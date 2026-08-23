@@ -1,14 +1,37 @@
 // src/pages/AdminPage.jsx
 import React, { useMemo, useState } from "react";
 import { useAdminUsers } from "../hooks/useAdminUsers";
+import { useAdminBackups } from "../hooks/useAdminBackups";
+import { useAdminBroadcast } from "../hooks/useAdminBroadcast";
+import { useConfirm } from "../hooks/useConfirm";
 import { Card, EmptyState, Badge } from "../components/ui/Card";
 import Button from "../components/ui/Button";
 import { Input } from "../components/ui/Input";
 import LoadingScreen from "../components/ui/LoadingScreen";
+import ConfirmDialog from "../components/ui/ConfirmDialog";
 import { formatDateTime } from "../utils/formatters";
 import {
-  ShieldIcon, UsersGroupIcon, RestoreIcon, ClearIcon, ExternalLinkIcon,
+  ShieldIcon, UsersGroupIcon, RestoreIcon, ClearIcon, ExternalLinkIcon, AlertIcon,
 } from "../components/ui/Icons";
+
+// نص تذكير الباك أب — ثابت لكل الشركات (زي ما اتفقنا)، بيظهر للشركة في
+// صفحة "التنبيهات" بتاعتها جوه التطبيق عن طريق نظام رسائل الأدمن الموجود
+// أصلاً (adminMessageService / useAdminBroadcast).
+const BACKUP_REMINDER = {
+  title: "تذكير بعمل نسخة احتياطية",
+  body: "من فضلك ادخل التطبيق واعمل نسخة احتياطية لبياناتك في أقرب وقت، حفاظاً على معلوماتك.",
+  severity: "medium",
+};
+
+// شركة تتحسب "متأخرة" في الباك أب لو آخر نسخة عندها أكتر من 7 أيام (أو
+// معملتش باك أب خالص). نفس فكرة ACTIVE_WINDOW_MS تحت بس بمدة أقصر.
+const BACKUP_STALE_MS = 7 * 24 * 60 * 60 * 1000;
+
+const isBackupStale = (lastBackupAt) => {
+  const d = typeof lastBackupAt?.toDate === "function" ? lastBackupAt.toDate() : lastBackupAt ? new Date(lastBackupAt) : null;
+  if (!d || isNaN(d.getTime())) return true; // معملش باك أب خالص = متأخر
+  return Date.now() - d.getTime() > BACKUP_STALE_MS;
+};
 
 // مشروع Firebase بتاع التطبيق — من .firebaserc. بيستخدم في بناء روابط
 // مباشرة لصفحات الاستخدام في الـ Console (أرقام حقيقية 100%، مش تقريبية).
@@ -48,6 +71,9 @@ const isActive = (lastActiveAt) => {
 
 const AdminPage = () => {
   const { users, count, loading, error, reload } = useAdminUsers();
+  const { backups, loading: backupsLoading } = useAdminBackups();
+  const { send: sendReminder, sending } = useAdminBroadcast();
+  const { confirm, confirmState } = useConfirm();
   const [query, setQuery] = useState("");
 
   const filtered = useMemo(() => {
@@ -58,6 +84,12 @@ const AdminPage = () => {
       (u.email || "").toLowerCase().includes(q)
     );
   }, [users, query]);
+
+  const handleRemind = async (uid) => {
+    const ok = await confirm(uid);
+    if (!ok) return;
+    sendReminder({ ...BACKUP_REMINDER, targetUserId: uid });
+  };
 
   if (loading) return <LoadingScreen message="جاري تحميل الحسابات..." />;
 
@@ -153,6 +185,8 @@ const AdminPage = () => {
                 <th className="text-right font-semibold px-4 py-3">حالة النشاط</th>
                 <th className="text-right font-semibold px-4 py-3">آخر دخول</th>
                 <th className="text-right font-semibold px-4 py-3">تاريخ التسجيل</th>
+                <th className="text-right font-semibold px-4 py-3">آخر نسخة احتياطية</th>
+                <th className="text-right font-semibold px-4 py-3"></th>
               </tr>
             </thead>
             <tbody>
@@ -177,12 +211,43 @@ const AdminPage = () => {
                   <td className="px-4 py-3 text-gray-400 whitespace-nowrap">
                     {formatDateTime(u.createdAt)}
                   </td>
+                  <td className="px-4 py-3 whitespace-nowrap">
+                    {backupsLoading ? (
+                      <span className="text-gray-600">...</span>
+                    ) : isBackupStale(backups[u.uid]?.lastBackupAt) ? (
+                      <span className="inline-flex items-center gap-1.5 text-red-400 font-semibold">
+                        <AlertIcon size={14} />
+                        {backups[u.uid]?.lastBackupAt ? formatDateTime(backups[u.uid].lastBackupAt) : "معملش باك أب"}
+                      </span>
+                    ) : (
+                      <span className="text-gray-400">{formatDateTime(backups[u.uid].lastBackupAt)}</span>
+                    )}
+                  </td>
+                  <td className="px-4 py-3 whitespace-nowrap">
+                    <Button
+                      variant="secondary"
+                      size="sm"
+                      icon={<AlertIcon size={14} />}
+                      disabled={sending}
+                      onClick={() => handleRemind(u.uid)}
+                    >
+                      تذكير
+                    </Button>
+                  </td>
                 </tr>
               ))}
             </tbody>
           </table>
         </Card>
       )}
+
+      <ConfirmDialog
+        open={confirmState.open}
+        onClose={confirmState.reject}
+        onConfirm={confirmState.accept}
+        title="تأكيد إرسال تذكير"
+        message="هيتبعت تنبيه للشركة دي جوه التطبيق يذكّرها إنها تعمل نسخة احتياطية. تحب تكمل؟"
+      />
     </div>
   );
 };

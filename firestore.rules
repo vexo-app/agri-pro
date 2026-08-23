@@ -91,8 +91,11 @@ service cloud.firestore {
 
     // Automatic + manual data backups. Doc id under /backups is the userId
     // itself (metadata: lastBackupAt), snapshots live in a subcollection.
+    // الأدمن يقدر يقرا الـ metadata بس (تاريخ آخر باك أب) عشان شاشة متابعة
+    // الشركات — مش محتوى النسخ نفسه، ده لسه مقفول على صاحبه بس (isOwner).
     match /backups/{userId} {
-      allow read, write: if isSignedIn() && isOwner(userId);
+      allow read:  if isSignedIn() && (isOwner(userId) || isAdmin());
+      allow write: if isSignedIn() && isOwner(userId);
 
       match /snapshots/{snapshotId} {
         allow read, write: if isSignedIn() && isOwner(userId);

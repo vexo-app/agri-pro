@@ -63,6 +63,19 @@ export const backupService = {
     return snap.exists() ? snap.data() : null;
   },
 
+  /**
+   * أدمن بس (isAdmin() في firestore.rules): تاريخ آخر باك أب لكل الشركات
+   * دفعة واحدة، لشاشة متابعة الأدمن. بيرجع { [userId]: lastBackupAt } —
+   * الدالة بتقرا مستندات الـ meta بس (وثيقة وحدة صغيرة لكل شركة)، مش
+   * محتوى النسخ الاحتياطية نفسه (الـ snapshots subcollection).
+   */
+  async getAllMeta() {
+    const snap = await getDocs(collection(db, COLLECTIONS.BACKUPS));
+    const map = {};
+    snap.docs.forEach((d) => { map[d.id] = d.data(); });
+    return map;
+  },
+
   /** Snapshot list (without the heavy `data` payload), newest first. */
   async list(userId) {
     const q = query(snapshotsCol(userId), orderBy("createdAt", "desc"));
