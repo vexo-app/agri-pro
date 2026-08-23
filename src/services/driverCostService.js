@@ -1,7 +1,7 @@
 // src/services/driverCostService.js
 import {
   collection, doc,
-  addDoc, updateDoc, deleteDoc,
+  setDoc, updateDoc, deleteDoc,
   getDocs, query, where,
   serverTimestamp,
 } from "firebase/firestore";
@@ -20,9 +20,14 @@ export const driverCostService = {
       .sort((a, b) => (b.date || "").localeCompare(a.date || ""));
   },
 
-  async add(userId, data) {
-    const ref = await addDoc(col(), { ...data, userId, createdAt: serverTimestamp() });
-    return ref.id;
+  // ملحوظة: الدالة دي مش بتتنادى حاليًا من أي مكان في التطبيق (الخدمة دي
+  // بقت legacy، الغرض منها بس قراءة/تنظيف بيانات قديمة — شوف DataContext).
+  // سابتها موحّدة مع باقي الخدمات (doc()/setDoc() بدل addDoc()) احتياطًا،
+  // عشان لو حد يوم استخدمها تاني ميقعش في مشكلة تكرار وقت الأوفلاين.
+  add(userId, data) {
+    const ref = doc(col());
+    const promise = setDoc(ref, { ...data, userId, createdAt: serverTimestamp() });
+    return { id: ref.id, promise };
   },
 
   async update(id, data) {
