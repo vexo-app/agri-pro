@@ -590,30 +590,32 @@ export const downloadDriverPayslipPdf = (args) => {
 };
 
 // ── 5. Custody Report (العهدة) ────────────────────────────────────────────────
-const buildCustodyReportHtml = ({ transactions, totalDeposits, totalExpenses, balance, expensesByCategory, getLinkedName }) => {
+const buildCustodyReportHtml = ({ transactions, totalExpenses, expensesByCategory, getLinkedName }) => {
   const today = new Date().toLocaleDateString("ar-EG");
 
   const categoryLabels = { equipment: "ميكنة", driver: "سائقين", other: "أخرى" };
 
+  // التقرير المطبوع بيعرض المصروفات بس (من غير حركات الإضافة/الرصيد) —
+  // شاشة العهدة في التطبيق نفسها لسه بتعرض كل الحركات والرصيد زي ما هي،
+  // الفلترة دي خاصة بالتقرير المطبوع فقط.
+  const expensesOnly = transactions.filter((t) => t.type !== "deposit");
+
   // Sort oldest → newest for a chronological ledger read
-  const sorted = [...transactions].sort((a, b) => (a.date || "").localeCompare(b.date || ""));
+  const sorted = [...expensesOnly].sort((a, b) => (a.date || "").localeCompare(b.date || ""));
 
   const rows = sorted.map((t) => {
-    const isDeposit = t.type === "deposit";
     const linkedName = getLinkedName ? getLinkedName(t) : null;
-    const desc = isDeposit
-      ? escapeHtml(t.source) || "إضافة فلوس"
-      : (t.category === "other" && t.otherLabel ? escapeHtml(t.otherLabel) : (categoryLabels[t.category] || "صرف"));
+    const desc = t.category === "other" && t.otherLabel ? escapeHtml(t.otherLabel) : (categoryLabels[t.category] || "صرف");
     return `
     <tr>
       <td>${formatDate(t.date)}</td>
       <td>
-        <span class="badge ${isDeposit ? "badge-green" : "badge-red"}">${isDeposit ? "إضافة" : "صرف"}</span>
+        <span class="badge badge-red">صرف</span>
       </td>
       <td>${desc}${linkedName ? ` · ${escapeHtml(linkedName)}` : ""}</td>
       <td>${escapeHtml(t.notes) || "—"}</td>
-      <td style="color:${isDeposit ? "#15803d" : "#991b1b"};font-weight:700">
-        ${isDeposit ? "+" : "-"} ${formatCurrency(t.amount)}
+      <td style="color:#991b1b;font-weight:700">
+        - ${formatCurrency(t.amount)}
       </td>
     </tr>`;
   }).join("");
@@ -629,7 +631,7 @@ const buildCustodyReportHtml = ({ transactions, totalDeposits, totalExpenses, ba
       <div class="header">
         <div>
           <h1>تقرير العهدة</h1>
-          <p class="brand">زراعي برو · سجل شامل بحركات العهدة</p>
+          <p class="brand">زراعي برو · سجل المصروفات من العهدة</p>
         </div>
         <div class="meta">
           <p>تاريخ الطباعة: ${today}</p>
@@ -638,11 +640,9 @@ const buildCustodyReportHtml = ({ transactions, totalDeposits, totalExpenses, ba
       </div>
 
       <div class="grid-2">
-        <div class="stat-box"><div class="stat-val" style="color:#15803d">${formatCurrency(totalDeposits)}</div><div class="stat-lbl">إجمالي المُضاف</div></div>
-        <div class="stat-box"><div class="stat-val" style="color:#991b1b">${formatCurrency(totalExpenses)}</div><div class="stat-lbl">إجمالي المصروف</div></div>
         <div class="stat-box" style="grid-column:1 / -1;">
-          <div class="stat-val" style="color:${balance>=0?"#15803d":"#991b1b"}">${formatCurrency(balance)}</div>
-          <div class="stat-lbl">الرصيد المتبقي</div>
+          <div class="stat-val" style="color:#991b1b">${formatCurrency(totalExpenses)}</div>
+          <div class="stat-lbl">إجمالي المصروف</div>
         </div>
       </div>
 
@@ -661,8 +661,8 @@ const buildCustodyReportHtml = ({ transactions, totalDeposits, totalExpenses, ba
           <thead><tr><th>التاريخ</th><th>النوع</th><th>البيان</th><th>ملاحظات</th><th>المبلغ</th></tr></thead>
           <tbody>${rows}</tbody>
           <tr class="total-row">
-            <td colspan="4">الرصيد المتبقي</td>
-            <td style="color:${balance>=0?"#15803d":"#991b1b"}">${formatCurrency(balance)}</td>
+            <td colspan="4">إجمالي المصروف</td>
+            <td style="color:#991b1b">${formatCurrency(totalExpenses)}</td>
           </tr>
         </table>
       </div>` : `<div class="section"><p style="color:#666;text-align:center;padding:20px 0;">لا توجد حركات مسجلة بعد</p></div>`}
