@@ -173,8 +173,9 @@ const JobForm = ({ initial, equipment, drivers, fuelPrice, onSave, onClose }) =>
         <Controller
           name="pricePerAcre"
           control={control}
+          rules={{ validate: (v) => !v || Number(v) >= 0 || "لا يمكن أن يكون سالبًا" }}
           render={({ field }) => (
-            <NumberInput label="سعر الفدان (ج.م)" placeholder="0" {...field} />
+            <NumberInput label="سعر الفدان (ج.م)" placeholder="0" error={errors.pricePerAcre?.message} {...field} />
           )}
         />
 
@@ -182,11 +183,13 @@ const JobForm = ({ initial, equipment, drivers, fuelPrice, onSave, onClose }) =>
         <Controller
           name="fuelUsed"
           control={control}
+          rules={{ validate: (v) => !v || Number(v) >= 0 || "لا يمكن أن يكون سالبًا" }}
           render={({ field }) => (
             <NumberInput
               label="الوقود المستخدم (لتر)"
               placeholder="0"
               hint={`سعر اللتر: ${fuelPrice} ج.م`}
+              error={errors.fuelUsed?.message}
               {...field}
             />
           )}
@@ -206,11 +209,13 @@ const JobForm = ({ initial, equipment, drivers, fuelPrice, onSave, onClose }) =>
           <Controller
             name="amountPaid"
             control={control}
+            rules={{ validate: (v) => !v || Number(v) >= 0 || "لا يمكن أن يكون سالبًا" }}
             render={({ field }) => (
               <NumberInput
                 label="دفعة مقدّمة عند التسجيل (ج.م)"
                 placeholder="0"
                 hint={revenue > 0 ? `الإجمالي: ${formatCurrency(revenue)}` : undefined}
+                error={errors.amountPaid?.message}
                 {...field}
               />
             )}

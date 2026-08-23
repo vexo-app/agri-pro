@@ -1,12 +1,21 @@
 // src/utils/calculations.js
 
+// تحويل آمن لأي قيمة لرقم صالح للحسابات المالية. زي Number(x)||0 بالظبط
+// (بيرجع 0 لأي قيمة فاسدة: undefined/null/نص عشوائي/NaN)، لكن كمان بيمنع
+// Infinity/-Infinity من التسرب لحسابات الإيراد/الربح (لو حقل اتلخبط بقيمة
+// غير محدودة، هيتحول لـ 0 بدل ما يفسد كل التجميعات اللي بعده).
+const safeNum = (value) => {
+  const n = Number(value);
+  return Number.isFinite(n) ? n : 0;
+};
+
 // ─── Job-level ────────────────────────────────────────────────────────────────
 
 export const calcRevenue = (acres, pricePerAcre) =>
-  (Number(acres) || 0) * (Number(pricePerAcre) || 0);
+  (safeNum(acres)) * (safeNum(pricePerAcre));
 
 export const calcFuelCost = (fuelUsed, fuelPrice) =>
-  (Number(fuelUsed) || 0) * (Number(fuelPrice) || 0);
+  (safeNum(fuelUsed)) * (safeNum(fuelPrice));
 
 /**
  * Full net profit for a single job.
@@ -15,7 +24,7 @@ export const calcFuelCost = (fuelUsed, fuelPrice) =>
 export const calcJobNetProfit = (acres, pricePerAcre, fuelUsed, fuelPrice, maintCostShare = 0) => {
   const revenue  = calcRevenue(acres, pricePerAcre);
   const fuelCost = calcFuelCost(fuelUsed, fuelPrice);
-  return revenue - fuelCost - (Number(maintCostShare) || 0);
+  return revenue - fuelCost - (safeNum(maintCostShare));
 };
 
 // kept for backward-compat with existing callers
@@ -27,7 +36,7 @@ export const calcJobProfit = calcJobNetProfit;
  * amountPaid is stored; remainingAmount is always derived — never stored.
  */
 export const calcRemainingAmount = (revenue, amountPaid) =>
-  Math.max(0, revenue - (Number(amountPaid) || 0));
+  Math.max(0, revenue - (safeNum(amountPaid)));
 
 /**
  * Single source of truth for "how much has this job been paid so far".
@@ -41,13 +50,13 @@ export const calcRemainingAmount = (revenue, amountPaid) =>
 export const getJobPaidAmount = (job, payments = []) => {
   const jobPayments = payments.filter((p) => p.jobId === job.id);
   if (jobPayments.length > 0) {
-    return jobPayments.reduce((s, p) => s + (Number(p.amount) || 0), 0);
+    return jobPayments.reduce((s, p) => s + (safeNum(p.amount)), 0);
   }
-  return Number(job.amountPaid) || 0; // legacy fallback
+  return safeNum(job.amountPaid); // legacy fallback
 };
 
 export const derivePaymentStatus = (revenue, amountPaid) => {
-  const paid = Number(amountPaid) || 0;
+  const paid = safeNum(amountPaid);
   if (paid <= 0)           return "unpaid";
   if (paid >= revenue)     return "paid";
   return "partial";
@@ -61,8 +70,8 @@ export const derivePaymentStatus = (revenue, amountPaid) => {
  */
 export const aggregateJobs = (jobs, fuelPrice, payments = []) => {
   const totalRevenue  = jobs.reduce((s, j) => s + calcRevenue(j.acres, j.pricePerAcre), 0);
-  const totalAcres    = jobs.reduce((s, j) => s + (Number(j.acres) || 0), 0);
-  const totalFuel     = jobs.reduce((s, j) => s + (Number(j.fuelUsed) || 0), 0);
+  const totalAcres    = jobs.reduce((s, j) => s + (safeNum(j.acres)), 0);
+  const totalFuel     = jobs.reduce((s, j) => s + (safeNum(j.fuelUsed)), 0);
   const totalFuelCost = calcFuelCost(totalFuel, fuelPrice);
   const netProfit     = totalRevenue - totalFuelCost;
 
@@ -84,7 +93,7 @@ export const buildEquipmentReport = (equipment, jobs, maintenance, fuelPrice, pa
     const eqJobs  = jobs.filter((j) => j.equipmentId === eq.id);
     const eqMaint = maintenance.filter((m) => m.equipmentId === eq.id);
     const stats      = aggregateJobs(eqJobs, fuelPrice, payments);
-    const maintCost  = eqMaint.reduce((s, m) => s + (Number(m.cost) || 0), 0);
+    const maintCost  = eqMaint.reduce((s, m) => s + (safeNum(m.cost)), 0);
     const netProfit  = stats.netProfit - maintCost;
     const margin     = stats.totalRevenue > 0 ? (netProfit / stats.totalRevenue) * 100 : 0;
     return { ...eq, ...stats, maintCost, netProfit, margin, ops: eqJobs.length };
@@ -122,7 +131,7 @@ export const buildDailyRevenue = (jobs, days = 7) => {
  */
 export const groupByWorkType = (jobs) => {
   const map = {};
-  jobs.forEach((j) => { map[j.workType] = (map[j.workType] || 0) + (Number(j.acres) || 0); });
+  jobs.forEach((j) => { map[j.workType] = (map[j.workType] || 0) + (safeNum(j.acres)); });
   return Object.entries(map).map(([name, value]) => ({ name, value }));
 };
 
@@ -164,7 +173,7 @@ export const buildClientList = (jobs, fuelPrice, payments = []) => {
 export const calcTotalPaidForJob = (payments, jobId) =>
   payments
     .filter((p) => p.jobId === jobId)
-    .reduce((s, p) => s + (Number(p.amount) || 0), 0);
+    .reduce((s, p) => s + (safeNum(p.amount)), 0);
 
 /**
  * Derive payment status from payments list (not stored amountPaid).

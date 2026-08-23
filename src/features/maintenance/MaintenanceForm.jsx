@@ -90,7 +90,10 @@ const MaintenanceForm = ({ initial, equipment, onSave, onClose }) => {
         <Controller
           name="cost"
           control={control}
-          rules={{ required: "أدخل التكلفة" }}
+          rules={{
+            required: "أدخل التكلفة",
+            min: { value: 0, message: "لا يمكن أن يكون سالبًا" },
+          }}
           render={({ field }) => (
             <NumberInput
               label="التكلفة (ج.م) *"
