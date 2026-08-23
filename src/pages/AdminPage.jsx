@@ -11,7 +11,7 @@ import LoadingScreen from "../components/ui/LoadingScreen";
 import ConfirmDialog from "../components/ui/ConfirmDialog";
 import { formatDateTime } from "../utils/formatters";
 import {
-  ShieldIcon, UsersGroupIcon, RestoreIcon, ClearIcon, ExternalLinkIcon, AlertIcon,
+  ShieldIcon, UsersGroupIcon, RestoreIcon, ClearIcon, ExternalLinkIcon, AlertIcon, SendIcon,
 } from "../components/ui/Icons";
 
 // نص تذكير الباك أب — ثابت لكل الشركات (زي ما اتفقنا)، بيظهر للشركة في
@@ -247,6 +247,9 @@ const AdminPage = () => {
         onConfirm={confirmState.accept}
         title="تأكيد إرسال تذكير"
         message="هيتبعت تنبيه للشركة دي جوه التطبيق يذكّرها إنها تعمل نسخة احتياطية. تحب تكمل؟"
+        confirmLabel="تأكيد الإرسال"
+        confirmIcon={<SendIcon size={14} />}
+        confirmVariant="primary"
       />
     </div>
   );
