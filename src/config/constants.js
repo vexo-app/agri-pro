@@ -15,19 +15,14 @@ export const ADMIN_UIDS = [
 ];
 
 // ─── Firestore Collections ────────────────────────────────────────────────────
+// الحقول اللي بقت جوه users/{uid}/... (equipment, jobs, drivers, maintenance,
+// payments, driverCosts, salaryEntries, attendance, custodyTransactions,
+// settings) اتشالت من هنا — أسماء الـ subcollections مكتوبة مباشرة جوه كل
+// service (src/services/*.js) بدل ما تتلف من هنا. اللي فاضل هنا هو بس
+// الـ collections اللي لسه على المستوى الأعلى فعلاً.
 export const COLLECTIONS = {
-  EQUIPMENT:      "equipment",
-  JOBS:           "jobs",
-  DRIVERS:        "drivers",
-  MAINTENANCE:    "maintenance",
-  SETTINGS:       "settings",
-  PAYMENTS:       "payments",
-  DRIVER_COSTS:   "driverCosts",
-  SALARY_ENTRIES: "salaryEntries",
-  ATTENDANCE:     "attendance",
   NOTIFICATIONS:  "notifications",
   BACKUPS:        "backups",
-  CUSTODY:        "custodyTransactions",
   USERS:          "users",
   ERROR_LOGS:     "errorLogs",
   ADMIN_MESSAGES: "adminMessages",

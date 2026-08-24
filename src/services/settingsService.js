@@ -1,11 +1,11 @@
 // src/services/settingsService.js
-import {
-  doc, getDoc, setDoc, serverTimestamp,
-} from "firebase/firestore";
+import { doc, getDoc, setDoc, serverTimestamp } from "firebase/firestore";
 import { db } from "../config/firebase";
-import { COLLECTIONS, DEFAULT_FUEL_PRICE } from "../config/constants";
+import { DEFAULT_FUEL_PRICE } from "../config/constants";
 
-const settingsDocRef = (userId) => doc(db, COLLECTIONS.SETTINGS, userId);
+// جوه users/{uid}/meta/settings بدل collection مستقل — نفس فكرة باقي
+// بيانات المستخدم (equipment, jobs...) دلوقتي.
+const settingsDocRef = (userId) => doc(db, "users", userId, "meta", "settings");
 
 export const settingsService = {
   async get(userId) {

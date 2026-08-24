@@ -2,7 +2,7 @@
 import {
   collection, doc,
   addDoc, getDoc, getDocs, setDoc, deleteDoc,
-  query, where, orderBy, serverTimestamp, writeBatch,
+  query, orderBy, serverTimestamp, writeBatch,
 } from "firebase/firestore";
 import { db } from "../config/firebase";
 import { COLLECTIONS, MAX_BACKUPS_KEPT } from "../config/constants";
@@ -11,16 +11,17 @@ const metaRef      = (userId) => doc(db, COLLECTIONS.BACKUPS, userId);
 const snapshotsCol = (userId) => collection(db, COLLECTIONS.BACKUPS, userId, "snapshots");
 const snapshotRef  = (userId, id) => doc(db, COLLECTIONS.BACKUPS, userId, "snapshots", id);
 
-// Data-bearing collections included in every backup/restore (settings handled separately below).
+// Data-bearing subcollections (under users/{uid}/...) included in every
+// backup/restore (settings handled separately below).
 const BACKUP_COLLECTIONS = [
-  ["equipment",     COLLECTIONS.EQUIPMENT],
-  ["jobs",          COLLECTIONS.JOBS],
-  ["drivers",       COLLECTIONS.DRIVERS],
-  ["maintenance",   COLLECTIONS.MAINTENANCE],
-  ["payments",      COLLECTIONS.PAYMENTS],
-  ["salaryEntries", COLLECTIONS.SALARY_ENTRIES],
-  ["attendance",    COLLECTIONS.ATTENDANCE],
-  ["custodyTransactions", COLLECTIONS.CUSTODY],
+  ["equipment",           "equipment"],
+  ["jobs",                "jobs"],
+  ["drivers",             "drivers"],
+  ["maintenance",         "maintenance"],
+  ["payments",            "payments"],
+  ["salaryEntries",       "salaryEntries"],
+  ["attendance",          "attendance"],
+  ["custodyTransactions", "custodyTransactions"],
 ];
 
 const countsFor = (data) =>
@@ -29,12 +30,13 @@ const countsFor = (data) =>
     return acc;
   }, {});
 
-// Overwrite a single collection (scoped to userId) with the given snapshot items:
-// deletes any live doc not present in the snapshot, and upserts every snapshot
-// item back under its original id. Batched in chunks of 450 writes.
-const restoreCollection = async (colName, userId, items) => {
-  const colRef = collection(db, colName);
-  const liveSnap = await getDocs(query(colRef, where("userId", "==", userId)));
+// Overwrite a single subcollection under users/{uid}/{subName} with the
+// given snapshot items: deletes any live doc not present in the snapshot,
+// and upserts every snapshot item back under its original id. Batched in
+// chunks of 450 writes.
+const restoreCollection = async (subName, userId, items) => {
+  const colRef = collection(db, "users", userId, subName);
+  const liveSnap = await getDocs(colRef);
   const snapshotIds = new Set(items.map((it) => it.id).filter(Boolean));
 
   const ops = [];
@@ -42,9 +44,9 @@ const restoreCollection = async (colName, userId, items) => {
     if (!snapshotIds.has(d.id)) ops.push({ type: "delete", ref: d.ref });
   });
   items.forEach((item) => {
-    const { id, ...rest } = item;
-    const ref = id ? doc(db, colName, id) : doc(colRef);
-    ops.push({ type: "set", ref, data: { ...rest, userId } });
+    const { id, userId: _drop, ...rest } = item; // userId no longer stored on the doc itself
+    const ref = id ? doc(colRef, id) : doc(colRef);
+    ops.push({ type: "set", ref, data: rest });
   });
 
   for (let i = 0; i < ops.length; i += 450) {
@@ -123,11 +125,11 @@ export const backupService = {
    * Caller is responsible for taking a fresh "safety" backup first.
    */
   async restoreSnapshot(userId, snapshotData) {
-    for (const [key, colName] of BACKUP_COLLECTIONS) {
-      await restoreCollection(colName, userId, snapshotData[key] || []);
+    for (const [key, subName] of BACKUP_COLLECTIONS) {
+      await restoreCollection(subName, userId, snapshotData[key] || []);
     }
     if (snapshotData.settings) {
-      await setDoc(doc(db, COLLECTIONS.SETTINGS, userId), snapshotData.settings);
+      await setDoc(doc(db, "users", userId, "meta", "settings"), snapshotData.settings);
     }
   },
 };

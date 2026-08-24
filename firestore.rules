@@ -4,13 +4,6 @@ service cloud.firestore {
 
     function isSignedIn()  { return request.auth != null; }
     function isOwner(uid)  { return request.auth.uid == uid; }
-    function ownsDoc()     { return resource.data.userId == request.auth.uid; }
-    function hasUserId()   { return request.resource.data.keys().hasAll(['userId']); }
-    // بتمنع إن أي update يغيّر حقل userId نفسه — من غيرها، صاحب مستند شرعي
-    // يقدر "ينقل" مستنده لحساب شركة تانية بمجرد ما يعدّل الحقل ده، وده مش
-    // IDOR بالمعنى الكلاسيكي (مفيش حد بيقرا بيانات مش بتاعته) لكنه بيسمح
-    // بحقن مستند غريب جوه بيانات شركة تانية من غير علمها.
-    function keepsOwner()  { return request.resource.data.userId == resource.data.userId; }
 
     // أدمن التطبيق — لازم تحط نفس الـ UID هنا وفي src/config/constants.js
     // (ADMIN_UIDS). ده اللي بيسمح فعلياً بقراءة قائمة كل المستخدمين — مش
@@ -21,78 +14,30 @@ service cloud.firestore {
       ];
     }
 
-    match /equipment/{id} {
-      allow read:   if isSignedIn() && ownsDoc();
-      allow create: if isSignedIn() && hasUserId() && isOwner(request.resource.data.userId);
-      allow update: if isSignedIn() && ownsDoc() && keepsOwner();
-      allow delete: if isSignedIn() && ownsDoc();
-    }
-    match /jobs/{id} {
-      allow read:   if isSignedIn() && ownsDoc();
-      allow create: if isSignedIn() && hasUserId() && isOwner(request.resource.data.userId);
-      allow update: if isSignedIn() && ownsDoc() && keepsOwner();
-      allow delete: if isSignedIn() && ownsDoc();
-    }
-    match /drivers/{id} {
-      allow read:   if isSignedIn() && ownsDoc();
-      allow create: if isSignedIn() && hasUserId() && isOwner(request.resource.data.userId);
-      allow update: if isSignedIn() && ownsDoc() && keepsOwner();
-      allow delete: if isSignedIn() && ownsDoc();
-    }
-    match /maintenance/{id} {
-      allow read:   if isSignedIn() && ownsDoc();
-      allow create: if isSignedIn() && hasUserId() && isOwner(request.resource.data.userId);
-      allow update: if isSignedIn() && ownsDoc() && keepsOwner();
-      allow delete: if isSignedIn() && ownsDoc();
-    }
-    match /payments/{id} {
-      allow read:   if isSignedIn() && ownsDoc();
-      allow create: if isSignedIn() && hasUserId() && isOwner(request.resource.data.userId);
-      allow update: if isSignedIn() && ownsDoc() && keepsOwner();
-      allow delete: if isSignedIn() && ownsDoc();
-    }
-    match /driverCosts/{id} {
-      allow read:   if isSignedIn() && ownsDoc();
-      allow create: if isSignedIn() && hasUserId() && isOwner(request.resource.data.userId);
-      allow update: if isSignedIn() && ownsDoc() && keepsOwner();
-      allow delete: if isSignedIn() && ownsDoc();
-    }
-    match /salaryEntries/{id} {
-      allow read:   if isSignedIn() && ownsDoc();
-      allow create: if isSignedIn() && hasUserId() && isOwner(request.resource.data.userId);
-      allow update: if isSignedIn() && ownsDoc() && keepsOwner();
-      allow delete: if isSignedIn() && ownsDoc();
-    }
-    match /attendance/{id} {
-      allow read:   if isSignedIn() && ownsDoc();
-      allow create: if isSignedIn() && hasUserId() && isOwner(request.resource.data.userId);
-      allow update: if isSignedIn() && ownsDoc() && keepsOwner();
-      allow delete: if isSignedIn() && ownsDoc();
-    }
-    match /custodyTransactions/{id} {
-      allow read:   if isSignedIn() && ownsDoc();
-      allow create: if isSignedIn() && hasUserId() && isOwner(request.resource.data.userId);
-      allow update: if isSignedIn() && ownsDoc() && keepsOwner();
-      allow delete: if isSignedIn() && ownsDoc();
-    }
-    match /settings/{userId} {
-      allow read, write: if isSignedIn() && isOwner(userId);
-    }
-
-    // ملف بروفايل بسيط لكل مستخدم (اسم، إيميل، تاريخ تسجيل، آخر نشاط).
-    // بيتحدث تلقائياً من AuthContext. القراءة الفردية لصاحب الحساب بس،
-    // لكن الأدمن يقدر يقرا كل الحسابات (list) عشان صفحة /admin.
-    match /users/{userId} {
-      allow get:            if isSignedIn() && (isOwner(userId) || isAdmin());
+    // كل بيانات الشركة (معدات، شغل، سائقين، صيانة، مدفوعات، رواتب،
+    // حضور، عهدة، إعدادات...) بقت جوه users/{uid}/... بدل collections
+    // منفصلة على المستوى الأعلى فيها حقل userId. الفايدة: مفيش أي حاجة
+    // ممكن تُقرأ أو تتكتب من غير ما تكون جوه مسار المستخدم نفسه أصلاً —
+    // العزل بقى في بنية المسار مش في شرط بيتكرر يدوي في كل collection.
+    // قاعدة واحدة عامة بتغطي أي subcollection جديدة تتضاف تحت مستخدم
+    // من غير ما نرجع نعدّل الملف ده تاني.
+    match /users/{uid} {
+      allow get:            if isSignedIn() && (isOwner(uid) || isAdmin());
       allow list:            if isSignedIn() && isAdmin();
-      allow create, update: if isSignedIn() && isOwner(userId);
+      allow create, update: if isSignedIn() && isOwner(uid);
       allow delete:          if false;
+
+      match /{document=**} {
+        allow read, write: if isSignedIn() && isOwner(uid);
+      }
     }
 
     // Automatic + manual data backups. Doc id under /backups is the userId
     // itself (metadata: lastBackupAt), snapshots live in a subcollection.
-    // الأدمن يقدر يقرا الـ metadata بس (تاريخ آخر باك أب) عشان شاشة متابعة
-    // الشركات — مش محتوى النسخ نفسه، ده لسه مقفول على صاحبه بس (isOwner).
+    // فضلت على المستوى الأعلى (مش جوه users/{uid}) عشان الأدمن يقدر يقرا
+    // الـ meta بتاعت كل الشركات دفعة واحدة (شاشة متابعة) من غير collection
+    // group query — القراءة دي metadata بس (تاريخ آخر باك أب)، مش محتوى
+    // النسخ نفسه، اللي لسه مقفول على صاحبه بس.
     match /backups/{userId} {
       allow read:  if isSignedIn() && (isOwner(userId) || isAdmin());
       allow write: if isSignedIn() && isOwner(userId);
@@ -104,10 +49,9 @@ service cloud.firestore {
 
     // سجل أخطاء التطبيق — أي مستخدم مسجّل دخول يقدر يكتب خطأ حصل عنده
     // (write-only بالنسبة له، مش بيقرا القائمة أبداً)، والأدمن بس اللي
-    // يقدر يقرا/يعدّل (يعلّم كـ "متحلّة")/يمسح. isOwner على create زي باقي
-    // الـ collections، بيمنع مستخدم إنه يزوّر خطأ باسم مستخدم تاني.
+    // يقدر يقرا/يعدّل (يعلّم كـ "متحلّة")/يمسح.
     match /errorLogs/{id} {
-      allow create: if isSignedIn() && hasUserId() && isOwner(request.resource.data.userId);
+      allow create: if isSignedIn() && request.resource.data.userId == request.auth.uid;
       allow read, update, delete: if isAdmin();
     }
 

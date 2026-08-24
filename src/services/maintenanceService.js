@@ -2,42 +2,37 @@
 import {
   collection, doc,
   setDoc, updateDoc, deleteDoc,
-  getDocs, query, where, orderBy,
+  getDocs, query, orderBy,
   serverTimestamp,
 } from "firebase/firestore";
 import { db } from "../config/firebase";
-import { COLLECTIONS } from "../config/constants";
 
-const col = () => collection(db, COLLECTIONS.MAINTENANCE);
+const col = (uid) => collection(db, "users", uid, "maintenance");
 
 export const maintenanceService = {
   async getAll(userId) {
-    const q = query(col(), where("userId", "==", userId), orderBy("date", "desc"));
+    const q = query(col(userId), orderBy("date", "desc"));
     const snap = await getDocs(q);
     return snap.docs.map((d) => ({ id: d.id, ...d.data() }));
   },
 
   // Returns { id, promise } — see equipmentService.js for why.
   add(userId, data) {
-    const ref = doc(col());
+    const ref = doc(col(userId));
     const promise = setDoc(ref, {
       ...data,
-      userId,
-      // ISO string (not serverTimestamp) so the exact creation moment is
-      // available immediately in local state — see jobService.js for why.
+      // ISO string (not serverTimestamp) — see jobService.js for why.
       createdAt: new Date().toISOString(),
       updatedAt: serverTimestamp(),
     });
     return { id: ref.id, promise };
   },
 
-  update(id, data) {
-    const ref = doc(db, COLLECTIONS.MAINTENANCE, id);
-    return updateDoc(ref, { ...data, updatedAt: serverTimestamp() });
+  update(userId, id, data) {
+    return updateDoc(doc(col(userId), id), { ...data, updatedAt: serverTimestamp() });
   },
 
-  remove(id) {
-    const ref = doc(db, COLLECTIONS.MAINTENANCE, id);
-    return deleteDoc(ref);
+  remove(userId, id) {
+    return deleteDoc(doc(col(userId), id));
   },
 };

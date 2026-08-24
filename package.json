@@ -3,21 +3,22 @@
   "version": "1.0.0",
   "private": true,
   "dependencies": {
+    "clsx": "^2.1.0",
+    "date-fns": "^3.3.1",
+    "firebase": "^10.8.0",
     "react": "^18.2.0",
     "react-dom": "^18.2.0",
-    "react-router-dom": "^6.22.0",
-    "firebase": "^10.8.0",
-    "recharts": "^2.12.0",
-    "react-hot-toast": "^2.4.1",
     "react-hook-form": "^7.51.0",
-    "date-fns": "^3.3.1",
-    "clsx": "^2.1.0"
+    "react-hot-toast": "^2.4.1",
+    "react-router-dom": "^6.22.0",
+    "recharts": "^2.12.0"
   },
   "devDependencies": {
+    "autoprefixer": "^10.4.17",
+    "firebase-admin": "^14.3.0",
+    "postcss": "^8.4.35",
     "react-scripts": "5.0.1",
     "tailwindcss": "^3.4.1",
-    "autoprefixer": "^10.4.17",
-    "postcss": "^8.4.35",
     "workbox-core": "^6.6.0",
     "workbox-expiration": "^6.6.0",
     "workbox-precaching": "^6.6.0",
@@ -36,7 +37,15 @@
     ]
   },
   "browserslist": {
-    "production": [">0.2%", "not dead", "not op_mini all"],
-    "development": ["last 1 chrome version", "last 1 firefox version", "last 1 safari version"]
+    "production": [
+      ">0.2%",
+      "not dead",
+      "not op_mini all"
+    ],
+    "development": [
+      "last 1 chrome version",
+      "last 1 firefox version",
+      "last 1 safari version"
+    ]
   }
 }

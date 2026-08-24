@@ -2,20 +2,15 @@
 import {
   collection, doc,
   setDoc, updateDoc, deleteDoc,
-  getDocs, query, where,
-  serverTimestamp,
+  getDocs, serverTimestamp,
 } from "firebase/firestore";
 import { db } from "../config/firebase";
-import { COLLECTIONS } from "../config/constants";
 
-const COLL = COLLECTIONS.CUSTODY;
-const col  = () => collection(db, COLL);
+const col = (uid) => collection(db, "users", uid, "custodyTransactions");
 
 export const custodyService = {
   async getAll(userId) {
-    // No orderBy — sort in JS to avoid needing a Firestore index
-    const q    = query(col(), where("userId", "==", userId));
-    const snap = await getDocs(q);
+    const snap = await getDocs(col(userId));
     return snap.docs
       .map((d) => ({ id: d.id, ...d.data() }))
       .sort((a, b) => (b.date || "").localeCompare(a.date || ""));
@@ -23,16 +18,16 @@ export const custodyService = {
 
   // Returns { id, promise } — see equipmentService.js for why.
   add(userId, data) {
-    const ref = doc(col());
-    const promise = setDoc(ref, { ...data, userId, createdAt: serverTimestamp() });
+    const ref = doc(col(userId));
+    const promise = setDoc(ref, { ...data, createdAt: serverTimestamp() });
     return { id: ref.id, promise };
   },
 
-  update(id, data) {
-    return updateDoc(doc(db, COLL, id), { ...data, updatedAt: serverTimestamp() });
+  update(userId, id, data) {
+    return updateDoc(doc(col(userId), id), { ...data, updatedAt: serverTimestamp() });
   },
 
-  remove(id) {
-    return deleteDoc(doc(db, COLL, id));
+  remove(userId, id) {
+    return deleteDoc(doc(col(userId), id));
   },
 };

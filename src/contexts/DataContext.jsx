@@ -203,7 +203,7 @@ export const DataProvider = ({ children }) => {
               driverCostsR.data.map(async (cost) => {
                 const payload = driverCostToSalaryEntry(cost);
                 const id = await salaryService.add(user.uid, payload);
-                await driverCostService.remove(cost.id);
+                await driverCostService.remove(user.uid, cost.id);
                 return { id, ...payload };
               })
             );
@@ -356,12 +356,12 @@ export const DataProvider = ({ children }) => {
     return id;
   }, [user, trackWrite]);
   const updateEquipment = useCallback(async (id, d) => {
-    trackWrite(equipmentService.update(id, d));
+    trackWrite(equipmentService.update(user.uid, id, d));
     dispatch({ type: "UPDATE_EQUIPMENT", payload: { id, ...d } });
     toast.success("تم تحديث المعدة");
   }, [trackWrite]);
   const deleteEquipment = useCallback(async (id) => {
-    trackWrite(equipmentService.remove(id));
+    trackWrite(equipmentService.remove(user.uid, id));
     dispatch({ type: "DELETE_EQUIPMENT", payload: id });
     toast.success("تم حذف المعدة");
   }, [trackWrite]);
@@ -374,12 +374,12 @@ export const DataProvider = ({ children }) => {
     return id;
   }, [user, trackWrite]);
   const updateJob = useCallback(async (id, d) => {
-    trackWrite(jobService.update(id, d));
+    trackWrite(jobService.update(user.uid, id, d));
     dispatch({ type: "UPDATE_JOB", payload: { id, ...d } });
     toast.success("تم تحديث العملية");
   }, [trackWrite]);
   const deleteJob = useCallback(async (id) => {
-    trackWrite(jobService.remove(id));
+    trackWrite(jobService.remove(user.uid, id));
     dispatch({ type: "DELETE_JOB", payload: id });
     toast.success("تم حذف العملية");
   }, [trackWrite]);
@@ -392,12 +392,12 @@ export const DataProvider = ({ children }) => {
     return id;
   }, [user, trackWrite]);
   const updateDriver = useCallback(async (id, d) => {
-    trackWrite(driverService.update(id, d));
+    trackWrite(driverService.update(user.uid, id, d));
     dispatch({ type: "UPDATE_DRIVER", payload: { id, ...d } });
     toast.success("تم تحديث السائق");
   }, [trackWrite]);
   const deleteDriver = useCallback(async (id) => {
-    trackWrite(driverService.remove(id));
+    trackWrite(driverService.remove(user.uid, id));
     dispatch({ type: "DELETE_DRIVER", payload: id });
     toast.success("تم حذف السائق");
   }, [trackWrite]);
@@ -410,12 +410,12 @@ export const DataProvider = ({ children }) => {
     return id;
   }, [user, trackWrite]);
   const updateMaintenance = useCallback(async (id, d) => {
-    trackWrite(maintenanceService.update(id, d));
+    trackWrite(maintenanceService.update(user.uid, id, d));
     dispatch({ type: "UPDATE_MAINTENANCE", payload: { id, ...d } });
     toast.success("تم تحديث الصيانة");
   }, [trackWrite]);
   const deleteMaintenance = useCallback(async (id) => {
-    trackWrite(maintenanceService.remove(id));
+    trackWrite(maintenanceService.remove(user.uid, id));
     dispatch({ type: "DELETE_MAINTENANCE", payload: id });
     toast.success("تم حذف الصيانة");
   }, [trackWrite]);
@@ -428,12 +428,12 @@ export const DataProvider = ({ children }) => {
     return id;
   }, [user, trackWrite]);
   const updatePayment = useCallback(async (id, d) => {
-    trackWrite(paymentService.update(id, d));
+    trackWrite(paymentService.update(user.uid, id, d));
     dispatch({ type: "UPDATE_PAYMENT", payload: { id, ...d } });
     toast.success("تم تحديث الدفعة");
   }, [trackWrite]);
   const deletePayment = useCallback(async (id) => {
-    trackWrite(paymentService.remove(id));
+    trackWrite(paymentService.remove(user.uid, id));
     dispatch({ type: "DELETE_PAYMENT", payload: id });
     toast.success("تم حذف الدفعة");
   }, [trackWrite]);
@@ -446,12 +446,12 @@ export const DataProvider = ({ children }) => {
     return id;
   }, [user, trackWrite]);
   const updateSalaryEntry = useCallback(async (id, d) => {
-    trackWrite(salaryService.update(id, d));
+    trackWrite(salaryService.update(user.uid, id, d));
     dispatch({ type: "UPDATE_SALARY", payload: { id, ...d } });
     toast.success("تم التحديث");
   }, [trackWrite]);
   const deleteSalaryEntry = useCallback(async (id) => {
-    trackWrite(salaryService.remove(id));
+    trackWrite(salaryService.remove(user.uid, id));
     dispatch({ type: "DELETE_SALARY", payload: id });
     toast.success("تم الحذف");
   }, [trackWrite]);
@@ -464,12 +464,12 @@ export const DataProvider = ({ children }) => {
     return id;
   }, [user, trackWrite]);
   const updateAttendance = useCallback(async (id, d) => {
-    trackWrite(attendanceService.update(id, d));
+    trackWrite(attendanceService.update(user.uid, id, d));
     dispatch({ type: "UPDATE_ATTENDANCE", payload: { id, ...d } });
     toast.success("تم تحديث الحضور");
   }, [trackWrite]);
   const deleteAttendance = useCallback(async (id) => {
-    trackWrite(attendanceService.remove(id));
+    trackWrite(attendanceService.remove(user.uid, id));
     dispatch({ type: "DELETE_ATTENDANCE", payload: id });
     toast.success("تم حذف السجل");
   }, [trackWrite]);
@@ -490,14 +490,14 @@ export const DataProvider = ({ children }) => {
     return id;
   }, [user, trackWrite]);
   const updateCustody = useCallback(async (id, d) => {
-    trackWrite(custodyService.update(id, d)).catch(() => {
+    trackWrite(custodyService.update(user.uid, id, d)).catch(() => {
       toast.error("حدث خطأ أثناء التحديث (هيتزامن لما الاتصال يرجع لو كانت المشكلة إنك أوف لاين)");
     });
     dispatch({ type: "UPDATE_CUSTODY", payload: { id, ...d } });
     toast.success("تم تحديث السجل");
   }, [trackWrite]);
   const deleteCustody = useCallback(async (id) => {
-    trackWrite(custodyService.remove(id)).catch(() => {
+    trackWrite(custodyService.remove(user.uid, id)).catch(() => {
       toast.error("حدث خطأ أثناء الحذف (هيتزامن لما الاتصال يرجع لو كانت المشكلة إنك أوف لاين)");
     });
     dispatch({ type: "DELETE_CUSTODY", payload: id });
