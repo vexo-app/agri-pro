@@ -56,11 +56,9 @@ const Sidebar = ({ onClose }) => {
 
       {/* Brand */}
       <div className="px-5 py-6 border-b border-white/8 bg-gradient-to-bl from-brand-900/30 to-transparent">
-        <div className="w-11 h-11 bg-brand-600 rounded-2xl flex items-center justify-center mb-3 shadow-lg shadow-brand-900/50">
-          <TractorIcon size={24} className="text-white" />
-        </div>
+        <img src="/brand-icon.png" alt="زراعي برو" className="w-11 h-11 rounded-2xl mb-3 shadow-lg shadow-brand-900/50" />
         <p className="text-base font-extrabold text-gray-100 leading-tight">زراعي برو</p>
-        <p className="text-xs text-brand-400 font-medium mt-0.5">إدارة المعدات الزراعية</p>
+        <p className="text-xs text-brand-400 font-medium mt-0.5">بيانات أوضح. قرارات أذكى. أرباح أكبر.</p>
       </div>
 
       {/* Nav */}

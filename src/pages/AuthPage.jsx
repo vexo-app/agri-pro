@@ -3,7 +3,7 @@ import React, { useState } from "react";
 import { useForm } from "react-hook-form";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "../contexts/AuthContext";
-import { TractorIcon, EyeIcon, EyeOffIcon } from "../components/ui/Icons";
+import { EyeIcon, EyeOffIcon } from "../components/ui/Icons";
 import toast from "react-hot-toast";
 
 const AuthPage = () => {
@@ -59,11 +59,9 @@ const AuthPage = () => {
 
       <div className="relative w-full max-w-sm">
         <div className="text-center mb-8">
-          <div className="w-16 h-16 bg-brand-600 rounded-3xl flex items-center justify-center mx-auto mb-4 shadow-xl shadow-brand-900/50">
-            <TractorIcon size={32} className="text-white" />
-          </div>
+          <img src="/brand-icon.png" alt="زراعي برو" className="w-16 h-16 rounded-3xl mx-auto mb-4 shadow-xl shadow-brand-900/50" />
           <h1 className="text-2xl font-extrabold text-gray-100">زراعي برو</h1>
-          <p className="text-sm text-gray-500 mt-1">إدارة المعدات الزراعية</p>
+          <p className="text-sm text-gray-500 mt-1">بيانات أوضح. قرارات أذكى. أرباح أكبر.</p>
           <p className="text-[11px] tracking-wide text-gray-600 mt-1.5">MADE BY: ADHAM FATHY</p>
         </div>
 
