@@ -227,7 +227,7 @@ const INVOICE_CSS = `
     display:flex; align-items:center; justify-content:center;
     font-size:9px; color:#16a34a99; font-weight:700; text-align:center; line-height:1.3;
   }
-  .inv-legal{color:#6b7280; font-weight:600; margin-bottom:4px;}
+  .inv-badge-note{font-size:8.5px; color:#9ca3af; margin-top:5px; line-height:1.55; max-width:170px;}
   /* التوقيع + الإقرار القانوني لازم يفضلوا مع بعض ومتقطعوش بين صفحتين،
      حتى لو الفاتورة نفسها طالت واتقسّمت على أكتر من صفحة. */
   .inv-closing{ page-break-inside: avoid; break-inside: avoid; }
@@ -310,6 +310,10 @@ const buildClientInvoiceHtml = ({ job, equipmentName, driverName, fuelPrice, pay
           <div class="inv-no">رقم ${buildInvoiceNumber(job)}</div>
           <div class="inv-date">صدرت: ${printedAt}</div>
           <div style="margin-top:8px">${paymentBadge}</div>
+          <div class="inv-badge-note">
+            هذه الفاتورة صادرة إلكترونياً وتُعتمد بتوقيع الطرفين أعلاه<br>
+            رقم الفاتورة ${buildInvoiceNumber(job)} · تم الإصدار ${printedAt}
+          </div>
         </div>
       </div>
 
@@ -387,11 +391,6 @@ const buildClientInvoiceHtml = ({ job, equipmentName, driverName, fuelPrice, pay
             <div class="inv-sign-label">توقيع واعتماد الشركة</div>
             <div class="inv-sign-sub">${escapeHtml(companyName)}</div>
           </div>
-        </div>
-
-        <div class="footer">
-          <div class="inv-legal">هذه الفاتورة صادرة إلكترونياً وتُعتمد بتوقيع الطرفين أعلاه</div>
-          رقم الفاتورة ${buildInvoiceNumber(job)} · تم الإصدار ${printedAt}
         </div>
       </div>
     </div>
