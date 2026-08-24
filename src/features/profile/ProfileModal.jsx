@@ -21,8 +21,80 @@ import ImportModal from "./ImportModal";
 import {
   LockIcon, CloudUploadIcon, EditIcon, SaveIcon,
   EyeIcon, EyeOffIcon, ClockIcon, RestoreIcon,
-  DownloadIcon, UploadFileIcon,
+  DownloadIcon, UploadFileIcon, PrintIcon,
 } from "../../components/ui/Icons";
+
+// ── Company invoice info (fixed data reused on every printed invoice) ──
+const INVOICE_FIELDS = [
+  { key: "name",              label: "اسم الشركة / المزرعة",  placeholder: "مزرعة الأمل لتأجير المعدات الزراعية" },
+  { key: "address",           label: "العنوان والتليفون",      placeholder: "كفر الشيخ، طريق دسوق الزراعي · ٠١٠١٢٣٤٥٦٧٨" },
+  { key: "commercialRegister", label: "السجل التجاري",         placeholder: "١٢٣٤٥" },
+  { key: "taxNumber",         label: "الرقم الضريبي",          placeholder: "٦٠٠-١٢٣-٤٥٦" },
+];
+
+const CompanyInvoiceSection = ({ user, settings, saveSettings }) => {
+  const [form, setForm] = useState({
+    name: "", address: "", commercialRegister: "", taxNumber: "",
+  });
+  const [editing, setEditing] = useState(false);
+  const [saving, setSaving] = useState(false);
+
+  useEffect(() => {
+    setForm({
+      name: settings?.company?.name || "",
+      address: settings?.company?.address || "",
+      commercialRegister: settings?.company?.commercialRegister || "",
+      taxNumber: settings?.company?.taxNumber || "",
+    });
+  }, [settings, user]);
+
+  const save = async () => {
+    setSaving(true);
+    try {
+      await saveSettings({ company: form });
+      setEditing(false);
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  return (
+    <Section icon={<PrintIcon size={16} />} title="بيانات الفاتورة الثابتة">
+      <p className="text-[11px] text-gray-500 mb-3 leading-relaxed">
+        البيانات دي بتتحفظ مرة واحدة وتتحط تلقائيًا في كل فاتورة تطبعها أو تنزّلها — مفيش داعي تكتبها كل مرة.
+      </p>
+      <div className="space-y-3">
+        {INVOICE_FIELDS.map((f) => (
+          <div key={f.key} className="flex flex-col gap-1.5">
+            <label className="text-xs font-semibold text-gray-400 tracking-wide">{f.label}</label>
+            <input
+              type="text"
+              disabled={!editing}
+              value={form[f.key]}
+              placeholder={f.placeholder}
+              onChange={(e) => setForm((s) => ({ ...s, [f.key]: e.target.value }))}
+              className="w-full bg-surface-3 border border-white/10 rounded-xl px-4 py-2.5 text-gray-100 placeholder-gray-600 text-sm
+                transition duration-200 focus:outline-none focus:ring-2 focus:ring-brand-600/50 focus:border-brand-600
+                disabled:opacity-60"
+            />
+          </div>
+        ))}
+      </div>
+      <div className="mt-3">
+        {editing ? (
+          <Button type="button" size="sm" className="w-full" loading={saving} onClick={save}>
+            حفظ بيانات الفاتورة
+          </Button>
+        ) : (
+          <Button type="button" size="sm" variant="secondary" className="w-full"
+            icon={<EditIcon size={15} />} onClick={() => setEditing(true)}>
+            تعديل بيانات الفاتورة
+          </Button>
+        )}
+      </div>
+    </Section>
+  );
+};
 
 // ── Small section wrapper ───────────────────────────────────
 const Section = ({ icon, title, children }) => (
@@ -67,6 +139,7 @@ const PasswordField = ({ label, error, register }) => {
 const ProfileModal = ({ open, onClose }) => {
   const { user }  = useAuth();
   const data      = useData();
+  const { settings, saveSettings } = data;
 
   // ── Display name ───────────────────────────────────────
   const [editingName, setEditingName] = useState(false);
@@ -227,6 +300,9 @@ const ProfileModal = ({ open, onClose }) => {
             <p className="text-xs text-gray-500 truncate mt-0.5">{user?.email}</p>
           </div>
         </div>
+
+        {/* ── Fixed invoice data (used on every printed invoice) ── */}
+        <CompanyInvoiceSection user={user} settings={settings} saveSettings={saveSettings} />
 
         {/* ── Change password ── */}
         <Section icon={<LockIcon size={16} />} title="تغيير كلمة المرور">

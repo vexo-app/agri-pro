@@ -169,16 +169,83 @@ export const downloadReportPdf = async (htmlContent, filename) => {
   }
 };
 
-// ── 1. Client Invoice ─────────────────────────────────────────────────────────
-const buildClientInvoiceHtml = ({ job, equipmentName, driverName, fuelPrice, payments = [], maintenance = [] }) => {
+// ── 1. Client Invoice (letterhead style — logo, watermark, signature/stamp) ────
+// عشان الفاتورة تطلع "زي دي بالظبط" (تصميم خطاب رسمي معتمد) لكل عميل، من غير
+// ما نكرر كتابة بيانات الشركة (اسم/عنوان/سجل تجاري/رقم ضريبي) في كل عملية —
+// دي بتتحفظ مرة واحدة في الإعدادات (بروفايل المستخدم) وبتتحقن هنا تلقائيًا.
+const INVOICE_CSS = `
+  .inv-page{ position:relative; overflow:hidden; }
+  .inv-watermark{
+    position:absolute; inset:0; display:flex; align-items:center; justify-content:center;
+    pointer-events:none; opacity:.04; transform:rotate(-18deg);
+    font-size:120px; font-weight:800; color:#0f4c2a; white-space:nowrap;
+  }
+  .inv-header{
+    display:flex; justify-content:space-between; align-items:flex-start;
+    gap:20px; padding-bottom:20px; margin-bottom:24px; border-bottom:3px solid #0f4c2a;
+  }
+  .inv-company{display:flex; gap:14px; align-items:center;}
+  .inv-logo-box{
+    width:64px; height:64px; border-radius:14px; flex-shrink:0;
+    background:linear-gradient(135deg,#16a34a,#0f4c2a);
+    display:flex; align-items:center; justify-content:center;
+    color:#fff; font-weight:800; font-size:22px;
+  }
+  .inv-company-name{font-size:19px; font-weight:800; color:#0f4c2a;}
+  .inv-company-meta{font-size:11px; color:#6b7280; margin-top:3px; line-height:1.7;}
+  .inv-meta{text-align:left; flex-shrink:0;}
+  .inv-tag{
+    display:inline-block; font-size:10px; font-weight:800; letter-spacing:.5px;
+    color:#0f4c2a; background:#dcfce7; padding:3px 10px; border-radius:999px; margin-bottom:6px;
+  }
+  .inv-no{font-size:20px; font-weight:800; color:#1a1a2e; font-variant-numeric:tabular-nums;}
+  .inv-date{font-size:11px; color:#6b7280; margin-top:2px;}
+  .inv-sign-section{
+    display:grid; grid-template-columns:1fr 1fr; gap:24px;
+    margin-top:40px; padding-top:24px; border-top:1px dashed #d1d5db;
+  }
+  .inv-sign-box{text-align:center;}
+  .inv-sign-line{
+    height:56px; border-bottom:1.5px solid #9ca3af; margin-bottom:8px;
+    display:flex; align-items:flex-end; justify-content:center; position:relative;
+  }
+  .inv-sign-label{font-size:11px; font-weight:700; color:#374151;}
+  .inv-sign-sub{font-size:10px; color:#9ca3af; margin-top:2px;}
+  .inv-stamp-hint{
+    position:absolute; bottom:6px; left:50%; transform:translateX(-50%) rotate(-8deg);
+    width:78px; height:78px; border:2px dashed #16a34a55; border-radius:50%;
+    display:flex; align-items:center; justify-content:center;
+    font-size:9px; color:#16a34a99; font-weight:700; text-align:center; line-height:1.3;
+  }
+  .inv-legal{color:#6b7280; font-weight:600; margin-bottom:4px;}
+`;
+
+// رقم فاتورة ثابت لكل عملية (سنة العملية + جزء من معرّفها) — مفيش نظام
+// ترقيم تسلسلي في الداتا حاليًا، فده أقرب رقم مرجعي فريد وثابت لنفس العملية
+// من غير ما نحتاج تعديل في شكل البيانات المخزّنة.
+const buildInvoiceNumber = (job) => {
+  const d = new Date(job.createdAt?.toDate?.() || job.createdAt || job.date || Date.now());
+  const year = isNaN(d.getTime()) ? new Date().getFullYear() : d.getFullYear();
+  const idPart = String(job.id || "").replace(/[^a-zA-Z0-9]/g, "").slice(-4).toUpperCase() || "0000";
+  return `${year}-${idPart}`;
+};
+
+const buildClientInvoiceHtml = ({ job, equipmentName, driverName, fuelPrice, payments = [], maintenance = [], company = {} }) => {
   const revenue   = (job.acres || 0) * (job.pricePerAcre || 0);
   const fuelCost  = (job.fuelUsed || 0) * fuelPrice;
   // مصدر واحد للمدفوع: مجموع سجلات payments، أو job.amountPaid كـ fallback
   // للعمليات القديمة اللي اتسجلت قبل نظام الدفعات — مش الاتنين مع بعض.
   const totalPaid = getJobPaidAmount(job, payments);
   const remaining = Math.max(0, revenue - totalPaid);
-  const today     = new Date().toLocaleDateString("ar-EG");
+  const printedAt = formatDateTime(new Date());
   const maintCost = maintenance.reduce((s, m) => s + (Number(m.cost) || 0), 0);
+
+  const companyName = (company.name || "").trim() || "اسم الشركة / المزرعة";
+  const logoInitials = companyName.replace(/\s+/g, "").slice(0, 2) || "شر";
+  const metaLine2 = [
+    company.commercialRegister ? `سجل تجاري: ${escapeHtml(company.commercialRegister)}` : "",
+    company.taxNumber ? `الرقم الضريبي: ${escapeHtml(company.taxNumber)}` : "",
+  ].filter(Boolean).join(" · ");
 
   const paymentBadge = remaining <= 0
     ? `<span class="badge badge-green">مدفوع بالكامل</span>`
@@ -204,35 +271,45 @@ const buildClientInvoiceHtml = ({ job, equipmentName, driverName, fuelPrice, pay
   `).join("");
 
   const html = `
-    <div class="page">
-      <div class="header">
-        <div>
-          <h1>فاتورة عمل</h1>
-          <p class="brand">زراعي برو · إدارة المعدات الزراعية</p>
+    <style>${INVOICE_CSS}</style>
+    <div class="page inv-page">
+      <div class="inv-watermark">${paymentBadge.includes("badge-green") ? "مدفوعة" : "فاتورة"}</div>
+
+      <div class="inv-header">
+        <div class="inv-company">
+          <div class="inv-logo-box">${escapeHtml(logoInitials)}</div>
+          <div>
+            <div class="inv-company-name">${escapeHtml(companyName)}</div>
+            <div class="inv-company-meta">
+              ${company.address ? escapeHtml(company.address) : "أضف عنوان الشركة من الملف الشخصي"}
+              ${metaLine2 ? `<br>${metaLine2}` : ""}
+            </div>
+          </div>
         </div>
-        <div class="meta">
-          <p>تاريخ الطباعة: ${today}</p>
-          <p>تاريخ ووقت العملية: ${formatDateTime(job.createdAt || job.date)}</p>
-          <p style="margin-top:6px">${paymentBadge}</p>
+        <div class="inv-meta">
+          <span class="inv-tag">فاتورة عمل</span>
+          <div class="inv-no">رقم ${buildInvoiceNumber(job)}</div>
+          <div class="inv-date">صدرت: ${printedAt}</div>
+          <div style="margin-top:8px">${paymentBadge}</div>
         </div>
       </div>
 
       <div class="grid-2">
         <div class="stat-box">
-          <div class="stat-val">${escapeHtml(job.client) || "—"}</div>
           <div class="stat-lbl">اسم العميل / الأرض</div>
+          <div class="stat-val">${escapeHtml(job.client) || "—"}</div>
         </div>
         <div class="stat-box">
-          <div class="stat-val">${escapeHtml(job.workType) || "—"}</div>
           <div class="stat-lbl">نوع العمل</div>
+          <div class="stat-val">${escapeHtml(job.workType) || "—"}</div>
         </div>
         <div class="stat-box">
-          <div class="stat-val">${formatNumber(job.acres)} فدان</div>
           <div class="stat-lbl">عدد الأفدنة</div>
+          <div class="stat-val">${formatNumber(job.acres)} فدان</div>
         </div>
         <div class="stat-box">
-          <div class="stat-val">${formatCurrency(job.pricePerAcre)}</div>
           <div class="stat-lbl">سعر الفدان</div>
+          <div class="stat-val">${formatCurrency(job.pricePerAcre)}</div>
         </div>
       </div>
 
@@ -240,18 +317,19 @@ const buildClientInvoiceHtml = ({ job, equipmentName, driverName, fuelPrice, pay
       <div class="section">
         <h2>تفاصيل التشغيل</h2>
         <table>
-          <tr><td style="font-weight:600">المعدة المستخدمة</td><td>${escapeHtml(equipmentName) || "—"}</td></tr>
+          <tr><td style="font-weight:600; width:45%">المعدة المستخدمة</td><td>${escapeHtml(equipmentName) || "—"}</td></tr>
           <tr><td style="font-weight:600">السائق</td><td>${escapeHtml(driverName) || "—"}</td></tr>
           <tr><td style="font-weight:600">الوقود المستخدم</td><td>${formatNumber(job.fuelUsed)} لتر</td></tr>
           <tr><td style="font-weight:600">تكلفة الوقود</td><td style="color:#991b1b">${formatCurrency(fuelCost)}</td></tr>
           ${maintenance.length ? `<tr><td style="font-weight:600">تكلفة الصيانة (المعدة)</td><td style="color:#991b1b">${formatCurrency(maintCost)}</td></tr>` : ""}
+          <tr><td style="font-weight:600">تاريخ ووقت العملية</td><td>${formatDateTime(job.createdAt || job.date)}</td></tr>
         </table>
       </div>` : ""}
 
       <div class="section">
         <h2>الملخص المالي</h2>
         <table>
-          <tr><td style="font-weight:600">إجمالي الإيراد</td><td style="color:#15803d;font-weight:800">${formatCurrency(revenue)}</td></tr>
+          <tr><td style="font-weight:600; width:45%">إجمالي الإيراد</td><td style="color:#15803d;font-weight:800">${formatCurrency(revenue)}</td></tr>
           <tr><td style="font-weight:600">المبلغ المدفوع</td><td style="color:#15803d">${formatCurrency(totalPaid)}</td></tr>
           <tr class="total-row"><td>المبلغ المتبقي</td><td style="color:${remaining>0?"#991b1b":"#15803d"}">${formatCurrency(remaining)}</td></tr>
         </table>
@@ -276,7 +354,25 @@ const buildClientInvoiceHtml = ({ job, equipmentName, driverName, fuelPrice, pay
         </table>
       </div>` : ""}
 
-      <div class="footer">زراعي برو · تم إنشاء هذه الفاتورة تلقائياً · ${today}</div>
+      <div class="inv-sign-section">
+        <div class="inv-sign-box">
+          <div class="inv-sign-line"></div>
+          <div class="inv-sign-label">توقيع المستلم / العميل</div>
+          <div class="inv-sign-sub">${escapeHtml(job.client) || ""}</div>
+        </div>
+        <div class="inv-sign-box">
+          <div class="inv-sign-line">
+            <div class="inv-stamp-hint">مكان<br>الختم</div>
+          </div>
+          <div class="inv-sign-label">توقيع واعتماد الشركة</div>
+          <div class="inv-sign-sub">${escapeHtml(companyName)}</div>
+        </div>
+      </div>
+
+      <div class="footer">
+        <div class="inv-legal">هذه الفاتورة صادرة إلكترونياً وتُعتمد بتوقيع الطرفين أعلاه</div>
+        رقم الفاتورة ${buildInvoiceNumber(job)} · تم الإصدار ${printedAt}
+      </div>
     </div>
   `;
 

@@ -60,6 +60,7 @@ const JobCard = ({
       fuelPrice:   settings.fuelPrice,
       payments:    jobPayments,
       maintenance: jobMaintenance,
+      company:     settings.company,
     });
   };
 
@@ -70,6 +71,7 @@ const JobCard = ({
     fuelPrice:   settings.fuelPrice,
     payments:    jobPayments,
     maintenance: jobMaintenance,
+    company:     settings.company,
   });
 
   return (
