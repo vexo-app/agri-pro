@@ -212,7 +212,7 @@ const INVOICE_CSS = `
   .inv-date{font-size:11px; color:#6b7280; margin-top:2px;}
   .inv-sign-section{
     display:grid; grid-template-columns:1fr 1fr; gap:24px;
-    margin-top:40px; padding-top:24px; border-top:1px dashed #d1d5db;
+    margin-top:28px; padding-top:18px; border-top:1px dashed #d1d5db;
   }
   .inv-sign-box{text-align:center;}
   .inv-sign-line{
@@ -230,7 +230,14 @@ const INVOICE_CSS = `
   .inv-badge-note{font-size:8.5px; color:#9ca3af; margin-top:5px; line-height:1.55; max-width:170px;}
   /* التوقيع + الإقرار القانوني لازم يفضلوا مع بعض ومتقطعوش بين صفحتين،
      حتى لو الفاتورة نفسها طالت واتقسّمت على أكتر من صفحة. */
-  .inv-closing{ page-break-inside: avoid; break-inside: avoid; }
+  /* التوقيع لازم يفضل مع بعضه (متقطعش) ومتقلعش بمفرده لصفحة جديدة —
+     avoid-inside بيمنع القطع من جواه، وavoid-before بيقول للطابعة "متبتديش
+     صفحة جديدة قبل العنصر ده لو ينفع"، يعني يحاول يشد لفوق مع الفاتورة
+     نفسها بدل ما يتقلع في صفحة لوحه. */
+  .inv-closing{
+    page-break-inside: avoid; break-inside: avoid;
+    page-break-before: avoid; break-before: avoid;
+  }
   .inv-logo-img{
     width:64px; height:64px; border-radius:14px; flex-shrink:0;
     object-fit:contain; background:#fff; border:1px solid #e5e7eb;
@@ -311,7 +318,7 @@ const buildClientInvoiceHtml = ({ job, equipmentName, driverName, fuelPrice, pay
           <div class="inv-date">صدرت: ${printedAt}</div>
           <div style="margin-top:8px">${paymentBadge}</div>
           <div class="inv-badge-note">
-            هذه الفاتورة صادرة إلكترونياً وتُعتمد بتوقيع الطرفين أعلاه<br>
+            هذه الفاتورة صادرة إلكترونياً وتُعتمد بتوقيع الطرفين<br>
             رقم الفاتورة ${buildInvoiceNumber(job)} · تم الإصدار ${printedAt}
           </div>
         </div>
