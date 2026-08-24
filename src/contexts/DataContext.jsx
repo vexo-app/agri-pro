@@ -359,12 +359,12 @@ export const DataProvider = ({ children }) => {
     trackWrite(equipmentService.update(user.uid, id, d));
     dispatch({ type: "UPDATE_EQUIPMENT", payload: { id, ...d } });
     toast.success("تم تحديث المعدة");
-  }, [trackWrite]);
+  }, [user, trackWrite]);
   const deleteEquipment = useCallback(async (id) => {
     trackWrite(equipmentService.remove(user.uid, id));
     dispatch({ type: "DELETE_EQUIPMENT", payload: id });
     toast.success("تم حذف المعدة");
-  }, [trackWrite]);
+  }, [user, trackWrite]);
 
   const addJob = useCallback(async (d) => {
     const { id, promise } = jobService.add(user.uid, d);
@@ -377,12 +377,12 @@ export const DataProvider = ({ children }) => {
     trackWrite(jobService.update(user.uid, id, d));
     dispatch({ type: "UPDATE_JOB", payload: { id, ...d } });
     toast.success("تم تحديث العملية");
-  }, [trackWrite]);
+  }, [user, trackWrite]);
   const deleteJob = useCallback(async (id) => {
     trackWrite(jobService.remove(user.uid, id));
     dispatch({ type: "DELETE_JOB", payload: id });
     toast.success("تم حذف العملية");
-  }, [trackWrite]);
+  }, [user, trackWrite]);
 
   const addDriver = useCallback(async (d) => {
     const { id, promise } = driverService.add(user.uid, d);
@@ -395,12 +395,12 @@ export const DataProvider = ({ children }) => {
     trackWrite(driverService.update(user.uid, id, d));
     dispatch({ type: "UPDATE_DRIVER", payload: { id, ...d } });
     toast.success("تم تحديث السائق");
-  }, [trackWrite]);
+  }, [user, trackWrite]);
   const deleteDriver = useCallback(async (id) => {
     trackWrite(driverService.remove(user.uid, id));
     dispatch({ type: "DELETE_DRIVER", payload: id });
     toast.success("تم حذف السائق");
-  }, [trackWrite]);
+  }, [user, trackWrite]);
 
   const addMaintenance = useCallback(async (d) => {
     const { id, promise } = maintenanceService.add(user.uid, d);
@@ -413,12 +413,12 @@ export const DataProvider = ({ children }) => {
     trackWrite(maintenanceService.update(user.uid, id, d));
     dispatch({ type: "UPDATE_MAINTENANCE", payload: { id, ...d } });
     toast.success("تم تحديث الصيانة");
-  }, [trackWrite]);
+  }, [user, trackWrite]);
   const deleteMaintenance = useCallback(async (id) => {
     trackWrite(maintenanceService.remove(user.uid, id));
     dispatch({ type: "DELETE_MAINTENANCE", payload: id });
     toast.success("تم حذف الصيانة");
-  }, [trackWrite]);
+  }, [user, trackWrite]);
 
   const addPayment = useCallback(async (d) => {
     const { id, promise } = paymentService.add(user.uid, d);
@@ -431,12 +431,12 @@ export const DataProvider = ({ children }) => {
     trackWrite(paymentService.update(user.uid, id, d));
     dispatch({ type: "UPDATE_PAYMENT", payload: { id, ...d } });
     toast.success("تم تحديث الدفعة");
-  }, [trackWrite]);
+  }, [user, trackWrite]);
   const deletePayment = useCallback(async (id) => {
     trackWrite(paymentService.remove(user.uid, id));
     dispatch({ type: "DELETE_PAYMENT", payload: id });
     toast.success("تم حذف الدفعة");
-  }, [trackWrite]);
+  }, [user, trackWrite]);
 
   const addSalaryEntry = useCallback(async (d) => {
     const { id, promise } = salaryService.add(user.uid, d);
@@ -449,12 +449,12 @@ export const DataProvider = ({ children }) => {
     trackWrite(salaryService.update(user.uid, id, d));
     dispatch({ type: "UPDATE_SALARY", payload: { id, ...d } });
     toast.success("تم التحديث");
-  }, [trackWrite]);
+  }, [user, trackWrite]);
   const deleteSalaryEntry = useCallback(async (id) => {
     trackWrite(salaryService.remove(user.uid, id));
     dispatch({ type: "DELETE_SALARY", payload: id });
     toast.success("تم الحذف");
-  }, [trackWrite]);
+  }, [user, trackWrite]);
 
   const addAttendance = useCallback(async (d) => {
     const { id, promise } = attendanceService.add(user.uid, d);
@@ -467,12 +467,12 @@ export const DataProvider = ({ children }) => {
     trackWrite(attendanceService.update(user.uid, id, d));
     dispatch({ type: "UPDATE_ATTENDANCE", payload: { id, ...d } });
     toast.success("تم تحديث الحضور");
-  }, [trackWrite]);
+  }, [user, trackWrite]);
   const deleteAttendance = useCallback(async (id) => {
     trackWrite(attendanceService.remove(user.uid, id));
     dispatch({ type: "DELETE_ATTENDANCE", payload: id });
     toast.success("تم حذف السجل");
-  }, [trackWrite]);
+  }, [user, trackWrite]);
 
   // Custody keeps its extra error-toast handling (e.g. permission-denied)
   // — attached to the write promise itself now (fired in the background)
@@ -495,14 +495,14 @@ export const DataProvider = ({ children }) => {
     });
     dispatch({ type: "UPDATE_CUSTODY", payload: { id, ...d } });
     toast.success("تم تحديث السجل");
-  }, [trackWrite]);
+  }, [user, trackWrite]);
   const deleteCustody = useCallback(async (id) => {
     trackWrite(custodyService.remove(user.uid, id)).catch(() => {
       toast.error("حدث خطأ أثناء الحذف (هيتزامن لما الاتصال يرجع لو كانت المشكلة إنك أوف لاين)");
     });
     dispatch({ type: "DELETE_CUSTODY", payload: id });
     toast.success("تم حذف السجل");
-  }, [trackWrite]);
+  }, [user, trackWrite]);
 
   const saveSettings = useCallback(async (d) => {
     trackWrite(settingsService.save(user.uid, d));
