@@ -712,9 +712,21 @@ export const downloadDriverPayslipPdf = (args) => {
   return downloadReportPdf(html, filename);
 };
 
-// ── 5. Custody Report (العهدة) ────────────────────────────────────────────────
-const buildCustodyReportHtml = ({ transactions, totalExpenses, expensesByCategory, getLinkedName }) => {
+// ── 5. Custody Report (العهدة) — letterhead style, same as the client invoice ──
+// نفس فكرة الفاتورة بالظبط: شعار/بيانات الشركة، شريط مائي، رقم تقرير ثابت،
+// وتوقيع/اعتماد في الآخر. البيانات المعروضة (الحركات والإجمالي والتبويب حسب
+// البند) هي نفسها بالظبط اللي كانت موجودة قبل كده، من غير أي إضافة أو حذف —
+// الفرق هنا في الشكل بس عشان يطلع "معتمد" زي الفاتورة.
+const buildCustodyReportNumber = () => {
+  const d = new Date();
+  const pad = (n) => String(n).padStart(2, "0");
+  return `${d.getFullYear()}${pad(d.getMonth() + 1)}${pad(d.getDate())}`;
+};
+
+const buildCustodyReportHtml = ({ transactions, totalExpenses, expensesByCategory, getLinkedName, company = {} }) => {
   const today = new Date().toLocaleDateString("ar-EG");
+  const printedAt = formatDateTime(new Date());
+  const reportNo = buildCustodyReportNumber();
 
   const categoryLabels = { equipment: "ميكنة", driver: "سائقين", other: "أخرى" };
 
@@ -749,16 +761,39 @@ const buildCustodyReportHtml = ({ transactions, totalExpenses, expensesByCategor
     return `<tr><td style="font-weight:600">${label}</td><td style="color:#991b1b">${formatCurrency(amount)}</td></tr>`;
   }).join("");
 
+  const companyName = (company.name || "").trim() || "اسم الشركة / المزرعة";
+  const logoInitials = companyName.replace(/\s+/g, "").slice(0, 2) || "شر";
+  const metaLine2 = [
+    company.commercialRegister ? `سجل تجاري: ${escapeHtml(company.commercialRegister)}` : "",
+    company.taxNumber ? `الرقم الضريبي: ${escapeHtml(company.taxNumber)}` : "",
+  ].filter(Boolean).join(" · ");
+
   const html = `
-    <div class="page">
-      <div class="header">
-        <div>
-          <h1>تقرير العهدة</h1>
-          <p class="brand">زراعي برو · سجل المصروفات من العهدة</p>
+    <style>${INVOICE_CSS}</style>
+    <div class="page inv-page">
+      <div class="inv-watermark">معتمد</div>
+
+      <div class="inv-header">
+        <div class="inv-company">
+          ${company.logo
+            ? `<img class="inv-logo-img" src="${escapeHtml(company.logo)}" alt="شعار الشركة" />`
+            : `<div class="inv-logo-box">${escapeHtml(logoInitials)}</div>`}
+          <div>
+            <div class="inv-company-name">${escapeHtml(companyName)}</div>
+            <div class="inv-company-meta">
+              ${company.address ? escapeHtml(company.address) : "أضف عنوان الشركة من الملف الشخصي"}
+              ${metaLine2 ? `<br>${metaLine2}` : ""}
+            </div>
+          </div>
         </div>
-        <div class="meta">
-          <p>تاريخ الطباعة: ${today}</p>
-          <p>عدد الحركات: ${sorted.length}</p>
+        <div class="inv-meta">
+          <span class="inv-tag">تقرير العهدة</span>
+          <div class="inv-no">رقم ${reportNo}</div>
+          <div class="inv-date">صدر: ${printedAt}</div>
+          <div class="inv-badge-note">
+            هذا التقرير صادر إلكترونياً ويُعتمد بتوقيع الطرفين<br>
+            رقم التقرير ${reportNo} · تم الإصدار ${printedAt}
+          </div>
         </div>
       </div>
 
@@ -790,7 +825,21 @@ const buildCustodyReportHtml = ({ transactions, totalExpenses, expensesByCategor
         </table>
       </div>` : `<div class="section"><p style="color:#666;text-align:center;padding:20px 0;">لا توجد حركات مسجلة بعد</p></div>`}
 
-      <div class="footer">زراعي برو · تقرير العهدة · ${today}</div>
+      <div class="inv-closing">
+        <div class="inv-sign-section">
+          <div class="inv-sign-box">
+            <div class="inv-sign-line"></div>
+            <div class="inv-sign-label">توقيع المسؤول عن العهدة</div>
+          </div>
+          <div class="inv-sign-box">
+            <div class="inv-sign-line">
+              <div class="inv-stamp-hint">مكان<br>الختم</div>
+            </div>
+            <div class="inv-sign-label">توقيع واعتماد الشركة</div>
+            <div class="inv-sign-sub">${escapeHtml(companyName)}</div>
+          </div>
+        </div>
+      </div>
     </div>
   `;
 

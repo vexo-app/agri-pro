@@ -32,7 +32,7 @@ const CustodyPage = () => {
     isOverdrawn, expensesByCategory, getLinkedName,
     loading, addCustody, updateCustody, deleteCustody,
   } = useCustody();
-  const { drivers, equipment } = useData();
+  const { drivers, equipment, settings } = useData();
   const { confirm, confirmState } = useConfirm();
   const [modal, setModal] = useState(null);
 
@@ -54,6 +54,7 @@ const CustodyPage = () => {
       balance,
       expensesByCategory,
       getLinkedName,
+      company: settings.company,
     });
   };
 
@@ -64,6 +65,7 @@ const CustodyPage = () => {
     balance,
     expensesByCategory,
     getLinkedName,
+    company: settings.company,
   });
 
   if (loading) return <LoadingScreen />;
