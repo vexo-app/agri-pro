@@ -6,7 +6,7 @@ import Button from "../../components/ui/Button";
 import {
   EQUIPMENT_CATEGORY, EQUIPMENT_CATEGORY_LABELS,
   BASE_EQUIPMENT_TYPES, ATTACHMENT_TYPES,
-  EQUIPMENT_STATUS_LABELS,
+  EQUIPMENT_STATUS_LABELS, MAX_MONEY_VALUE,
 } from "../../config/constants";
 
 const OTHER_VALUE = "__other__";
@@ -268,10 +268,16 @@ const EquipmentForm = ({ initial, drivers, baseEquipment = [], onSave, onClose }
           <Controller
             name="fuelRate"
             control={control}
+            rules={{
+              validate: (v) =>
+                !v || (Number(v) >= 0 && Number(v) <= MAX_MONEY_VALUE) ||
+                (Number(v) < 0 ? "لا يمكن أن يكون سالبًا" : `أكبر من الحد المسموح (${MAX_MONEY_VALUE.toLocaleString()})`),
+            }}
             render={({ field }) => (
               <NumberInput
                 label="معدل استهلاك الوقود (لتر/ساعة)"
                 placeholder="0"
+                error={errors.fuelRate?.message}
                 {...field}
               />
             )}

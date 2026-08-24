@@ -6,7 +6,7 @@ import { useAuth } from "../../contexts/AuthContext";
 import { useData } from "../../contexts/DataContext";
 import { useNotifications } from "../../hooks/useNotifications";
 import { formatInputNumber, parseInputNumber } from "../../utils/formatters";
-import { ADMIN_UIDS } from "../../config/constants";
+import { ADMIN_UIDS, MAX_MONEY_VALUE } from "../../config/constants";
 import ProfileModal from "../../features/profile/ProfileModal";
 import {
   HomeIcon, TractorIcon, ClipboardIcon,
@@ -48,7 +48,7 @@ const Sidebar = ({ onClose }) => {
 
   const handleSaveFuel = () => {
     const val = Number(parseInputNumber(fuelDisplay));
-    if (val > 0) saveSettings({ fuelPrice: val });
+    if (val > 0 && val <= MAX_MONEY_VALUE) saveSettings({ fuelPrice: val });
   };
 
   return (

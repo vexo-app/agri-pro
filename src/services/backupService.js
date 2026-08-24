@@ -20,6 +20,7 @@ const BACKUP_COLLECTIONS = [
   ["payments",      COLLECTIONS.PAYMENTS],
   ["salaryEntries", COLLECTIONS.SALARY_ENTRIES],
   ["attendance",    COLLECTIONS.ATTENDANCE],
+  ["custodyTransactions", COLLECTIONS.CUSTODY],
 ];
 
 const countsFor = (data) =>

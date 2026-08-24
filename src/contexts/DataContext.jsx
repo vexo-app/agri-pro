@@ -299,6 +299,7 @@ export const DataProvider = ({ children }) => {
           payments:      state.payments,
           salaryEntries: state.salaryEntries,
           attendance:    state.attendance,
+          custodyTransactions: state.custody,
           settings:      state.settings,
         });
         localStorage.setItem(`lastBackupAt:${user.uid}`, String(Date.now()));

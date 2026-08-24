@@ -5,6 +5,7 @@ import { Input, NumberInput } from "../../components/ui/Input";
 import Button from "../../components/ui/Button";
 import { SummaryRow } from "../../components/ui/Card";
 import { formatCurrency, todayISO } from "../../utils/formatters";
+import { MAX_MONEY_VALUE } from "../../config/constants";
 
 const PaymentForm = ({ jobId, jobRevenue, alreadyPaid, onSave, onClose }) => {
   const maxRemaining = Math.max(0, jobRevenue - alreadyPaid);
@@ -47,7 +48,10 @@ const PaymentForm = ({ jobId, jobRevenue, alreadyPaid, onSave, onClose }) => {
           control={control}
           rules={{
             required: "أدخل المبلغ",
-            validate: (v) => Number(v) > 0 || "يجب أن يكون أكبر من صفر",
+            validate: (v) =>
+              Number(v) > 0 && Number(v) <= MAX_MONEY_VALUE
+                ? true
+                : Number(v) <= 0 ? "يجب أن يكون أكبر من صفر" : `أكبر من الحد المسموح (${MAX_MONEY_VALUE.toLocaleString()})`,
           }}
           render={({ field }) => (
             <NumberInput

@@ -48,6 +48,7 @@ export const useAutoBackup = () => {
           payments:      data.payments,
           salaryEntries: data.salaryEntries,
           attendance:    data.attendance,
+          custodyTransactions: data.custody,
           settings:      data.settings,
         });
         localStorage.setItem(lastBackupKey(user.uid), String(Date.now()));

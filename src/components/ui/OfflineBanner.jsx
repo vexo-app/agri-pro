@@ -66,7 +66,7 @@ const OfflineBanner = () => {
   const {
     pendingWrites, lastSyncedAt, firstPendingWriteAt, loadError, retryLoad,
     backupFailCount, retryBackupNow,
-    equipment, jobs, drivers, maintenance, payments, salaryEntries, attendance, settings,
+    equipment, jobs, drivers, maintenance, payments, salaryEntries, attendance, settings, custody,
   } = useData();
 
   const [showSyncedFlash, setShowSyncedFlash] = useState(false);
@@ -96,7 +96,8 @@ const OfflineBanner = () => {
   const handleEmergencyBackup = () => {
     try {
       exportService.downloadBackupFile({
-        equipment, jobs, drivers, maintenance, payments, salaryEntries, attendance, settings,
+        equipment, jobs, drivers, maintenance, payments, salaryEntries, attendance,
+        custodyTransactions: custody, settings,
       });
       toast.success("اتنزّل ملف احتياطي على جهازك دلوقتي");
     } catch {

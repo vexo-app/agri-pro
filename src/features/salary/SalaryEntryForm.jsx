@@ -3,7 +3,7 @@ import React from "react";
 import { useForm, Controller } from "react-hook-form";
 import { Input, Select, NumberInput } from "../../components/ui/Input";
 import Button from "../../components/ui/Button";
-import { SALARY_ENTRY_TYPES, SALARY_ENTRY_LABELS } from "../../config/constants";
+import { SALARY_ENTRY_TYPES, SALARY_ENTRY_LABELS, MAX_MONEY_VALUE } from "../../config/constants";
 import { todayISO } from "../../utils/formatters";
 
 // القيد بيبقى إما خصم أو حافز بس — نوع الخصم/الحافز بيتكتب حر جنبه
@@ -57,7 +57,11 @@ const SalaryEntryForm = ({ driverId, driverName, onSave, onClose }) => {
         <Controller
           name="amount"
           control={control}
-          rules={{ required: "أدخل المبلغ" }}
+          rules={{
+            required: "أدخل المبلغ",
+            min: { value: 0, message: "لا يمكن أن يكون سالبًا" },
+            max: { value: MAX_MONEY_VALUE, message: `أكبر من الحد المسموح (${MAX_MONEY_VALUE.toLocaleString()})` },
+          }}
           render={({ field }) => (
             <NumberInput
               label="المبلغ (ج.م) *"

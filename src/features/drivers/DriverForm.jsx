@@ -3,7 +3,7 @@ import React from "react";
 import { useForm, Controller } from "react-hook-form";
 import { Input, NumberInput, Select } from "../../components/ui/Input";
 import Button from "../../components/ui/Button";
-import { DRIVER_STATUS, DRIVER_STATUS_LABELS } from "../../config/constants";
+import { DRIVER_STATUS, DRIVER_STATUS_LABELS, MAX_MONEY_VALUE } from "../../config/constants";
 
 const DriverForm = ({ initial, onSave, onClose }) => {
   const {
@@ -41,16 +41,25 @@ const DriverForm = ({ initial, onSave, onClose }) => {
           label="رقم الهاتف"
           placeholder="01xxxxxxxxx"
           style={{ direction: "ltr", textAlign: "right" }}
-          {...register("phone")}
+          error={errors.phone?.message}
+          {...register("phone", {
+            pattern: { value: /^\d{11}$/, message: "رقم الهاتف لازم يكون 11 رقم بالظبط" },
+          })}
         />
 
         <Controller
           name="salary"
           control={control}
+          rules={{
+            validate: (v) =>
+              !v || (Number(v) >= 0 && Number(v) <= MAX_MONEY_VALUE) ||
+              (Number(v) < 0 ? "لا يمكن أن يكون سالبًا" : `أكبر من الحد المسموح (${MAX_MONEY_VALUE.toLocaleString()})`),
+          }}
           render={({ field }) => (
             <NumberInput
               label="الراتب الشهري (ج.م)"
               placeholder="0"
+              error={errors.salary?.message}
               {...field}
             />
           )}

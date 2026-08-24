@@ -6,6 +6,7 @@ import Button from "../../components/ui/Button";
 import {
   CUSTODY_TYPES, CUSTODY_TYPE_LABELS,
   CUSTODY_EXPENSE_CATEGORIES, CUSTODY_EXPENSE_CATEGORY_LABELS,
+  MAX_MONEY_VALUE,
 } from "../../config/constants";
 import { todayISO } from "../../utils/formatters";
 
@@ -69,7 +70,13 @@ const CustodyTransactionForm = ({ initial, drivers, equipment, onSave, onClose }
         <Controller
           name="amount"
           control={control}
-          rules={{ required: "أدخل المبلغ", validate: (v) => Number(v) > 0 || "أدخل مبلغ أكبر من صفر" }}
+          rules={{
+            required: "أدخل المبلغ",
+            validate: (v) =>
+              Number(v) > 0 && Number(v) <= MAX_MONEY_VALUE
+                ? true
+                : Number(v) <= 0 ? "أدخل مبلغ أكبر من صفر" : `أكبر من الحد المسموح (${MAX_MONEY_VALUE.toLocaleString()})`,
+          }}
           render={({ field }) => (
             <NumberInput
               label="المبلغ (ج.م) *"

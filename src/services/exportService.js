@@ -13,7 +13,7 @@ const EXPORT_VERSION = 1;
 
 const BACKUP_KEYS = [
   "equipment", "jobs", "drivers", "maintenance",
-  "payments", "salaryEntries", "attendance", "settings",
+  "payments", "salaryEntries", "attendance", "custodyTransactions", "settings",
 ];
 
 /** بناء اسم ملف واضح فيه تاريخ اليوم، عشان لو حمّل أكتر من نسخة يعرف يميزهم. */

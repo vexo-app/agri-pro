@@ -3,7 +3,7 @@ import React, { useState } from "react";
 import { useForm, Controller } from "react-hook-form";
 import { Input, Select, Textarea, NumberInput } from "../../components/ui/Input";
 import Button from "../../components/ui/Button";
-import { MAINTENANCE_TYPES } from "../../config/constants";
+import { MAINTENANCE_TYPES, MAX_MONEY_VALUE } from "../../config/constants";
 import { todayISO } from "../../utils/formatters";
 
 const MaintenanceForm = ({ initial, equipment, onSave, onClose }) => {
@@ -93,6 +93,7 @@ const MaintenanceForm = ({ initial, equipment, onSave, onClose }) => {
           rules={{
             required: "أدخل التكلفة",
             min: { value: 0, message: "لا يمكن أن يكون سالبًا" },
+            max: { value: MAX_MONEY_VALUE, message: `أكبر من الحد المسموح (${MAX_MONEY_VALUE.toLocaleString()})` },
           }}
           render={({ field }) => (
             <NumberInput

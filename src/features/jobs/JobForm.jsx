@@ -4,7 +4,7 @@ import { useForm, useWatch, Controller } from "react-hook-form";
 import { Input, Select, Textarea, NumberInput } from "../../components/ui/Input";
 import Button from "../../components/ui/Button";
 import { SummaryRow } from "../../components/ui/Card";
-import { WORK_TYPES } from "../../config/constants";
+import { WORK_TYPES, MAX_MONEY_VALUE } from "../../config/constants";
 import { calcRevenue, calcFuelCost, calcRemainingAmount } from "../../utils/calculations";
 import { formatCurrency, todayISO } from "../../utils/formatters";
 
@@ -173,7 +173,7 @@ const JobForm = ({ initial, equipment, drivers, fuelPrice, onSave, onClose }) =>
         <Controller
           name="pricePerAcre"
           control={control}
-          rules={{ validate: (v) => !v || Number(v) >= 0 || "لا يمكن أن يكون سالبًا" }}
+          rules={{ validate: (v) => !v || (Number(v) >= 0 && Number(v) <= MAX_MONEY_VALUE) || (Number(v) < 0 ? "لا يمكن أن يكون سالبًا" : `أكبر من الحد المسموح (${MAX_MONEY_VALUE.toLocaleString()})`) }}
           render={({ field }) => (
             <NumberInput label="سعر الفدان (ج.م)" placeholder="0" error={errors.pricePerAcre?.message} {...field} />
           )}
@@ -183,7 +183,7 @@ const JobForm = ({ initial, equipment, drivers, fuelPrice, onSave, onClose }) =>
         <Controller
           name="fuelUsed"
           control={control}
-          rules={{ validate: (v) => !v || Number(v) >= 0 || "لا يمكن أن يكون سالبًا" }}
+          rules={{ validate: (v) => !v || (Number(v) >= 0 && Number(v) <= MAX_MONEY_VALUE) || (Number(v) < 0 ? "لا يمكن أن يكون سالبًا" : `أكبر من الحد المسموح (${MAX_MONEY_VALUE.toLocaleString()})`) }}
           render={({ field }) => (
             <NumberInput
               label="الوقود المستخدم (لتر)"
@@ -209,7 +209,7 @@ const JobForm = ({ initial, equipment, drivers, fuelPrice, onSave, onClose }) =>
           <Controller
             name="amountPaid"
             control={control}
-            rules={{ validate: (v) => !v || Number(v) >= 0 || "لا يمكن أن يكون سالبًا" }}
+            rules={{ validate: (v) => !v || (Number(v) >= 0 && Number(v) <= MAX_MONEY_VALUE) || (Number(v) < 0 ? "لا يمكن أن يكون سالبًا" : `أكبر من الحد المسموح (${MAX_MONEY_VALUE.toLocaleString()})`) }}
             render={({ field }) => (
               <NumberInput
                 label="دفعة مقدّمة عند التسجيل (ج.م)"
