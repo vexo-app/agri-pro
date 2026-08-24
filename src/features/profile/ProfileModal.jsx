@@ -21,8 +21,38 @@ import ImportModal from "./ImportModal";
 import {
   LockIcon, CloudUploadIcon, EditIcon, SaveIcon,
   EyeIcon, EyeOffIcon, ClockIcon, RestoreIcon,
-  DownloadIcon, UploadFileIcon, PrintIcon,
+  DownloadIcon, UploadFileIcon, PrintIcon, TrashIcon,
 } from "../../components/ui/Icons";
+
+// شعار الشركة بيتخزن كـ base64 جوه نفس مستند الإعدادات في Firestore (زي
+// باقي بيانات الفاتورة) — من غير ما نحتاج Firebase Storage منفصل. عشان
+// المستند يفضل صغير (وحد Firestore حوالي 1MB للمستند كله)، بنصغّر أي
+// صورة مرفوعة لمقاس مصغّر (256px) ونحولها JPEG بجودة متوسطة قبل التخزين،
+// فبيبقى حجمها كام كيلوبايت بس مهما كانت الصورة الأصلية كبيرة.
+const MAX_LOGO_DIM = 256;
+const resizeImageToDataUrl = (file) => new Promise((resolve, reject) => {
+  const reader = new FileReader();
+  reader.onerror = () => reject(new Error("تعذر قراءة الملف"));
+  reader.onload = () => {
+    const img = new Image();
+    img.onerror = () => reject(new Error("الملف ده مش صورة صالحة"));
+    img.onload = () => {
+      const scale = Math.min(1, MAX_LOGO_DIM / Math.max(img.width, img.height));
+      const w = Math.round(img.width * scale);
+      const h = Math.round(img.height * scale);
+      const canvas = document.createElement("canvas");
+      canvas.width = w;
+      canvas.height = h;
+      const ctx = canvas.getContext("2d");
+      ctx.fillStyle = "#ffffff";
+      ctx.fillRect(0, 0, w, h);
+      ctx.drawImage(img, 0, 0, w, h);
+      resolve(canvas.toDataURL("image/jpeg", 0.82));
+    };
+    img.src = reader.result;
+  };
+  reader.readAsDataURL(file);
+});
 
 // ── Company invoice info (fixed data reused on every printed invoice) ──
 const INVOICE_FIELDS = [
@@ -34,10 +64,11 @@ const INVOICE_FIELDS = [
 
 const CompanyInvoiceSection = ({ user, settings, saveSettings }) => {
   const [form, setForm] = useState({
-    name: "", address: "", commercialRegister: "", taxNumber: "",
+    name: "", address: "", commercialRegister: "", taxNumber: "", logo: "",
   });
   const [editing, setEditing] = useState(false);
   const [saving, setSaving] = useState(false);
+  const [uploadingLogo, setUploadingLogo] = useState(false);
 
   useEffect(() => {
     setForm({
@@ -45,16 +76,51 @@ const CompanyInvoiceSection = ({ user, settings, saveSettings }) => {
       address: settings?.company?.address || "",
       commercialRegister: settings?.company?.commercialRegister || "",
       taxNumber: settings?.company?.taxNumber || "",
+      logo: settings?.company?.logo || "",
     });
   }, [settings, user]);
 
-  const save = async () => {
+  const save = async (overrides) => {
     setSaving(true);
     try {
-      await saveSettings({ company: form });
+      const next = { ...form, ...overrides };
+      await saveSettings({ company: next });
+      setForm(next);
       setEditing(false);
     } finally {
       setSaving(false);
+    }
+  };
+
+  const onLogoChange = async (e) => {
+    const file = e.target.files?.[0];
+    e.target.value = "";
+    if (!file) return;
+    if (!file.type.startsWith("image/")) return toast.error("لازم تختار ملف صورة");
+    setUploadingLogo(true);
+    try {
+      const dataUrl = await resizeImageToDataUrl(file);
+      // الشعار بيتحفظ فورًا (من غير ما نستنى زرار "حفظ") زي أي رفع صورة عادي
+      await saveSettings({ company: { ...form, logo: dataUrl } });
+      setForm((s) => ({ ...s, logo: dataUrl }));
+      toast.success("تم حفظ شعار الشركة");
+    } catch (err) {
+      toast.error(err.message || "تعذر رفع الشعار");
+    } finally {
+      setUploadingLogo(false);
+    }
+  };
+
+  const removeLogo = async () => {
+    setUploadingLogo(true);
+    try {
+      await saveSettings({ company: { ...form, logo: "" } });
+      setForm((s) => ({ ...s, logo: "" }));
+      toast.success("تم حذف الشعار");
+    } catch (err) {
+      toast.error("تعذر حذف الشعار");
+    } finally {
+      setUploadingLogo(false);
     }
   };
 
@@ -63,6 +129,32 @@ const CompanyInvoiceSection = ({ user, settings, saveSettings }) => {
       <p className="text-[11px] text-gray-500 mb-3 leading-relaxed">
         البيانات دي بتتحفظ مرة واحدة وتتحط تلقائيًا في كل فاتورة تطبعها أو تنزّلها — مفيش داعي تكتبها كل مرة.
       </p>
+
+      {/* ── Company logo ── */}
+      <div className="flex items-center gap-3 mb-4">
+        <div className="w-14 h-14 rounded-xl bg-surface-3 border border-white/10 flex items-center justify-center overflow-hidden flex-shrink-0">
+          {form.logo ? (
+            <img src={form.logo} alt="شعار الشركة" className="w-full h-full object-contain" />
+          ) : (
+            <span className="text-[10px] text-gray-500 text-center px-1">لا يوجد شعار</span>
+          )}
+        </div>
+        <div className="flex-1 min-w-0 space-y-1.5">
+          <label className="inline-flex items-center gap-1.5 text-xs font-semibold text-brand-400 hover:text-brand-300 cursor-pointer">
+            <UploadFileIcon size={14} />
+            {uploadingLogo ? "جاري الرفع..." : form.logo ? "تغيير الشعار" : "رفع شعار الشركة"}
+            <input type="file" accept="image/*" className="hidden" disabled={uploadingLogo} onChange={onLogoChange} />
+          </label>
+          {form.logo && (
+            <button type="button" onClick={removeLogo} disabled={uploadingLogo}
+              className="flex items-center gap-1 text-[11px] text-gray-500 hover:text-red-400">
+              <TrashIcon size={12} /> حذف الشعار
+            </button>
+          )}
+          <p className="text-[10px] text-gray-500 leading-relaxed">هيظهر تلقائيًا أعلى كل فاتورة بدل حروف اسم الشركة.</p>
+        </div>
+      </div>
+
       <div className="space-y-3">
         {INVOICE_FIELDS.map((f) => (
           <div key={f.key} className="flex flex-col gap-1.5">
@@ -82,7 +174,7 @@ const CompanyInvoiceSection = ({ user, settings, saveSettings }) => {
       </div>
       <div className="mt-3">
         {editing ? (
-          <Button type="button" size="sm" className="w-full" loading={saving} onClick={save}>
+          <Button type="button" size="sm" className="w-full" loading={saving} onClick={() => save()}>
             حفظ بيانات الفاتورة
           </Button>
         ) : (

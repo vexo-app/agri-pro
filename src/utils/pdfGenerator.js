@@ -61,6 +61,16 @@ const BASE_CSS = `
     body { print-color-adjust: exact; -webkit-print-color-adjust: exact; }
     .no-print { display:none; }
   }
+  /* الفاتورة/التقرير ممكن يطول لأكتر من صفحة وده طبيعي، لكن مش عايزين
+     أي جزء (صف جدول، قسم، أو الختام في الآخر) ينقطع نص نص بين صفحتين،
+     ولا الختام يتقلع من مكانه وياخد صفحة لوحه فاضية. الحل: نمنع القطع
+     *جوه* كل عنصر من دول، فلو مش هيكمل في الصفحة الحالية كامل، بيتنقل
+     كامل للي بعدها بدل ما يتقطع أو يسيب فراغ كبير وراه.
+     ملحوظة: page-break-* هي النسخة القديمة، و break-* هي المعيار
+     الحديث — بنحطهم مع بعض عشان يشتغل على كل المتصفحات.  */
+  table, tr { page-break-inside: avoid; break-inside: avoid; }
+  thead { display: table-header-group; }
+  .section { page-break-inside: avoid; break-inside: avoid; }
 `;
 
 // ── Open print window ─────────────────────────────────────────────────────────
@@ -218,6 +228,13 @@ const INVOICE_CSS = `
     font-size:9px; color:#16a34a99; font-weight:700; text-align:center; line-height:1.3;
   }
   .inv-legal{color:#6b7280; font-weight:600; margin-bottom:4px;}
+  /* التوقيع + الإقرار القانوني لازم يفضلوا مع بعض ومتقطعوش بين صفحتين،
+     حتى لو الفاتورة نفسها طالت واتقسّمت على أكتر من صفحة. */
+  .inv-closing{ page-break-inside: avoid; break-inside: avoid; }
+  .inv-logo-img{
+    width:64px; height:64px; border-radius:14px; flex-shrink:0;
+    object-fit:contain; background:#fff; border:1px solid #e5e7eb;
+  }
 `;
 
 // رقم فاتورة ثابت لكل عملية (سنة العملية + جزء من معرّفها) — مفيش نظام
@@ -277,7 +294,9 @@ const buildClientInvoiceHtml = ({ job, equipmentName, driverName, fuelPrice, pay
 
       <div class="inv-header">
         <div class="inv-company">
-          <div class="inv-logo-box">${escapeHtml(logoInitials)}</div>
+          ${company.logo
+            ? `<img class="inv-logo-img" src="${escapeHtml(company.logo)}" alt="شعار الشركة" />`
+            : `<div class="inv-logo-box">${escapeHtml(logoInitials)}</div>`}
           <div>
             <div class="inv-company-name">${escapeHtml(companyName)}</div>
             <div class="inv-company-meta">
@@ -354,24 +373,26 @@ const buildClientInvoiceHtml = ({ job, equipmentName, driverName, fuelPrice, pay
         </table>
       </div>` : ""}
 
-      <div class="inv-sign-section">
-        <div class="inv-sign-box">
-          <div class="inv-sign-line"></div>
-          <div class="inv-sign-label">توقيع المستلم / العميل</div>
-          <div class="inv-sign-sub">${escapeHtml(job.client) || ""}</div>
-        </div>
-        <div class="inv-sign-box">
-          <div class="inv-sign-line">
-            <div class="inv-stamp-hint">مكان<br>الختم</div>
+      <div class="inv-closing">
+        <div class="inv-sign-section">
+          <div class="inv-sign-box">
+            <div class="inv-sign-line"></div>
+            <div class="inv-sign-label">توقيع المستلم / العميل</div>
+            <div class="inv-sign-sub">${escapeHtml(job.client) || ""}</div>
           </div>
-          <div class="inv-sign-label">توقيع واعتماد الشركة</div>
-          <div class="inv-sign-sub">${escapeHtml(companyName)}</div>
+          <div class="inv-sign-box">
+            <div class="inv-sign-line">
+              <div class="inv-stamp-hint">مكان<br>الختم</div>
+            </div>
+            <div class="inv-sign-label">توقيع واعتماد الشركة</div>
+            <div class="inv-sign-sub">${escapeHtml(companyName)}</div>
+          </div>
         </div>
-      </div>
 
-      <div class="footer">
-        <div class="inv-legal">هذه الفاتورة صادرة إلكترونياً وتُعتمد بتوقيع الطرفين أعلاه</div>
-        رقم الفاتورة ${buildInvoiceNumber(job)} · تم الإصدار ${printedAt}
+        <div class="footer">
+          <div class="inv-legal">هذه الفاتورة صادرة إلكترونياً وتُعتمد بتوقيع الطرفين أعلاه</div>
+          رقم الفاتورة ${buildInvoiceNumber(job)} · تم الإصدار ${printedAt}
+        </div>
       </div>
     </div>
   `;
