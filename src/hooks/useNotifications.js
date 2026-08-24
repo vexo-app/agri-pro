@@ -1,17 +1,42 @@
 // src/hooks/useNotifications.js
-import { useMemo } from "react";
+import { useMemo, useState, useCallback } from "react";
 import { useData } from "../contexts/DataContext";
+import { useAuth } from "../contexts/AuthContext";
 import { checkMaintenanceDue, checkOverdueDebts } from "../utils/calculations";
 import { CUSTODY_TYPES } from "../config/constants";
 import { useAdminMessages } from "./useAdminMessages";
 
+// حالة "مقروء" و"محذوف" لكل تنبيه متخزنة محلياً على الجهاز (زي فكرة
+// dismissedAdminMsgs بالظبط) — عشان التنبيهات دي مُشتقّة من البيانات
+// مش موجودة كمستندات في Firestore أصلاً، فمفيش حاجة نحدّثها هناك.
+const readKey   = (uid) => `readNotifs:${uid}`;
+const hiddenKey = (uid) => `hiddenNotifs:${uid}`;
+
+const loadSet = (key) => {
+  try { return new Set(JSON.parse(localStorage.getItem(key) || "[]")); }
+  catch { return new Set(); }
+};
+const saveSet = (key, set) => localStorage.setItem(key, JSON.stringify([...set]));
+
 /**
  * Derives all active alerts from existing data — no extra Firestore reads.
- * Returns sorted list of notifications with type, severity, and action info.
+ * Returns sorted list of notifications with type, severity, date, read state,
+ * and action info, plus helpers to mark-read / delete (single or bulk).
  */
 export const useNotifications = () => {
   const { equipment, maintenance, jobs, payments, settings, custody, loading } = useData();
+  const { user } = useAuth();
   const { messages: adminMessages, loading: adminLoading, dismiss } = useAdminMessages();
+
+  const [version, setVersion] = useState(0); // بيتغيّر عشان نجبر إعادة الحساب بعد أي تعديل محلي
+  const uid = user?.uid || "anon";
+  const readSet   = useMemo(() => loadSet(readKey(uid)),   [uid, version]);
+  const hiddenSet = useMemo(() => loadSet(hiddenKey(uid)), [uid, version]);
+
+  const latestCustodyDate = useMemo(
+    () => [...custody].sort((a, b) => (b.date || "").localeCompare(a.date || ""))[0]?.date || null,
+    [custody]
+  );
 
   const maintenanceAlerts = useMemo(
     () => checkMaintenanceDue(equipment, maintenance, 14),
@@ -48,6 +73,7 @@ export const useNotifications = () => {
         body: isOverdue
           ? `تأخر الصيانة بـ ${Math.abs(daysLeft)} يوم`
           : `باقي ${daysLeft} يوم للصيانة`,
+        date: new Date(Date.now() + daysLeft * 86400000).toISOString(),
         equipmentId: eq.id,
         actionLabel: "عرض المعدة",
         actionPath:  `/equipment/${eq.id}`,
@@ -62,6 +88,7 @@ export const useNotifications = () => {
         severity: daysDiff > 60 ? "high" : "medium",
         title:    `${job.client} — مستحق متأخر`,
         body:     `${remaining.toLocaleString("ar-EG")} ج.م متأخر منذ ${daysDiff} يوم`,
+        date:     job.date,
         jobId:    job.id,
         client:   job.client,
         remaining,
@@ -79,6 +106,7 @@ export const useNotifications = () => {
         severity: "high",
         title:    "رصيد العهدة بالسالب",
         body:     `المصروفات تجاوزت المبلغ المُسلَّم بـ ${Math.abs(custodyBalance).toLocaleString("ar-EG")} ج.م`,
+        date:     latestCustodyDate,
         actionLabel: "عرض العهدة",
         actionPath:  "/custody",
       });
@@ -93,6 +121,7 @@ export const useNotifications = () => {
       severity: m.severity || "medium",
       title:    m.title,
       body:     m.body,
+      date:     m.createdAt,
       dismissible: true,
       onDismiss: () => dismiss(m.id),
     }));
@@ -104,11 +133,44 @@ export const useNotifications = () => {
       return a.title.localeCompare(b.title, "ar");
     });
 
-    return [...adminItems, ...sorted];
-  }, [maintenanceAlerts, debtAlerts, custody, custodyBalance, adminMessages, dismiss]);
+    return [...adminItems, ...sorted]
+      .filter((n) => !hiddenSet.has(n.id))
+      .map((n) => ({ ...n, read: readSet.has(n.id) }));
+  }, [maintenanceAlerts, debtAlerts, custody, custodyBalance, latestCustodyDate, adminMessages, dismiss, readSet, hiddenSet]);
 
-  const highCount = notifications.filter((n) => n.severity === "high").length;
-  const totalCount = notifications.length;
+  const bump = () => setVersion((v) => v + 1);
 
-  return { notifications, highCount, totalCount, loading: loading || adminLoading };
+  const markRead = useCallback((id) => {
+    const s = loadSet(readKey(uid)); s.add(id); saveSet(readKey(uid), s); bump();
+  }, [uid]);
+
+  const markAllRead = useCallback(() => {
+    const s = loadSet(readKey(uid));
+    notifications.forEach((n) => s.add(n.id));
+    saveSet(readKey(uid), s); bump();
+  }, [uid, notifications]);
+
+  const removeOne = useCallback((n) => {
+    if (n.dismissible && n.onDismiss) { n.onDismiss(); return; }
+    const s = loadSet(hiddenKey(uid)); s.add(n.id); saveSet(hiddenKey(uid), s); bump();
+  }, [uid]);
+
+  const removeAll = useCallback(() => {
+    const s = loadSet(hiddenKey(uid));
+    notifications.forEach((n) => {
+      if (n.dismissible && n.onDismiss) n.onDismiss();
+      else s.add(n.id);
+    });
+    saveSet(hiddenKey(uid), s); bump();
+  }, [uid, notifications]);
+
+  const unreadCount = notifications.filter((n) => !n.read).length;
+  const highCount   = notifications.filter((n) => n.severity === "high").length;
+  const totalCount  = notifications.length;
+
+  return {
+    notifications, highCount, totalCount, unreadCount,
+    loading: loading || adminLoading,
+    markRead, markAllRead, removeOne, removeAll,
+  };
 };

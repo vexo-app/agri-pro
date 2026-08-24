@@ -2,10 +2,13 @@
 import React from "react";
 import { useNavigate }       from "react-router-dom";
 import { useNotifications }  from "../hooks/useNotifications";
+import { formatDateTime }    from "../utils/formatters";
+import { useConfirm }        from "../hooks/useConfirm";
 import LoadingScreen         from "../components/ui/LoadingScreen";
 import { Card }  from "../components/ui/Card";
 import Button                from "../components/ui/Button";
-import { AlertIcon, WrenchIcon, DriverIcon, WalletIcon, MegaphoneIcon, ClearIcon } from "../components/ui/Icons";
+import ConfirmDialog         from "../components/ui/ConfirmDialog";
+import { AlertIcon, WrenchIcon, DriverIcon, WalletIcon, MegaphoneIcon, ClearIcon, CheckCircleIcon, TrashIcon } from "../components/ui/Icons";
 
 const SEVERITY_STYLE = {
   high:   {
@@ -34,8 +37,16 @@ const TYPE_ICONS = {
 };
 
 const NotificationsPage = () => {
-  const { notifications, totalCount, highCount, loading } = useNotifications();
+  const {
+    notifications, totalCount, highCount, unreadCount, loading,
+    markRead, markAllRead, removeOne, removeAll,
+  } = useNotifications();
   const navigate = useNavigate();
+  const { confirm, confirmState } = useConfirm();
+
+  const handleDeleteAll = async () => {
+    if (await confirm("all", "هيتم حذف كل التنبيهات الحالية. متأكد؟")) removeAll();
+  };
 
   if (loading) return <LoadingScreen />;
 
@@ -43,17 +54,39 @@ const NotificationsPage = () => {
     <div className="p-4 lg:p-6 max-w-3xl mx-auto" dir="rtl">
 
       {/* Header */}
-      <div className="mb-6">
-        <h1 className="text-xl font-extrabold text-gray-100 flex items-center gap-2">
-          <AlertIcon size={22} className="text-brand-400" />
-          التنبيهات
-        </h1>
-        <p className="text-sm text-gray-500 mt-0.5">
-          {totalCount === 0
-            ? "لا توجد تنبيهات نشطة"
-            : `${totalCount} تنبيه · ${highCount} عاجل`}
-        </p>
+      <div className="mb-6 flex items-start justify-between gap-3 flex-wrap">
+        <div>
+          <h1 className="text-xl font-extrabold text-gray-100 flex items-center gap-2">
+            <AlertIcon size={22} className="text-brand-400" />
+            التنبيهات
+          </h1>
+          <p className="text-sm text-gray-500 mt-0.5">
+            {totalCount === 0
+              ? "لا توجد تنبيهات نشطة"
+              : `${totalCount} تنبيه · ${highCount} عاجل${unreadCount ? ` · ${unreadCount} غير مقروء` : ""}`}
+          </p>
+        </div>
+        {totalCount > 0 && (
+          <div className="flex gap-2">
+            {unreadCount > 0 && (
+              <Button variant="ghost" size="sm" icon={<CheckCircleIcon size={14} />} onClick={markAllRead}>
+                تحديد الكل كمقروء
+              </Button>
+            )}
+            <Button variant="danger" size="sm" icon={<TrashIcon size={14} />} onClick={handleDeleteAll}>
+              حذف الكل
+            </Button>
+          </div>
+        )}
       </div>
+
+      <ConfirmDialog
+        open={confirmState.open}
+        onClose={confirmState.reject}
+        onConfirm={confirmState.accept}
+        message={confirmState.message}
+        confirmLabel="حذف الكل"
+      />
 
       {notifications.length === 0 ? (
         <Card>
@@ -72,7 +105,7 @@ const NotificationsPage = () => {
             const TypeIcon = TYPE_ICONS[n.type] ?? AlertIcon;
 
             return (
-              <Card key={n.id} className={`border ${style.border}`}>
+              <Card key={n.id} className={`border ${style.border} ${n.read ? "opacity-60" : ""}`}>
                 <div className={`p-4 rounded-2xl ${style.bg}`}>
                   <div className="flex items-start gap-3">
                     <div className={`w-10 h-10 rounded-xl border flex items-center justify-center flex-shrink-0 ${style.iconBg}`}>
@@ -84,14 +117,21 @@ const NotificationsPage = () => {
                         <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${style.labelBg}`}>
                           {n.type === "admin_message" ? "من الإدارة" : style.label}
                         </span>
+                        {!n.read && <span className="w-2 h-2 rounded-full bg-brand-400 flex-shrink-0" />}
                       </div>
                       <p className="text-xs text-gray-400">{n.body}</p>
+                      {n.date && <p className="text-[11px] text-gray-500 mt-1">{formatDateTime(n.date)}</p>}
                     </div>
-                    {n.dismissible && (
-                      <button onClick={n.onDismiss} className="text-gray-500 hover:text-gray-300 flex-shrink-0 p-1" aria-label="إخفاء">
+                    <div className="flex items-center gap-1 flex-shrink-0">
+                      {!n.read && (
+                        <button onClick={() => markRead(n.id)} className="text-gray-500 hover:text-green-400 p-1" aria-label="تحديد كمقروء">
+                          <CheckCircleIcon size={16} />
+                        </button>
+                      )}
+                      <button onClick={() => removeOne(n)} className="text-gray-500 hover:text-red-400 p-1" aria-label="حذف">
                         <ClearIcon size={16} />
                       </button>
-                    )}
+                    </div>
                   </div>
                   {n.actionPath && (
                     <div className="mt-3 flex justify-end">

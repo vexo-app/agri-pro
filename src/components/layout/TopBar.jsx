@@ -12,6 +12,7 @@ const TITLES = {
   "/maintenance":   "الصيانة",
   "/reports":       "التقارير",
   "/clients":       "العملاء والديون",
+  "/custody":       "العهدة",
   "/notifications": "التنبيهات",
 };
 
