@@ -30,7 +30,9 @@ export const useNotifications = () => {
 
   const [version, setVersion] = useState(0); // بيتغيّر عشان نجبر إعادة الحساب بعد أي تعديل محلي
   const uid = user?.uid || "anon";
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   const readSet   = useMemo(() => loadSet(readKey(uid)),   [uid, version]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   const hiddenSet = useMemo(() => loadSet(hiddenKey(uid)), [uid, version]);
 
   const latestCustodyDate = useMemo(
