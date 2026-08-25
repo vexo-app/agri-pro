@@ -11,7 +11,7 @@ import ProfileModal from "../../features/profile/ProfileModal";
 import {
   HomeIcon, TractorIcon, ClipboardIcon,
   DriverIcon, WrenchIcon, ChartIcon,
-  FuelIcon, LogoutIcon, AlertIcon, WalletIcon, ShieldIcon, BugIcon, MegaphoneIcon,
+  FuelIcon, LogoutIcon, AlertIcon, WalletIcon, ShieldIcon, BugIcon, MegaphoneIcon, DownloadIcon,
 } from "../ui/Icons";
 
 const NAV_ITEMS = [
@@ -151,6 +151,25 @@ const Sidebar = ({ onClose }) => {
                 <>
                   <MegaphoneIcon size={18} className={isActive ? "text-purple-400" : "text-gray-500"} />
                   <span className="flex-1">إرسال تنبيه</span>
+                </>
+              )}
+            </NavLink>
+            <NavLink
+              to="/admin/backup-to-excel"
+              onClick={onClose}
+              className={({ isActive }) =>
+                clsx(
+                  "flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-semibold transition-all duration-150",
+                  isActive
+                    ? "bg-gradient-to-l from-purple-900/60 to-purple-900/20 text-purple-300 border border-purple-800/50 shadow-sm"
+                    : "text-gray-400 hover:text-gray-200 hover:bg-white/5"
+                )
+              }
+            >
+              {({ isActive }) => (
+                <>
+                  <DownloadIcon size={18} className={isActive ? "text-purple-400" : "text-gray-500"} />
+                  <span className="flex-1">تحويل نسخة لإكسيل</span>
                 </>
               )}
             </NavLink>
