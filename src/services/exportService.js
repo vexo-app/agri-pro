@@ -77,6 +77,21 @@ export const exportService = {
       throw new Error("الملف ده مش نسخة احتياطية من زراعي برو");
     }
 
+    if (parsed.version !== EXPORT_VERSION) {
+      throw new Error("نسخة الملف غير مدعومة، برجاء استخدام نسخة احتياطية حديثة");
+    }
+
+    // كل المجموعات المطلوبة (ما عدا settings) لازم تكون موجودة وشكلها array —
+    // ده بيمنع استرجاع ملف ناقص أو ملف اتعدل يدويًا وبقى شكله غلط، قبل ما
+    // نوصل لأي كتابة فعلية على Firestore في restoreSnapshot.
+    const missingOrInvalid = BACKUP_KEYS.some((key) => {
+      if (key === "settings") return parsed.data[key] === undefined;
+      return !Array.isArray(parsed.data[key]);
+    });
+    if (missingOrInvalid) {
+      throw new Error("الملف ده ناقص أو تالف — بعض البيانات المطلوبة مش موجودة");
+    }
+
     // بناء counts للعرض في شاشة التأكيد قبل الاسترجاع
     const counts = BACKUP_KEYS.reduce((acc, key) => {
       if (key === "settings") return acc;
