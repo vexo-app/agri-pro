@@ -183,6 +183,20 @@ export const DRIVER_STATUS_LABELS = {
   inactive: "غير نشط",
 };
 
+// ─── Driver Costs ─────────────────────────────────────────────────────────────
+// كان DriverCostForm.jsx بيستورد الثابت ده من هنا من غير ما يكون معرّف
+// فعلياً في الملف — أي فتح لفورم "إضافة تكلفة سائق" كان بيرمي خطأ
+// (DRIVER_COST_TYPES is undefined). الإضافة دي بس بتكمّل الثابت الناقص،
+// مفيش أي تغيير في أي مكان تاني.
+export const DRIVER_COST_TYPES = [
+  "راتب شهري",
+  "سلفة",
+  "بدل وقود",
+  "تأمين",
+  "غرامة",
+  "أخرى",
+];
+
 // ─── Notifications ────────────────────────────────────────────────────────────
 export const NOTIFICATION_TYPES = {
   MAINTENANCE_DUE:   "maintenance_due",
