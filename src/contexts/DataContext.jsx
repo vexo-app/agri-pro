@@ -177,6 +177,15 @@ export const DataProvider = ({ children }) => {
   const [reloadTick, setReloadTick] = useState(0);
   const retryLoad = useCallback(() => setReloadTick((t) => t + 1), []);
 
+  // Guards the one-time driverCosts→salaryEntries migration below against
+  // running concurrently (e.g. a retry/online-reconnect load firing while a
+  // previous load's migration is still in flight). Without this, two
+  // overlapping runs can each read the same not-yet-removed legacy doc and
+  // not-yet-written salaryEntry, so neither sees the other's in-progress
+  // work and both migrate it — producing a duplicate despite the
+  // legacyDriverCostId guard, which only protects against *sequential* runs.
+  const migratingDriverCostsRef = useRef(false);
+
   useEffect(() => {
     if (!user) return;
     let cancelled = false;
@@ -220,7 +229,8 @@ export const DataProvider = ({ children }) => {
         // against a failed (and therefore unknown) salaryEntries list could
         // duplicate entries next time the real data loads.
         let mergedSalaryEntries = salaryEntriesR.ok ? salaryEntriesR.data : undefined;
-        if (driverCostsR.ok && salaryEntriesR.ok && driverCostsR.data.length > 0) {
+        if (driverCostsR.ok && salaryEntriesR.ok && driverCostsR.data.length > 0 && !migratingDriverCostsRef.current) {
+          migratingDriverCostsRef.current = true;
           try {
             // Idempotency guard: if a driverCost doc's own delete failed
             // after its salaryEntry was already created (see catch below),
@@ -255,6 +265,8 @@ export const DataProvider = ({ children }) => {
           } catch (migrateErr) {
             // Non-fatal — leave legacy docs in place, try again next load.
             console.warn("driverCosts migration failed:", migrateErr);
+          } finally {
+            migratingDriverCostsRef.current = false;
           }
         }
 

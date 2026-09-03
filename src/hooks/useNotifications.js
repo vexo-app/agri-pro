@@ -3,6 +3,7 @@ import { useMemo, useState, useCallback } from "react";
 import { useData } from "../contexts/DataContext";
 import { useAuth } from "../contexts/AuthContext";
 import { checkMaintenanceDue, checkOverdueDebts } from "../utils/calculations";
+import { findDuplicateSalaryEntries } from "../utils/findDuplicateSalaryEntries";
 import { CUSTODY_TYPES } from "../config/constants";
 import { useAdminMessages } from "./useAdminMessages";
 
@@ -24,7 +25,7 @@ const saveSet = (key, set) => localStorage.setItem(key, JSON.stringify([...set])
  * and action info, plus helpers to mark-read / delete (single or bulk).
  */
 export const useNotifications = () => {
-  const { equipment, maintenance, jobs, payments, settings, custody, loading } = useData();
+  const { equipment, maintenance, jobs, payments, settings, custody, salaryEntries = [], drivers = [], loading } = useData();
   const { user } = useAuth();
   const { messages: adminMessages, loading: adminLoading, dismiss } = useAdminMessages();
 
@@ -59,6 +60,28 @@ export const useNotifications = () => {
       .reduce((s, c) => s + (Number(c.amount) || 0), 0);
     return deposits - expenses;
   }, [custody]);
+
+  // Possible duplicate salaryEntries left over from the old driverCosts
+  // migration (see utils/findDuplicateSalaryEntries.js). Detection only —
+  // nothing here deletes anything; it just surfaces groups for review on
+  // the relevant driver's page, same as any other data-derived alert.
+  const salaryDuplicateReport = useMemo(
+    () => findDuplicateSalaryEntries(salaryEntries),
+    [salaryEntries]
+  );
+
+  const salaryDuplicatesByDriver = useMemo(() => {
+    const byDriver = new Map();
+    [...salaryDuplicateReport.highConfidence, ...salaryDuplicateReport.needsReview].forEach((group) => {
+      const driverId = group.keep?.driverId || group.duplicates[0]?.driverId;
+      if (!driverId) return;
+      const entry = byDriver.get(driverId) || { count: 0, hasHighConfidence: false };
+      entry.count += group.duplicates.length;
+      if (salaryDuplicateReport.highConfidence.includes(group)) entry.hasHighConfidence = true;
+      byDriver.set(driverId, entry);
+    });
+    return byDriver;
+  }, [salaryDuplicateReport]);
 
   const notifications = useMemo(() => {
     const list = [];
@@ -114,6 +137,24 @@ export const useNotifications = () => {
       });
     }
 
+    // Possible duplicate salary entries (from the legacy driverCosts
+    // migration) — report-only, one per affected driver, so they can be
+    // reviewed and removed manually from the driver's page if confirmed.
+    salaryDuplicatesByDriver.forEach((info, driverId) => {
+      const driver = drivers.find((d) => d.id === driverId);
+      list.push({
+        id:       `salary-dup-${driverId}`,
+        type:     "duplicate_salary_entries",
+        severity: info.hasHighConfidence ? "high" : "medium",
+        title:    `${driver?.name || "سائق"} — قيود رواتب مكررة محتملة`,
+        body:     `${info.count} قيد ممكن يكون منقول مرتين من نظام التكاليف القديم — راجعها قبل الحذف`,
+        date:     null,
+        driverId,
+        actionLabel: "مراجعة سجل الراتب",
+        actionPath:  `/drivers/${driverId}`,
+      });
+    });
+
     // Admin broadcast/targeted messages — دايماً فوق كل حاجة تانية،
     // بترتيبها هي بالتاريخ (الأحدث الأول)، مش متدمجة مع ترتيب severity
     // بتاع باقي التنبيهات عشان تفضل واضحة إنها من الإدارة.
@@ -138,7 +179,7 @@ export const useNotifications = () => {
     return [...adminItems, ...sorted]
       .filter((n) => !hiddenSet.has(n.id))
       .map((n) => ({ ...n, read: readSet.has(n.id) }));
-  }, [maintenanceAlerts, debtAlerts, custody, custodyBalance, latestCustodyDate, adminMessages, dismiss, readSet, hiddenSet]);
+  }, [maintenanceAlerts, debtAlerts, custody, custodyBalance, latestCustodyDate, salaryDuplicatesByDriver, drivers, adminMessages, dismiss, readSet, hiddenSet]);
 
   const bump = () => setVersion((v) => v + 1);
 
