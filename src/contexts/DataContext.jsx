@@ -290,7 +290,13 @@ export const DataProvider = ({ children }) => {
   const retryBackupNow = useCallback(() => setBackupRetryTick((t) => t + 1), []);
 
   useEffect(() => {
-    if (!user || state.loading) return;
+    // Guard against backing up incomplete/stale data: only proceed once the
+    // user is authenticated, the current load has finished, and that load
+    // didn't leave any required collection unloaded (loadError). Without
+    // this, a failed/partial load (state.loading === false but some
+    // collections missing) would still let a backup run and snapshot
+    // whatever partial state happens to be in memory.
+    if (!user || state.loading || loadError) return;
     let cancelled = false;
     let runningNow = false;
 
@@ -358,7 +364,7 @@ export const DataProvider = ({ children }) => {
       clearInterval(interval);
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [user, state.loading, backupRetryTick]);
+  }, [user, state.loading, loadError, backupRetryTick]);
 
   // ── Mutations ─────────────────────────────────────────────────────────
   // IMPORTANT: none of these `await` the Firestore write before updating
