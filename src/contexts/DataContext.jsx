@@ -225,7 +225,8 @@ export const DataProvider = ({ children }) => {
             const migrated = await Promise.all(
               driverCostsR.data.map(async (cost) => {
                 const payload = driverCostToSalaryEntry(cost);
-                const id = await salaryService.add(user.uid, payload);
+                const { id, promise } = salaryService.add(user.uid, payload);
+                await promise;
                 await driverCostService.remove(user.uid, cost.id);
                 return { id, ...payload };
               })
