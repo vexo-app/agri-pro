@@ -37,10 +37,17 @@ const JobsPage = () => {
   const handleSave = async (formData) => {
     if (modal.mode === "add") {
       const { amountPaid, ...jobData } = formData;
-      const newJobId = await addJob(jobData);
+      const { id: newJobId, promise: jobWritePromise } = await addJob(jobData);
       // لو المستخدم دخل دفعة مقدّمة عند التسجيل، بنسجّلها كدفعة فعلية
-      // في payments collection بدل ما تفضل بس رقم جوه الـ job.
+      // في payments collection بدل ما تفضل بس رقم جوه الـ job — لكن بس
+      // لما نتأكد إن الـ job اتسجّل فعلاً على السيرفر، عشان منسجلش دفعة
+      // مرتبطة بعملية اتعمل لها rollback لو فشل حفظها.
       if (Number(amountPaid) > 0) {
+        try {
+          await jobWritePromise;
+        } catch {
+          return;
+        }
         await addPayment({
           jobId: newJobId,
           amount: Number(amountPaid),

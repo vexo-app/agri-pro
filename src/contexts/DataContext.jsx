@@ -415,7 +415,7 @@ export const DataProvider = ({ children }) => {
       errorMessage: "تعذر حفظ العملية، تم التراجع عن التسجيل",
     });
     toast.success("تم تسجيل العملية");
-    return id;
+    return { id, promise };
   }, [user, trackWrite]);
   const updateJob = useCallback(async (id, d) => {
     const previous = stateRef.current.jobs.find((j) => j.id === id);
