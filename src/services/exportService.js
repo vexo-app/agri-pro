@@ -77,7 +77,7 @@ export const exportService = {
       throw new Error("الملف ده مش نسخة احتياطية من زراعي برو");
     }
 
-    if (parsed.version !== EXPORT_VERSION) {
+    if (!(Number.isInteger(parsed.version) && parsed.version >= 1 && parsed.version <= EXPORT_VERSION)) {
       throw new Error("نسخة الملف غير مدعومة، برجاء استخدام نسخة احتياطية حديثة");
     }
 

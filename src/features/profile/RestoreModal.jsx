@@ -81,6 +81,7 @@ const RestoreModal = ({ open, onClose }) => {
         payments:      data.payments,
         salaryEntries: data.salaryEntries,
         attendance:    data.attendance,
+        custodyTransactions: data.custody,
         settings:      data.settings,
       });
 
