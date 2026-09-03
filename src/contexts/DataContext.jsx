@@ -222,17 +222,36 @@ export const DataProvider = ({ children }) => {
         let mergedSalaryEntries = salaryEntriesR.ok ? salaryEntriesR.data : undefined;
         if (driverCostsR.ok && salaryEntriesR.ok && driverCostsR.data.length > 0) {
           try {
-            const migrated = await Promise.all(
-              driverCostsR.data.map(async (cost) => {
-                const payload = driverCostToSalaryEntry(cost);
-                const { id, promise } = salaryService.add(user.uid, payload);
-                await promise;
-                await driverCostService.remove(user.uid, cost.id);
-                return { id, ...payload };
-              })
+            // Idempotency guard: if a driverCost doc's own delete failed
+            // after its salaryEntry was already created (see catch below),
+            // it lingers and would otherwise be migrated again next load —
+            // creating a duplicate salaryEntry. Detect "already migrated"
+            // via the legacy record's own id, stamped on the salaryEntry
+            // it produced (legacyDriverCostId).
+            const alreadyMigratedIds = new Set(
+              salaryEntriesR.data.map((e) => e.legacyDriverCostId).filter(Boolean)
             );
-            mergedSalaryEntries = [...migrated, ...salaryEntriesR.data];
-            toast.success(`تم دمج ${migrated.length} من تكاليف السائقين القديمة داخل نظام الرواتب`);
+            const migrated = (
+              await Promise.all(
+                driverCostsR.data.map(async (cost) => {
+                  if (alreadyMigratedIds.has(cost.id)) {
+                    // Its salaryEntry already exists — just finish removing
+                    // this leftover legacy doc, don't create another one.
+                    await driverCostService.remove(user.uid, cost.id);
+                    return null;
+                  }
+                  const payload = driverCostToSalaryEntry(cost);
+                  const { id, promise } = salaryService.add(user.uid, payload);
+                  await promise;
+                  await driverCostService.remove(user.uid, cost.id);
+                  return { id, ...payload };
+                })
+              )
+            ).filter(Boolean);
+            if (migrated.length > 0) {
+              mergedSalaryEntries = [...migrated, ...salaryEntriesR.data];
+              toast.success(`تم دمج ${migrated.length} من تكاليف السائقين القديمة داخل نظام الرواتب`);
+            }
           } catch (migrateErr) {
             // Non-fatal — leave legacy docs in place, try again next load.
             console.warn("driverCosts migration failed:", migrateErr);

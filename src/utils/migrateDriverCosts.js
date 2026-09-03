@@ -39,5 +39,9 @@ export const driverCostToSalaryEntry = (cost) => {
     date:     cost.date || new Date().toISOString().split("T")[0],
     notes:    note,
     paid:     true, // legacy costs had no paid/unpaid concept — treat as settled
+    // Ties this entry back to the legacy driverCosts doc it came from, so
+    // the migration can detect (and skip) a record it already migrated —
+    // see DataContext.jsx's migration block.
+    legacyDriverCostId: cost.id,
   };
 };
