@@ -14,9 +14,17 @@ const AuthPage = () => {
 
   const { register, handleSubmit, formState: { errors, isSubmitting }, reset } = useForm();
 
+  // ملحوظة أمان: "البريد غير مسجل" و"كلمة المرور غلط" مقصودين برسالة
+  // واحدة (بدل رسالتين مختلفتين زي الأول) — رسالتين مختلفتين كانوا
+  // بيسمحوا لأي حد يجرب إيميلات عشوائية ويعرف مين عنده حساب فعلاً في
+  // التطبيق من غير ما يعرف الباسورد أصلاً (user enumeration)، فبقت
+  // نفس الرسالة الغامضة للحالتين. auth/invalid-credential مضافة كمان
+  // لأن نسخ حديثة من Firebase بترجعها هي بس (بدل user-not-found/
+  // wrong-password) لما حماية enumeration مفعّلة على مستوى المشروع.
   const authErrorMsgs = {
-    "auth/user-not-found":       "البريد الإلكتروني غير مسجل",
-    "auth/wrong-password":       "كلمة المرور غير صحيحة",
+    "auth/user-not-found":       "البريد الإلكتروني أو كلمة المرور غير صحيحة",
+    "auth/wrong-password":       "البريد الإلكتروني أو كلمة المرور غير صحيحة",
+    "auth/invalid-credential":   "البريد الإلكتروني أو كلمة المرور غير صحيحة",
     "auth/email-already-in-use": "البريد الإلكتروني مسجل مسبقاً",
     "auth/weak-password":        "كلمة المرور ضعيفة (6 أحرف على الأقل)",
     "auth/invalid-email":        "صيغة البريد الإلكتروني غير صحيحة",
@@ -34,7 +42,15 @@ const AuthPage = () => {
         toast.success("تم إنشاء الحساب بنجاح!");
         navigate("/");
       } else {
-        await resetPassword(data.email);
+        try {
+          await resetPassword(data.email);
+        } catch (err) {
+          // نفس منطق الـ enumeration فوق: لو الإيميل مش مسجل، بنعرض
+          // نفس رسالة النجاح بالظبط بدل ما نفضح إن الإيميل ده مش موجود
+          // — إلا لو الخطأ حاجة تانية فعلاً (صيغة غلط، محاولات كتير)،
+          // وقتها لازم يتعرض عادي عشان المستخدم يعرف يصلحها.
+          if (err.code !== "auth/user-not-found") throw err;
+        }
         toast.success("تم إرسال رابط استعادة كلمة المرور إلى بريدك الإلكتروني");
         setMode("login");
         reset();
