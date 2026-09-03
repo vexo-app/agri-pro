@@ -427,6 +427,16 @@ export const DataProvider = ({ children }) => {
     toast.success("تم تحديث العملية");
   }, [user, trackWrite]);
   const deleteJob = useCallback(async (id) => {
+    // Block the delete entirely if any payment still references this job —
+    // deleting the job would otherwise orphan those payments (jobId
+    // pointing at a job that no longer exists). Checked before any
+    // dispatch/write so nothing (not even an optimistic UI removal) happens
+    // until this passes.
+    const hasPayments = stateRef.current.payments.some((p) => p.jobId === id);
+    if (hasPayments) {
+      toast.error("لا يمكن حذف العملية لوجود دفعات مرتبطة بها");
+      return;
+    }
     const previous = stateRef.current.jobs.find((j) => j.id === id);
     dispatch({ type: "DELETE_JOB", payload: id });
     trackWrite(jobService.remove(user.uid, id), {
