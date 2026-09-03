@@ -125,6 +125,20 @@ export const backupService = {
    * Caller is responsible for taking a fresh "safety" backup first.
    */
   async restoreSnapshot(userId, snapshotData) {
+    // Validate every required collection up front, before any write touches
+    // Firestore. Without this, a missing/invalid collection (e.g. `null`
+    // instead of an array) would fall through to `|| []` below and silently
+    // wipe that collection during restore instead of aborting.
+    if (!snapshotData || typeof snapshotData !== "object") {
+      throw new Error("بيانات الاسترجاع غير صالحة");
+    }
+    const invalidKey = BACKUP_COLLECTIONS.find(
+      ([key]) => !Array.isArray(snapshotData[key])
+    );
+    if (invalidKey) {
+      throw new Error("بيانات الاسترجاع ناقصة أو غير صالحة، تم إلغاء العملية قبل أي تعديل");
+    }
+
     for (const [key, subName] of BACKUP_COLLECTIONS) {
       await restoreCollection(subName, userId, snapshotData[key] || []);
     }
