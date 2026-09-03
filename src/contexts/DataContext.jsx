@@ -1,5 +1,5 @@
 // src/contexts/DataContext.jsx
-import React, { createContext, useContext, useCallback, useReducer, useEffect, useState } from "react";
+import React, { createContext, useContext, useCallback, useReducer, useEffect, useState, useRef } from "react";
 import toast from "react-hot-toast";
 import { waitForPendingWrites } from "firebase/firestore";
 import { db } from "../config/firebase";
@@ -100,6 +100,14 @@ export const DataProvider = ({ children }) => {
   const { user } = useAuth();
   const [state, dispatch] = useReducer(reducer, initialState);
 
+  // Always-current snapshot of state, read (not subscribed to) by mutation
+  // callbacks below so they can capture "the record as it was right before
+  // this edit" for rollback purposes, without adding `state` to every
+  // callback's dependency array (which would recreate all of them on every
+  // render).
+  const stateRef = useRef(state);
+  useEffect(() => { stateRef.current = state; }, [state]);
+
   // ── Sync status ────────────────────────────────────────────────────────
   // pendingWrites > 0 means at least one add/update/delete is still sitting
   // in Firestore's local offline queue and hasn't been acknowledged by the
@@ -122,10 +130,25 @@ export const DataProvider = ({ children }) => {
   // The tracking itself happens in the background via waitForPendingWrites,
   // which only resolves once the write is actually acknowledged by the
   // server (or immediately, if there's nothing pending).
-  const trackWrite = useCallback((promise) => {
+  //
+  // `rollback`/`errorMessage` (both optional) let a caller undo its earlier
+  // optimistic dispatch if the write is genuinely rejected. This is safe to
+  // treat as "genuinely rejected, not just offline": while offline, Firestore
+  // queues the write locally and this promise simply stays pending until the
+  // write reaches the server — it does not reject just because the device is
+  // offline. A rejection here means something real (permission-denied,
+  // failed validation, etc.), so it's the right moment to reverse the
+  // optimistic UI change instead of leaving it looking saved when it isn't.
+  const trackWrite = useCallback((promise, { rollback, errorMessage } = {}) => {
     setPendingWrites((c) => c + 1);
     promise
-      .catch(() => {}) // don't let an unhandled rejection here mask the real error at the call site
+      .catch((err) => {
+        console.warn("Firestore write rejected, rolling back optimistic update:", err);
+        if (rollback) rollback();
+        toast.error(errorMessage || (err?.code === "permission-denied"
+          ? "لا يوجد صلاحية للكتابة — تأكد من نشر قواعد Firestore"
+          : "فشل حفظ التغيير، وتم التراجع عنه"));
+      })
       .finally(() => {
         waitForPendingWrites(db)
           .catch(() => {})
@@ -350,163 +373,248 @@ export const DataProvider = ({ children }) => {
   // indicator (OfflineBanner / pendingWrites).
   const addEquipment = useCallback(async (d) => {
     const { id, promise } = equipmentService.add(user.uid, d);
-    trackWrite(promise);
     dispatch({ type: "ADD_EQUIPMENT", payload: { id, ...d } });
+    trackWrite(promise, {
+      rollback: () => dispatch({ type: "DELETE_EQUIPMENT", payload: id }),
+      errorMessage: "تعذر حفظ المعدة، تم التراجع عن الإضافة",
+    });
     toast.success("تم إضافة المعدة");
     return id;
   }, [user, trackWrite]);
   const updateEquipment = useCallback(async (id, d) => {
-    trackWrite(equipmentService.update(user.uid, id, d));
+    const previous = stateRef.current.equipment.find((e) => e.id === id);
     dispatch({ type: "UPDATE_EQUIPMENT", payload: { id, ...d } });
+    trackWrite(equipmentService.update(user.uid, id, d), {
+      rollback: () => previous && dispatch({ type: "UPDATE_EQUIPMENT", payload: previous }),
+      errorMessage: "تعذر حفظ تعديل المعدة، تم التراجع عن التعديل",
+    });
     toast.success("تم تحديث المعدة");
   }, [user, trackWrite]);
   const deleteEquipment = useCallback(async (id) => {
-    trackWrite(equipmentService.remove(user.uid, id));
+    const previous = stateRef.current.equipment.find((e) => e.id === id);
     dispatch({ type: "DELETE_EQUIPMENT", payload: id });
+    trackWrite(equipmentService.remove(user.uid, id), {
+      rollback: () => previous && dispatch({ type: "ADD_EQUIPMENT", payload: previous }),
+      errorMessage: "تعذر حذف المعدة، تم استرجاعها",
+    });
     toast.success("تم حذف المعدة");
   }, [user, trackWrite]);
 
   const addJob = useCallback(async (d) => {
     const { id, promise } = jobService.add(user.uid, d);
-    trackWrite(promise);
     dispatch({ type: "ADD_JOB", payload: { id, ...d } });
+    trackWrite(promise, {
+      rollback: () => dispatch({ type: "DELETE_JOB", payload: id }),
+      errorMessage: "تعذر حفظ العملية، تم التراجع عن التسجيل",
+    });
     toast.success("تم تسجيل العملية");
     return id;
   }, [user, trackWrite]);
   const updateJob = useCallback(async (id, d) => {
-    trackWrite(jobService.update(user.uid, id, d));
+    const previous = stateRef.current.jobs.find((j) => j.id === id);
     dispatch({ type: "UPDATE_JOB", payload: { id, ...d } });
+    trackWrite(jobService.update(user.uid, id, d), {
+      rollback: () => previous && dispatch({ type: "UPDATE_JOB", payload: previous }),
+      errorMessage: "تعذر حفظ تعديل العملية، تم التراجع عن التعديل",
+    });
     toast.success("تم تحديث العملية");
   }, [user, trackWrite]);
   const deleteJob = useCallback(async (id) => {
-    trackWrite(jobService.remove(user.uid, id));
+    const previous = stateRef.current.jobs.find((j) => j.id === id);
     dispatch({ type: "DELETE_JOB", payload: id });
+    trackWrite(jobService.remove(user.uid, id), {
+      rollback: () => previous && dispatch({ type: "ADD_JOB", payload: previous }),
+      errorMessage: "تعذر حذف العملية، تم استرجاعها",
+    });
     toast.success("تم حذف العملية");
   }, [user, trackWrite]);
 
   const addDriver = useCallback(async (d) => {
     const { id, promise } = driverService.add(user.uid, d);
-    trackWrite(promise);
     dispatch({ type: "ADD_DRIVER", payload: { id, ...d } });
+    trackWrite(promise, {
+      rollback: () => dispatch({ type: "DELETE_DRIVER", payload: id }),
+      errorMessage: "تعذر حفظ السائق، تم التراجع عن الإضافة",
+    });
     toast.success("تم إضافة السائق");
     return id;
   }, [user, trackWrite]);
   const updateDriver = useCallback(async (id, d) => {
-    trackWrite(driverService.update(user.uid, id, d));
+    const previous = stateRef.current.drivers.find((x) => x.id === id);
     dispatch({ type: "UPDATE_DRIVER", payload: { id, ...d } });
+    trackWrite(driverService.update(user.uid, id, d), {
+      rollback: () => previous && dispatch({ type: "UPDATE_DRIVER", payload: previous }),
+      errorMessage: "تعذر حفظ تعديل السائق، تم التراجع عن التعديل",
+    });
     toast.success("تم تحديث السائق");
   }, [user, trackWrite]);
   const deleteDriver = useCallback(async (id) => {
-    trackWrite(driverService.remove(user.uid, id));
+    const previous = stateRef.current.drivers.find((x) => x.id === id);
     dispatch({ type: "DELETE_DRIVER", payload: id });
+    trackWrite(driverService.remove(user.uid, id), {
+      rollback: () => previous && dispatch({ type: "ADD_DRIVER", payload: previous }),
+      errorMessage: "تعذر حذف السائق، تم استرجاعه",
+    });
     toast.success("تم حذف السائق");
   }, [user, trackWrite]);
 
   const addMaintenance = useCallback(async (d) => {
     const { id, promise } = maintenanceService.add(user.uid, d);
-    trackWrite(promise);
     dispatch({ type: "ADD_MAINTENANCE", payload: { id, ...d } });
+    trackWrite(promise, {
+      rollback: () => dispatch({ type: "DELETE_MAINTENANCE", payload: id }),
+      errorMessage: "تعذر حفظ سجل الصيانة، تم التراجع عن الإضافة",
+    });
     toast.success("تم تسجيل الصيانة");
     return id;
   }, [user, trackWrite]);
   const updateMaintenance = useCallback(async (id, d) => {
-    trackWrite(maintenanceService.update(user.uid, id, d));
+    const previous = stateRef.current.maintenance.find((m) => m.id === id);
     dispatch({ type: "UPDATE_MAINTENANCE", payload: { id, ...d } });
+    trackWrite(maintenanceService.update(user.uid, id, d), {
+      rollback: () => previous && dispatch({ type: "UPDATE_MAINTENANCE", payload: previous }),
+      errorMessage: "تعذر حفظ تعديل الصيانة، تم التراجع عن التعديل",
+    });
     toast.success("تم تحديث الصيانة");
   }, [user, trackWrite]);
   const deleteMaintenance = useCallback(async (id) => {
-    trackWrite(maintenanceService.remove(user.uid, id));
+    const previous = stateRef.current.maintenance.find((m) => m.id === id);
     dispatch({ type: "DELETE_MAINTENANCE", payload: id });
+    trackWrite(maintenanceService.remove(user.uid, id), {
+      rollback: () => previous && dispatch({ type: "ADD_MAINTENANCE", payload: previous }),
+      errorMessage: "تعذر حذف سجل الصيانة، تم استرجاعه",
+    });
     toast.success("تم حذف الصيانة");
   }, [user, trackWrite]);
 
   const addPayment = useCallback(async (d) => {
     const { id, promise } = paymentService.add(user.uid, d);
-    trackWrite(promise);
     dispatch({ type: "ADD_PAYMENT", payload: { id, ...d } });
+    trackWrite(promise, {
+      rollback: () => dispatch({ type: "DELETE_PAYMENT", payload: id }),
+      errorMessage: "تعذر حفظ الدفعة، تم التراجع عن التسجيل",
+    });
     toast.success("تم تسجيل الدفعة");
     return id;
   }, [user, trackWrite]);
   const updatePayment = useCallback(async (id, d) => {
-    trackWrite(paymentService.update(user.uid, id, d));
+    const previous = stateRef.current.payments.find((p) => p.id === id);
     dispatch({ type: "UPDATE_PAYMENT", payload: { id, ...d } });
+    trackWrite(paymentService.update(user.uid, id, d), {
+      rollback: () => previous && dispatch({ type: "UPDATE_PAYMENT", payload: previous }),
+      errorMessage: "تعذر حفظ تعديل الدفعة، تم التراجع عن التعديل",
+    });
     toast.success("تم تحديث الدفعة");
   }, [user, trackWrite]);
   const deletePayment = useCallback(async (id) => {
-    trackWrite(paymentService.remove(user.uid, id));
+    const previous = stateRef.current.payments.find((p) => p.id === id);
     dispatch({ type: "DELETE_PAYMENT", payload: id });
+    trackWrite(paymentService.remove(user.uid, id), {
+      rollback: () => previous && dispatch({ type: "ADD_PAYMENT", payload: previous }),
+      errorMessage: "تعذر حذف الدفعة، تم استرجاعها",
+    });
     toast.success("تم حذف الدفعة");
   }, [user, trackWrite]);
 
   const addSalaryEntry = useCallback(async (d) => {
     const { id, promise } = salaryService.add(user.uid, d);
-    trackWrite(promise);
     dispatch({ type: "ADD_SALARY", payload: { id, ...d } });
+    trackWrite(promise, {
+      rollback: () => dispatch({ type: "DELETE_SALARY", payload: id }),
+      errorMessage: "تعذر الحفظ، تم التراجع عن التسجيل",
+    });
     toast.success("تم التسجيل");
     return id;
   }, [user, trackWrite]);
   const updateSalaryEntry = useCallback(async (id, d) => {
-    trackWrite(salaryService.update(user.uid, id, d));
+    const previous = stateRef.current.salaryEntries.find((s) => s.id === id);
     dispatch({ type: "UPDATE_SALARY", payload: { id, ...d } });
+    trackWrite(salaryService.update(user.uid, id, d), {
+      rollback: () => previous && dispatch({ type: "UPDATE_SALARY", payload: previous }),
+      errorMessage: "تعذر حفظ التعديل، تم التراجع عنه",
+    });
     toast.success("تم التحديث");
   }, [user, trackWrite]);
   const deleteSalaryEntry = useCallback(async (id) => {
-    trackWrite(salaryService.remove(user.uid, id));
+    const previous = stateRef.current.salaryEntries.find((s) => s.id === id);
     dispatch({ type: "DELETE_SALARY", payload: id });
+    trackWrite(salaryService.remove(user.uid, id), {
+      rollback: () => previous && dispatch({ type: "ADD_SALARY", payload: previous }),
+      errorMessage: "تعذر الحذف، تم استرجاع السجل",
+    });
     toast.success("تم الحذف");
   }, [user, trackWrite]);
 
   const addAttendance = useCallback(async (d) => {
     const { id, promise } = attendanceService.add(user.uid, d);
-    trackWrite(promise);
     dispatch({ type: "ADD_ATTENDANCE", payload: { id, ...d } });
+    trackWrite(promise, {
+      rollback: () => dispatch({ type: "DELETE_ATTENDANCE", payload: id }),
+      errorMessage: "تعذر حفظ الحضور، تم التراجع عن التسجيل",
+    });
     toast.success("تم تسجيل الحضور");
     return id;
   }, [user, trackWrite]);
   const updateAttendance = useCallback(async (id, d) => {
-    trackWrite(attendanceService.update(user.uid, id, d));
+    const previous = stateRef.current.attendance.find((a) => a.id === id);
     dispatch({ type: "UPDATE_ATTENDANCE", payload: { id, ...d } });
+    trackWrite(attendanceService.update(user.uid, id, d), {
+      rollback: () => previous && dispatch({ type: "UPDATE_ATTENDANCE", payload: previous }),
+      errorMessage: "تعذر حفظ تعديل الحضور، تم التراجع عن التعديل",
+    });
     toast.success("تم تحديث الحضور");
   }, [user, trackWrite]);
   const deleteAttendance = useCallback(async (id) => {
-    trackWrite(attendanceService.remove(user.uid, id));
+    const previous = stateRef.current.attendance.find((a) => a.id === id);
     dispatch({ type: "DELETE_ATTENDANCE", payload: id });
+    trackWrite(attendanceService.remove(user.uid, id), {
+      rollback: () => previous && dispatch({ type: "ADD_ATTENDANCE", payload: previous }),
+      errorMessage: "تعذر حذف السجل، تم استرجاعه",
+    });
     toast.success("تم حذف السجل");
   }, [user, trackWrite]);
 
-  // Custody keeps its extra error-toast handling (e.g. permission-denied)
-  // — attached to the write promise itself now (fired in the background)
-  // instead of via try/catch around an awaited call, since the promise no
-  // longer blocks the optimistic UI update below.
+  // Custody now goes through the same centralized trackWrite rollback path
+  // as every other entity above, instead of its own extra .catch() — that
+  // used to show an error toast but never actually reversed the optimistic
+  // dispatch below it, so a rejected write still looked "saved" until the
+  // next reload.
   const addCustody = useCallback(async (d) => {
     const { id, promise } = custodyService.add(user.uid, d);
-    trackWrite(promise).catch((err) => {
-      toast.error(err?.code === "permission-denied"
-        ? "لا يوجد صلاحية للكتابة — تأكد من نشر قواعد Firestore"
-        : "حدث خطأ أثناء الحفظ (هيتزامن لما الاتصال يرجع لو كانت المشكلة إنك أوف لاين)");
-    });
     dispatch({ type: "ADD_CUSTODY", payload: { id, ...d } });
+    trackWrite(promise, {
+      rollback: () => dispatch({ type: "DELETE_CUSTODY", payload: id }),
+      errorMessage: "تعذر حفظ الحركة، تم التراجع عنها",
+    });
     toast.success(d.type === "expense" ? "تم تسجيل الصرف" : "تم تسجيل الإضافة");
     return id;
   }, [user, trackWrite]);
   const updateCustody = useCallback(async (id, d) => {
-    trackWrite(custodyService.update(user.uid, id, d)).catch(() => {
-      toast.error("حدث خطأ أثناء التحديث (هيتزامن لما الاتصال يرجع لو كانت المشكلة إنك أوف لاين)");
-    });
+    const previous = stateRef.current.custody.find((c) => c.id === id);
     dispatch({ type: "UPDATE_CUSTODY", payload: { id, ...d } });
+    trackWrite(custodyService.update(user.uid, id, d), {
+      rollback: () => previous && dispatch({ type: "UPDATE_CUSTODY", payload: previous }),
+      errorMessage: "تعذر حفظ تعديل الحركة، تم التراجع عنه",
+    });
     toast.success("تم تحديث السجل");
   }, [user, trackWrite]);
   const deleteCustody = useCallback(async (id) => {
-    trackWrite(custodyService.remove(user.uid, id)).catch(() => {
-      toast.error("حدث خطأ أثناء الحذف (هيتزامن لما الاتصال يرجع لو كانت المشكلة إنك أوف لاين)");
-    });
+    const previous = stateRef.current.custody.find((c) => c.id === id);
     dispatch({ type: "DELETE_CUSTODY", payload: id });
+    trackWrite(custodyService.remove(user.uid, id), {
+      rollback: () => previous && dispatch({ type: "ADD_CUSTODY", payload: previous }),
+      errorMessage: "تعذر حذف الحركة، تم استرجاعها",
+    });
     toast.success("تم حذف السجل");
   }, [user, trackWrite]);
 
   const saveSettings = useCallback(async (d) => {
-    trackWrite(settingsService.save(user.uid, d));
+    const previous = stateRef.current.settings;
     dispatch({ type: "UPDATE_SETTINGS", payload: d });
+    trackWrite(settingsService.save(user.uid, d), {
+      rollback: () => dispatch({ type: "UPDATE_SETTINGS", payload: previous }),
+      errorMessage: "تعذر حفظ الإعدادات، تم التراجع عن التغيير",
+    });
     toast.success("تم حفظ الإعدادات");
   }, [user, trackWrite]);
 

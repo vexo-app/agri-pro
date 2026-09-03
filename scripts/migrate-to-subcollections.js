@@ -14,11 +14,12 @@
 //      التطبيق نفسه؛ السكريبت ده بيتشغل من جهازك بس مش جوه الـ app)
 //   2) نزّل service account key من:
 //      Firebase Console → Project Settings → Service Accounts → Generate new private key
-//      وحطه في المجلد ده باسم serviceAccountKey.json (متسيبوش الملف ده يتنشر على GitHub!)
-//   3) جرب dry run الأول:      node scripts/migrate-to-subcollections.js
-//   4) لما تتأكد من العدد:      node scripts/migrate-to-subcollections.js --write
+//      وسيبه *برا* الريبو خالص (متحطوش جوه scripts/ ولا أي مكان تاني في
+//      المشروع — الملف ده بيدّي صلاحية أدمن كاملة، ومتسيبوش يتنشر على GitHub!)
+//   3) جرب dry run الأول:      node scripts/migrate-to-subcollections.js /path/to/serviceAccountKey.json
+//   4) لما تتأكد من العدد:      node scripts/migrate-to-subcollections.js /path/to/serviceAccountKey.json --write
 //   5) بعد التأكد إن التطبيق شغال كويس بالبيانات الجديدة:
-//                                node scripts/migrate-to-subcollections.js --delete-old
+//                                node scripts/migrate-to-subcollections.js /path/to/serviceAccountKey.json --delete-old
 
 const { initializeApp, cert } = require("firebase-admin/app");
 const { getFirestore } = require("firebase-admin/firestore");
@@ -27,8 +28,18 @@ const path  = require("path");
 const WRITE       = process.argv.includes("--write");
 const DELETE_OLD  = process.argv.includes("--delete-old");
 
+// مفتاح الأدمن بيتاخد من مسار يتديله وقت التشغيل، مش من ملف ثابت جوه
+// المشروع — نفس النمط المستخدم في backfillUserProfiles.js. لو حد شغّل
+// السكريبت من غير ما يديله مسار، بيوقف برسالة واضحة بدل ما يدور على
+// ملف مش موجود ويرمي stack trace غامض.
+const keyPathArg = process.argv[2];
+if (!keyPathArg || keyPathArg.startsWith("--")) {
+  console.error("استخدام: node scripts/migrate-to-subcollections.js <path-to-service-account.json> [--write] [--delete-old]");
+  process.exit(1);
+}
+
 initializeApp({
-  credential: cert(require(path.join(__dirname, "serviceAccountKey.json"))),
+  credential: cert(require(path.resolve(keyPathArg))),
 });
 const db = getFirestore();
 
