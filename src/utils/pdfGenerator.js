@@ -553,12 +553,13 @@ export const downloadEquipmentReportPdf = (args) => {
 // ── 3. Monthly Summary ────────────────────────────────────────────────────────
 export const printMonthlySummary = ({ jobs, equipment, maintenance, drivers, fuelPrice, month, year, allTime = false, totalSalariesPaid = 0 }) => {
   const today = new Date().toLocaleDateString("ar-EG");
-  // allTime reuses the exact same month-report layout/calculations below,
-  // just without the month filter — so it lines up with the Reports page's
-  // own all-time totals instead of one calendar month. totalSalariesPaid
-  // (0 by default, so the existing monthly call is unaffected) is only
-  // meant to be passed in allTime mode, to match ReportsPage's own
-  // "totalProfit = totalGrossProfit - totalSalariesPaid" net-profit figure.
+  // allTime reuses the exact same report layout/calculations below, just
+  // without the date filters on jobs/maintenance — so it lines up with the
+  // Reports page's own all-time totals instead of one calendar month.
+  // totalSalariesPaid defaults to 0 only for callers that don't pass it;
+  // the caller is expected to already scope it to match (month-filtered
+  // salary entries for a monthly report, the page's own all-time total for
+  // allTime) — this function doesn't filter it itself.
   const periodLabel = allTime
     ? "كل الوقت"
     : new Date(year, month - 1).toLocaleDateString("ar-EG", { month:"long", year:"numeric" });
@@ -566,12 +567,13 @@ export const printMonthlySummary = ({ jobs, equipment, maintenance, drivers, fue
 
   const prefix = `${year}-${String(month).padStart(2,"0")}`;
   const monthJobs = allTime ? jobs : jobs.filter((j) => j.date?.startsWith(prefix));
+  const monthMaintenance = allTime ? maintenance : maintenance.filter((m) => m.date?.startsWith(prefix));
 
   const totalRevenue  = monthJobs.reduce((s, j) => s + (j.acres * j.pricePerAcre), 0);
   const totalAcres    = monthJobs.reduce((s, j) => s + (j.acres || 0), 0);
   const totalFuel     = monthJobs.reduce((s, j) => s + (j.fuelUsed || 0), 0);
   const totalFuelCost = totalFuel * fuelPrice;
-  const maintCost     = maintenance.reduce((s, m) => s + (m.cost || 0), 0);
+  const maintCost     = monthMaintenance.reduce((s, m) => s + (m.cost || 0), 0);
   const netProfit     = totalRevenue - totalFuelCost - maintCost - totalSalariesPaid;
 
   const equip = [...new Set(monthJobs.map((j) => j.equipmentId))].map((id) => {

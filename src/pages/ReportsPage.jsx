@@ -72,19 +72,28 @@ const ReportsPage = () => {
 
   // Exports a PDF via the existing printMonthlySummary() — no new
   // calculations, just two different sets of its own existing inputs:
-  // - monthly: current calendar month only (unchanged from before).
-  // - allTime: no month filter, plus totalSalariesPaid so its net-profit
-  //   figure lines up with this page's own totalProfit (totalGrossProfit -
-  //   totalSalariesPaid), instead of only reflecting one month.
+  // - monthly: current calendar month only, with salaries paid *that month*
+  //   deducted from profit (same calcTotalSalariesPaid used for the
+  //   all-time KPI above, just given a month-filtered entry list first —
+  //   so the monthly report uses the exact same profit methodology as the
+  //   all-time one, scoped to the month instead of everything).
+  // - allTime: no month filter, using the page's own totalSalariesPaid so
+  //   its net-profit figure lines up exactly with this page's totalProfit
+  //   (totalGrossProfit - totalSalariesPaid).
   const handlePrintReport = (allTime) => {
     const now = new Date();
+    const monthPrefix = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}`;
+    const salariesForPeriod = allTime
+      ? totalSalariesPaid
+      : calcTotalSalariesPaid(salaryEntries.filter((e) => (e.date || "").startsWith(monthPrefix)));
+
     printMonthlySummary({
       jobs, equipment, maintenance, drivers,
       fuelPrice: settings.fuelPrice,
       month: now.getMonth() + 1,
       year:  now.getFullYear(),
       allTime,
-      totalSalariesPaid: allTime ? totalSalariesPaid : 0,
+      totalSalariesPaid: salariesForPeriod,
     });
   };
 
