@@ -57,14 +57,15 @@ const resizeImageToDataUrl = (file) => new Promise((resolve, reject) => {
 // ── Company invoice info (fixed data reused on every printed invoice) ──
 const INVOICE_FIELDS = [
   { key: "name",              label: "اسم الشركة / المزرعة",  placeholder: "مزرعة الأمل لتأجير المعدات الزراعية" },
-  { key: "address",           label: "العنوان والتليفون",      placeholder: "كفر الشيخ، طريق دسوق الزراعي · ٠١٠١٢٣٤٥٦٧٨" },
+  { key: "phone",             label: "رقم الهاتف",            placeholder: "أدخل رقم الهاتف", dir: "ltr" },
+  { key: "address",           label: "العنوان",                placeholder: "كفر الشيخ، طريق دسوق الزراعي" },
   { key: "commercialRegister", label: "السجل التجاري",         placeholder: "١٢٣٤٥" },
   { key: "taxNumber",         label: "الرقم الضريبي",          placeholder: "٦٠٠-١٢٣-٤٥٦" },
 ];
 
 const CompanyInvoiceSection = ({ user, settings, saveSettings }) => {
   const [form, setForm] = useState({
-    name: "", address: "", commercialRegister: "", taxNumber: "", logo: "",
+    name: "", phone: "", address: "", commercialRegister: "", taxNumber: "", logo: "",
   });
   const [editing, setEditing] = useState(false);
   const [saving, setSaving] = useState(false);
@@ -73,6 +74,7 @@ const CompanyInvoiceSection = ({ user, settings, saveSettings }) => {
   useEffect(() => {
     setForm({
       name: settings?.company?.name || "",
+      phone: settings?.company?.phone || "",
       address: settings?.company?.address || "",
       commercialRegister: settings?.company?.commercialRegister || "",
       taxNumber: settings?.company?.taxNumber || "",
@@ -161,6 +163,7 @@ const CompanyInvoiceSection = ({ user, settings, saveSettings }) => {
             <label className="text-xs font-semibold text-gray-400 tracking-wide">{f.label}</label>
             <input
               type="text"
+              dir={f.dir}
               disabled={!editing}
               value={form[f.key]}
               placeholder={f.placeholder}
