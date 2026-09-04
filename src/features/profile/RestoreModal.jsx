@@ -17,6 +17,7 @@ const COUNT_LABELS = {
   payments:      "الدفعات",
   salaryEntries: "المرتبات",
   attendance:    "الحضور",
+  custodyTransactions: "العهدة",
 };
 
 const CONFIRM_WORD = "استرجاع";
@@ -40,6 +41,7 @@ const RestoreModal = ({ open, onClose }) => {
     payments:      data.payments?.length      || 0,
     salaryEntries: data.salaryEntries?.length || 0,
     attendance:    data.attendance?.length    || 0,
+    custodyTransactions: data.custody?.length || 0,
   };
 
   const loadList = useCallback(async () => {
