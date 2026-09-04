@@ -12,50 +12,15 @@
 // ─────────────────────────────────────────────────────────
 
 import * as XLSX from "xlsx";
-
-// ─── Labels (نفس القيم في src/config/constants.js) ─────────────────────────
-
-const EQUIPMENT_CATEGORY_LABELS = {
-  base: "معدة أساسية",
-  attachment: "ملحق",
-};
-
-const EQUIPMENT_STATUS_LABELS = {
-  active: "نشطة",
-  maintenance: "في الصيانة",
-  inactive: "متوقفة",
-};
-
-const DRIVER_STATUS_LABELS = {
-  active: "نشط",
-  inactive: "غير نشط",
-};
-
-const SALARY_ENTRY_LABELS = {
-  base: "راتب أساسي",
-  bonus: "حافز / مكافأة",
-  deduction: "خصم",
-  advance: "سلفة",
-  advance_repay: "سداد سلفة",
-};
-
-const ATTENDANCE_LABELS = {
-  present: "حضر",
-  absent: "غياب",
-  late: "تأخير",
-  half: "نصف يوم",
-};
-
-const CUSTODY_TYPE_LABELS = {
-  deposit: "إضافة فلوس",
-  expense: "صرف فلوس",
-};
-
-const CUSTODY_EXPENSE_CATEGORY_LABELS = {
-  equipment: "ميكنة",
-  driver: "سائقين",
-  other: "أخرى",
-};
+import {
+  EQUIPMENT_CATEGORY_LABELS,
+  EQUIPMENT_STATUS_LABELS,
+  DRIVER_STATUS_LABELS,
+  SALARY_ENTRY_LABELS,
+  ATTENDANCE_LABELS,
+  CUSTODY_TYPE_LABELS,
+  CUSTODY_EXPENSE_CATEGORY_LABELS,
+} from "../config/constants";
 
 // ─── Helpers ─────────────────────────────────────────────────────────────
 
