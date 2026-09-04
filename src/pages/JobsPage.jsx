@@ -11,7 +11,7 @@ import ConfirmDialog    from "../components/ui/ConfirmDialog";
 import Button           from "../components/ui/Button";
 import { EmptyState }   from "../components/ui/Card";
 import LoadingScreen    from "../components/ui/LoadingScreen";
-import { PlusIcon, ClipboardIcon, RevenueIcon, FuelIcon, ProfitIcon, AcreIcon } from "../components/ui/Icons";
+import { PlusIcon, ClipboardIcon, RevenueIcon, FuelIcon, WrenchIcon, ProfitIcon, AcreIcon } from "../components/ui/Icons";
 import { formatCurrency, formatNumber } from "../utils/formatters";
 
 const SummaryBadge = ({ Icon, label, value, color }) => (
@@ -25,7 +25,7 @@ const SummaryBadge = ({ Icon, label, value, color }) => (
 );
 
 const JobsPage = () => {
-  const { jobs, totals, filters, setFilters, clearFilters, hasActiveFilters, loading, addJob, updateJob, deleteJob, fuelPrice } = useJobs();
+  const { jobs, totals, totalMaintCost, netProfit, filters, setFilters, clearFilters, hasActiveFilters, loading, addJob, updateJob, deleteJob, fuelPrice } = useJobs();
   const { equipment, drivers, addPayment } = useData();
   const { confirm, confirmState } = useConfirm();
   const [modal, setModal] = useState(null);
@@ -84,7 +84,8 @@ const JobsPage = () => {
         <div className="flex flex-wrap gap-3 mb-5">
           <SummaryBadge Icon={RevenueIcon} label="إجمالي الإيراد"  value={formatCurrency(totals.totalRevenue)}   color="text-amber-400" />
           <SummaryBadge Icon={FuelIcon}    label="تكلفة الوقود"    value={formatCurrency(totals.totalFuelCost)}  color="text-red-400" />
-          <SummaryBadge Icon={ProfitIcon}  label="صافي الربح"      value={formatCurrency(totals.netProfit)}      color={totals.netProfit >= 0 ? "text-green-400" : "text-red-400"} />
+          <SummaryBadge Icon={WrenchIcon}  label="تكلفة الصيانة"   value={formatCurrency(totalMaintCost)}        color="text-red-400" />
+          <SummaryBadge Icon={ProfitIcon}  label="صافي الربح"      value={formatCurrency(netProfit)}             color={netProfit >= 0 ? "text-green-400" : "text-red-400"} />
           <SummaryBadge Icon={AcreIcon}    label="إجمالي الأفدنة"  value={`${formatNumber(totals.totalAcres)} فدان`} color="text-blue-400" />
         </div>
       )}

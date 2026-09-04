@@ -7,7 +7,7 @@ import {
 } from "../utils/calculations";
 
 export const useJobs = () => {
-  const { jobs, payments, settings, loading, addJob, updateJob, deleteJob } = useData();
+  const { jobs, maintenance = [], payments, settings, loading, addJob, updateJob, deleteJob } = useData();
 
   const [filters, setFilters] = useState({
     equipmentId:"", driverId:"", workType:"",
@@ -48,13 +48,31 @@ export const useJobs = () => {
     [filtered, settings.fuelPrice, payments]
   );
 
+  // Maintenance cost scoped to match the jobs currently shown: same
+  // equipment + date-range filters as the jobs list (driver/workType/
+  // paymentStatus don't apply to maintenance records, so they're ignored
+  // here — maintenance isn't tied to a driver or a work type).
+  const totalMaintCost = useMemo(() => {
+    return maintenance
+      .filter((m) => {
+        if (filters.equipmentId && m.equipmentId !== filters.equipmentId) return false;
+        if (filters.dateFrom    && m.date        <  filters.dateFrom)     return false;
+        if (filters.dateTo      && m.date        >  filters.dateTo)       return false;
+        return true;
+      })
+      .reduce((s, m) => s + (Number(m.cost) || 0), 0);
+  }, [maintenance, filters.equipmentId, filters.dateFrom, filters.dateTo]);
+
+  const netProfit = totals.netProfit - totalMaintCost;
+
   const clearFilters = () =>
     setFilters({ equipmentId:"", driverId:"", workType:"", dateFrom:"", dateTo:"", paymentStatus:"" });
 
   return {
     jobs: filtered.map(enrichJob),
     allJobs: jobs,
-    totals, filters, setFilters, clearFilters,
+    totals, totalMaintCost, netProfit,
+    filters, setFilters, clearFilters,
     hasActiveFilters: Object.values(filters).some(Boolean),
     loading,
     addJob, updateJob, deleteJob,
