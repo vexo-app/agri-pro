@@ -46,7 +46,8 @@ import {
   ChevronLeftIcon,
   TractorIcon,
   DriverIcon,
-  WalletIcon,
+  AlertIcon,
+  ChartIcon,
 } from "../../components/ui/Icons";
 
 const TOTAL_STEPS = 3;
@@ -59,10 +60,31 @@ const STEP_LABELS = ["مرحبًا", "بيانات الشركة", "اكتمل ا
 const BRAND_PRIMARY = "#8CFF00"; // Primary Green — CTA / active accents only
 const BRAND_TAGLINE = "بيانات أوضح. قرارات أذكى. أرباح أكبر.";
 
-const FEATURES = [
-  { Icon: TractorIcon, label: "المعدات" },
-  { Icon: DriverIcon, label: "السائقون" },
-  { Icon: WalletIcon, label: "المصاريف" },
+// Quick "basics" tour shown on the welcome step — a short, interactive
+// introduction to the app's core sections before the user ever signs
+// in to the real dashboard. Pure local UI state (no persistence, no
+// navigation) so it can't affect onboarding's own data flow.
+const TOUR_SLIDES = [
+  {
+    Icon: TractorIcon,
+    title: "المعدات",
+    desc: "سجّل معداتك وتابع حالتها وساعات تشغيلها بسهولة.",
+  },
+  {
+    Icon: DriverIcon,
+    title: "السائقون",
+    desc: "اربط كل سائق بمعداته وتابع أداءه ومستحقاته أول بأول.",
+  },
+  {
+    Icon: AlertIcon,
+    title: "العملاء والديون",
+    desc: "تابع فواتير عملائك ومديونياتهم من مكان واحد.",
+  },
+  {
+    Icon: ChartIcon,
+    title: "التقارير",
+    desc: "شوف أرباحك ومصاريفك في تقارير واضحة وجاهزة.",
+  },
 ];
 
 // Primary-accent button styling, applied on top of the existing
@@ -129,6 +151,87 @@ const IconBadge = ({ icon }) => (
     <div className="text-brand-400">{icon}</div>
   </div>
 );
+
+// ── Interactive "basics" carousel (welcome step) ────────────
+// Small, self-contained tour of the app's core sections: dots +
+// arrows the user can drive themselves, with a gentle auto-advance
+// that pauses the moment the user interacts. Local state only.
+const IntroCarousel = () => {
+  const [index, setIndex] = useState(0);
+  const [paused, setPaused] = useState(false);
+  const count = TOUR_SLIDES.length;
+
+  React.useEffect(() => {
+    if (paused) return undefined;
+    const timer = setInterval(() => {
+      setIndex((i) => (i + 1) % count);
+    }, 3800);
+    return () => clearInterval(timer);
+  }, [paused, count]);
+
+  const goTo = (next) => {
+    setIndex(((next % count) + count) % count);
+    setPaused(true);
+  };
+
+  const slide = TOUR_SLIDES[index];
+
+  return (
+    <div className="mb-8">
+      <div
+        className="relative rounded-2xl bg-surface-2/50 border border-white/5 px-10 py-5 min-h-[136px] flex items-center justify-center text-center overflow-hidden"
+        role="group"
+        aria-roledescription="carousel"
+        aria-label="جولة سريعة على أساسيات البرنامج"
+      >
+        <div key={index} className="flex flex-col items-center gap-2 animate-slide-up">
+          <div
+            className="w-11 h-11 rounded-xl bg-surface-3 border flex items-center justify-center"
+            style={{ borderColor: "rgba(140,255,0,0.35)" }}
+          >
+            <slide.Icon size={20} className="text-brand-400" />
+          </div>
+          <p className="text-sm font-extrabold text-gray-100">{slide.title}</p>
+          <p className="text-xs text-gray-400 leading-relaxed px-2">{slide.desc}</p>
+        </div>
+
+        <button
+          type="button"
+          onClick={() => goTo(index - 1)}
+          aria-label="الشريحة السابقة"
+          className="absolute top-1/2 -translate-y-1/2 right-2 w-7 h-7 rounded-full bg-surface-2 border border-white/10 flex items-center justify-center text-gray-400 hover:text-gray-200 hover:border-white/20 transition-colors"
+        >
+          <ChevronLeftIcon size={14} className="rotate-180" />
+        </button>
+        <button
+          type="button"
+          onClick={() => goTo(index + 1)}
+          aria-label="الشريحة التالية"
+          className="absolute top-1/2 -translate-y-1/2 left-2 w-7 h-7 rounded-full bg-surface-2 border border-white/10 flex items-center justify-center text-gray-400 hover:text-gray-200 hover:border-white/20 transition-colors"
+        >
+          <ChevronLeftIcon size={14} />
+        </button>
+      </div>
+
+      <div className="flex items-center justify-center gap-1.5 mt-3" role="tablist" aria-label="مؤشر الشرائح">
+        {TOUR_SLIDES.map((s, i) => (
+          <button
+            key={s.title}
+            type="button"
+            role="tab"
+            aria-selected={i === index}
+            aria-label={s.title}
+            onClick={() => goTo(i)}
+            className={clsx(
+              "h-1.5 rounded-full transition-all duration-300",
+              i === index ? "w-5 bg-[#8CFF00]" : "w-1.5 bg-white/15"
+            )}
+          />
+        ))}
+      </div>
+    </div>
+  );
+};
 
 // ── Numbered SaaS stepper (reads right → left, native to RTL) ──
 // Completed = brand-500 (the brand's own Secondary Green, used for
@@ -277,17 +380,7 @@ const OnboardingFlow = () => {
           كل حاجة محتاجها لإدارة شغلك في مكان واحد.
         </p>
 
-        <div className="grid grid-cols-3 gap-2 mb-8">
-          {FEATURES.map(({ Icon, label }) => (
-            <div
-              key={label}
-              className="flex flex-col items-center gap-1.5 py-3 rounded-xl bg-surface-2/50 border border-white/5"
-            >
-              <Icon size={18} className="text-brand-400" />
-              <span className="text-[10px] font-semibold text-gray-400">{label}</span>
-            </div>
-          ))}
-        </div>
+        <IntroCarousel />
 
         <Button
           className={clsx("w-full mb-3", PRIMARY_CTA_CLASS)}
