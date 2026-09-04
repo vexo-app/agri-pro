@@ -61,16 +61,11 @@ const BASE_CSS = `
     body { print-color-adjust: exact; -webkit-print-color-adjust: exact; }
     .no-print { display:none; }
   }
-  /* الفاتورة/التقرير ممكن يطول لأكتر من صفحة وده طبيعي، لكن مش عايزين
-     أي جزء (صف جدول، قسم، أو الختام في الآخر) ينقطع نص نص بين صفحتين،
-     ولا الختام يتقلع من مكانه وياخد صفحة لوحه فاضية. الحل: نمنع القطع
-     *جوه* كل عنصر من دول، فلو مش هيكمل في الصفحة الحالية كامل، بيتنقل
-     كامل للي بعدها بدل ما يتقطع أو يسيب فراغ كبير وراه.
-     ملحوظة: page-break-* هي النسخة القديمة، و break-* هي المعيار
-     الحديث — بنحطهم مع بعض عشان يشتغل على كل المتصفحات.  */
-  table, tr { page-break-inside: avoid; break-inside: avoid; }
+  /* لا قيود على تقسيم الجداول أو الأقسام بين الصفحات — الجدول/القسم
+     الطويل بيتقسم بشكل طبيعي بين صفحتين زي أي طباعة عادية. الحاجة
+     الوحيدة اللي فضلت هي تكرار رأس الجدول (thead) في كل صفحة جديدة،
+     عشان لو الجدول اتقسم، يفضل واضح كل عمود بيمثل إيه. */
   thead { display: table-header-group; }
-  .section { page-break-inside: avoid; break-inside: avoid; }
 `;
 
 // ── Open print window ─────────────────────────────────────────────────────────
@@ -228,16 +223,6 @@ const INVOICE_CSS = `
     font-size:9px; color:#16a34a99; font-weight:700; text-align:center; line-height:1.3;
   }
   .inv-badge-note{font-size:8.5px; color:#9ca3af; margin-top:5px; line-height:1.55; max-width:170px;}
-  /* التوقيع + الإقرار القانوني لازم يفضلوا مع بعض ومتقطعوش بين صفحتين،
-     حتى لو الفاتورة نفسها طالت واتقسّمت على أكتر من صفحة. */
-  /* التوقيع لازم يفضل مع بعضه (متقطعش) ومتقلعش بمفرده لصفحة جديدة —
-     avoid-inside بيمنع القطع من جواه، وavoid-before بيقول للطابعة "متبتديش
-     صفحة جديدة قبل العنصر ده لو ينفع"، يعني يحاول يشد لفوق مع الفاتورة
-     نفسها بدل ما يتقلع في صفحة لوحه. */
-  .inv-closing{
-    page-break-inside: avoid; break-inside: avoid;
-    page-break-before: avoid; break-before: avoid;
-  }
   .inv-logo-img{
     width:64px; height:64px; border-radius:14px; flex-shrink:0;
     object-fit:contain; background:#fff; border:1px solid #e5e7eb;
