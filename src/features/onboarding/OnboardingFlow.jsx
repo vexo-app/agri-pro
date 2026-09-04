@@ -15,14 +15,20 @@
 // dedicated phone/currency/fiscal-year/business-type fields exist,
 // so those are intentionally left out rather than inventing new ones).
 //
-// Visual language (v2): Arabic-first premium SaaS look — a restrained
-// geometric backdrop (diamond lattice + rotated-square accents), a
-// diamond-framed icon badge, a numbered stepper that reads naturally
-// right-to-left, and grouped, generously-spaced form sections. All of
-// it built from tokens/components that already exist in the design
-// system (Card, Button, Input, Icons, brand/surface colors, the
-// existing `animate-slide-up` keyframe) — no new dependencies, no
-// changed data model, no changed validation/persistence logic.
+// Visual language (v3 — official brand identity pass):
+// Brings in the *official* زراعي برو brand kit (see /brand-identity
+// deliverable): the real App Icon asset (used as-is, byte-for-byte,
+// copied to public/brand/app-icon.png — never redrawn/recolored/
+// stretched), the exact documented palette (Primary #8CFF00 used
+// sparingly as the CTA accent, Secondary #22C55E — which is simply
+// this app's existing `brand-500` token, so no new color for that
+// role — for success/active states, Dark Background #0F172A for the
+// onboarding canvas), and the single approved tagline
+// "بيانات أوضح. قرارات أذكى. أرباح أكبر." on the welcome step only
+// (brand screens shouldn't repeat the full lockup on every step).
+// Everything else — the numbered RTL stepper, grouped form, subtle
+// geometric backdrop, Card/Button/Input components, validation,
+// Firebase calls — is unchanged from the previous visual pass.
 // ─────────────────────────────────────────────────────────
 import React, { useState } from "react";
 import clsx from "clsx";
@@ -35,10 +41,10 @@ import Button from "../../components/ui/Button";
 import { Input } from "../../components/ui/Input";
 import { SummaryRow } from "../../components/ui/Card";
 import {
-  TractorIcon,
   UserIcon,
   CheckCircleIcon,
   ChevronLeftIcon,
+  TractorIcon,
   DriverIcon,
   WalletIcon,
 } from "../../components/ui/Icons";
@@ -46,17 +52,30 @@ import {
 const TOTAL_STEPS = 3;
 const STEP_LABELS = ["مرحبًا", "بيانات الشركة", "اكتمل الإعداد"];
 
+// Official brand tokens (from the زراعي برو brand-identity kit).
+// Primary is intentionally NOT added to tailwind.config.js — it is
+// used in exactly the few spots the brand guide calls out (main CTA,
+// active step, subtle glows), scoped to this screen only.
+const BRAND_PRIMARY = "#8CFF00"; // Primary Green — CTA / active accents only
+const BRAND_TAGLINE = "بيانات أوضح. قرارات أذكى. أرباح أكبر.";
+
 const FEATURES = [
   { Icon: TractorIcon, label: "المعدات" },
   { Icon: DriverIcon, label: "السائقون" },
   { Icon: WalletIcon, label: "المصاريف" },
 ];
 
+// Primary-accent button styling, applied on top of the existing
+// Button component via `!important` utilities so the shared component
+// itself stays untouched — used only for this flow's main CTAs, per
+// the brand guide's "Primary = main CTA button, used sparingly" rule.
+const PRIMARY_CTA_CLASS =
+  "!bg-[#8CFF00] hover:!bg-[#a6ff4d] !text-[#0F172A] !shadow-[0_0_22px_rgba(140,255,0,0.35)]";
+
 // ── Decorative geometric backdrop ───────────────────────────
-// Soft brand-colored glow blobs (existing pattern) layered with a
-// faint diamond lattice and a couple of crisp rotated-square accents.
-// Everything is brand-colored, very low opacity, and pointer-events-none —
-// pure atmosphere, no new colors, no external assets.
+// Soft brand-colored glow blobs layered with a faint diamond lattice
+// and a couple of crisp rotated-square accents — pure atmosphere,
+// pointer-events-none, no external assets.
 const GeometricBackdrop = () => (
   <div className="absolute inset-0 overflow-hidden pointer-events-none" aria-hidden="true">
     <div className="absolute top-1/4 right-1/4 w-96 h-96 bg-brand-900/20 rounded-full blur-3xl" />
@@ -65,7 +84,7 @@ const GeometricBackdrop = () => (
       className="absolute inset-0 opacity-[0.05]"
       style={{
         backgroundImage:
-          "linear-gradient(45deg, rgba(74,222,128,0.8) 1px, transparent 1px), linear-gradient(-45deg, rgba(74,222,128,0.8) 1px, transparent 1px)",
+          "linear-gradient(45deg, rgba(140,255,0,0.7) 1px, transparent 1px), linear-gradient(-45deg, rgba(140,255,0,0.7) 1px, transparent 1px)",
         backgroundSize: "34px 34px",
       }}
     />
@@ -74,17 +93,47 @@ const GeometricBackdrop = () => (
   </div>
 );
 
-// ── Diamond-framed icon badge ────────────────────────────────
-const IconBadge = ({ icon }) => (
-  <div className="relative w-16 h-16 mx-auto mb-6">
-    <div className="absolute inset-0 rotate-45 rounded-2xl bg-gradient-to-br from-brand-500/25 via-brand-600/10 to-transparent border border-brand-500/30" />
-    <div className="absolute inset-[3px] rounded-xl bg-surface-2/90 border border-white/5 flex items-center justify-center">
-      <div className="text-brand-400">{icon}</div>
+// ── Brand lockup for the welcome step ───────────────────────
+// The official App Icon (used exactly as shipped — no recolor, no
+// crop of the artwork, no rotation) mounted on the brand's own
+// documented light surface tone, with the icon-glow effect the
+// brand guide documents for the icon's lime frame. Name + the single
+// approved tagline sit underneath, per "شاشات الترحيب: Primary Logo
+// + Tagline" in logo-usage.md.
+const BrandLockup = () => (
+  <div className="mb-6">
+    <div className="relative w-20 h-20 mx-auto mb-4 rounded-2xl bg-[#F1F5F9] p-2 shadow-[0_0_22px_rgba(140,255,0,0.3)]">
+      <img
+        src="/brand/app-icon.png"
+        alt="زراعي برو"
+        className="w-full h-full object-contain rounded-xl"
+      />
     </div>
+    <p className="text-xl font-extrabold text-gray-100 tracking-tight mb-1">زراعي برو</p>
+    <p className="text-xs sm:text-[13px] font-semibold text-brand-500 leading-relaxed">
+      {BRAND_TAGLINE}
+    </p>
+  </div>
+);
+
+// ── Icon badge for steps 2 & 3 ──────────────────────────────
+// Echoes the App Icon's own signature — a dark rounded square with a
+// thin lime frame — without reusing the literal logo artwork on every
+// screen (the brand guide explicitly discourages repeating the full
+// graphic on each step).
+const IconBadge = ({ icon }) => (
+  <div
+    className="w-16 h-16 mx-auto mb-6 rounded-2xl bg-surface-2 border-2 flex items-center justify-center shadow-[0_0_16px_rgba(140,255,0,0.15)]"
+    style={{ borderColor: "rgba(140,255,0,0.45)" }}
+  >
+    <div className="text-brand-400">{icon}</div>
   </div>
 );
 
 // ── Numbered SaaS stepper (reads right → left, native to RTL) ──
+// Completed = brand-500 (the brand's own Secondary Green, used for
+// success/positive states). Current = the brand's Primary lime,
+// matching the guide's "Primary = active state" rule.
 const Stepper = ({ step }) => (
   <div className="mb-7" role="group" aria-label="مراحل الإعداد">
     <div className="flex items-center">
@@ -98,8 +147,7 @@ const Stepper = ({ step }) => (
               className={clsx(
                 "w-8 h-8 flex-shrink-0 rounded-full flex items-center justify-center text-[11px] font-bold border-2 transition-all duration-300",
                 isDone && "bg-brand-500 border-brand-500 text-dark",
-                isCurrent &&
-                  "bg-brand-500/15 border-brand-500 text-brand-400 ring-4 ring-brand-500/10 scale-105",
+                isCurrent && "bg-[#8CFF00]/15 border-[#8CFF00] text-[#8CFF00] ring-4 ring-[#8CFF00]/15 scale-105",
                 !isDone && !isCurrent && "bg-surface-2 border-white/10 text-gray-500"
               )}
               aria-current={isCurrent ? "step" : undefined}
@@ -137,9 +185,10 @@ const Stepper = ({ step }) => (
   </div>
 );
 
-const Shell = ({ step, icon, wide = false, children }) => (
+const Shell = ({ step, badge, wide = false, children }) => (
   <div
-    className="relative min-h-screen bg-dark flex items-center justify-center p-4 sm:p-6 font-arabic overflow-hidden"
+    className="relative min-h-screen flex items-center justify-center p-4 sm:p-6 font-arabic overflow-hidden"
+    style={{ backgroundColor: "#0F172A" }}
     dir="rtl"
   >
     <GeometricBackdrop />
@@ -149,9 +198,12 @@ const Shell = ({ step, icon, wide = false, children }) => (
         key={step}
         className="relative bg-surface border border-white/10 rounded-3xl p-6 sm:p-8 text-center shadow-2xl shadow-black/40 animate-slide-up overflow-hidden"
       >
-        <div className="absolute top-0 inset-x-0 h-1 bg-gradient-to-l from-brand-400 via-brand-500 to-brand-700" />
+        <div
+          className="absolute top-0 inset-x-0 h-1"
+          style={{ background: `linear-gradient(to left, ${BRAND_PRIMARY}, #22C55E, #15803D)` }}
+        />
         <Stepper step={step} />
-        <IconBadge icon={icon} />
+        {badge}
         {children}
       </div>
     </div>
@@ -216,14 +268,9 @@ const OnboardingFlow = () => {
 
   if (step === 1) {
     return (
-      <Shell step={1} icon={<TractorIcon size={26} />}>
-        <div className="inline-flex items-center gap-2 bg-surface-2/70 border border-white/8 rounded-full px-3 py-1.5 mb-5">
-          <img src="/brand-icon.png" alt="" className="w-5 h-5 rounded-md" />
-          <span className="text-[11px] font-bold text-gray-300 tracking-wide">زراعي برو</span>
-        </div>
-
-        <h1 className="text-2xl sm:text-[26px] font-extrabold text-gray-100 leading-snug mb-3 tracking-tight">
-          أهلاً بك في نظام إدارة أعمالك
+      <Shell step={1} badge={<BrandLockup />}>
+        <h1 className="text-xl sm:text-2xl font-extrabold text-gray-100 leading-snug mb-3 tracking-tight">
+          أهلاً بك 👋
         </h1>
         <p className="text-sm text-gray-400 leading-relaxed mb-7 px-1">
           نظام بسيط واحترافي لمتابعة المعدات والسائقين والعملاء والمصاريف —
@@ -242,7 +289,11 @@ const OnboardingFlow = () => {
           ))}
         </div>
 
-        <Button className="w-full mb-3" icon={<ChevronLeftIcon size={16} />} onClick={() => setStep(2)}>
+        <Button
+          className={clsx("w-full mb-3", PRIMARY_CTA_CLASS)}
+          icon={<ChevronLeftIcon size={16} />}
+          onClick={() => setStep(2)}
+        >
           ابدأ الآن
         </Button>
         <button
@@ -259,7 +310,7 @@ const OnboardingFlow = () => {
 
   if (step === 2) {
     return (
-      <Shell step={2} icon={<UserIcon size={24} />} wide>
+      <Shell step={2} badge={<IconBadge icon={<UserIcon size={24} />} />} wide>
         <h1 className="text-lg sm:text-xl font-extrabold text-gray-100 mb-2 tracking-tight">
           بيانات الشركة الأساسية
         </h1>
@@ -311,7 +362,12 @@ const OnboardingFlow = () => {
           >
             رجوع
           </Button>
-          <Button className="flex-1" loading={saving} icon={<ChevronLeftIcon size={16} />} onClick={saveBasicSetup}>
+          <Button
+            className={clsx("flex-1", PRIMARY_CTA_CLASS)}
+            loading={saving}
+            icon={<ChevronLeftIcon size={16} />}
+            onClick={saveBasicSetup}
+          >
             متابعة
           </Button>
         </div>
@@ -320,7 +376,7 @@ const OnboardingFlow = () => {
   }
 
   return (
-    <Shell step={3} icon={<CheckCircleIcon size={26} />}>
+    <Shell step={3} badge={<IconBadge icon={<CheckCircleIcon size={26} />} />}>
       <h1 className="text-xl sm:text-2xl font-extrabold text-gray-100 mb-2 tracking-tight">
         أنت جاهز للبدء!
       </h1>
@@ -335,7 +391,12 @@ const OnboardingFlow = () => {
         </div>
       )}
 
-      <Button className="w-full" loading={saving} icon={<ChevronLeftIcon size={16} />} onClick={finishOnboarding}>
+      <Button
+        className={clsx("w-full", PRIMARY_CTA_CLASS)}
+        loading={saving}
+        icon={<ChevronLeftIcon size={16} />}
+        onClick={finishOnboarding}
+      >
         الذهاب إلى لوحة التحكم
       </Button>
     </Shell>
