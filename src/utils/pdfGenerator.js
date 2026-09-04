@@ -551,7 +551,7 @@ export const downloadEquipmentReportPdf = (args) => {
 };
 
 // ── 3. Monthly Summary ────────────────────────────────────────────────────────
-export const printMonthlySummary = ({ jobs, equipment, maintenance, drivers, fuelPrice, month, year, allTime = false, totalSalariesPaid = 0 }) => {
+export const printMonthlySummary = ({ jobs, equipment, maintenance, drivers, fuelPrice, month, year, allTime = false, totalSalariesPaid = 0, totalTaxDeductions = 0 }) => {
   const today = new Date().toLocaleDateString("ar-EG");
   // allTime reuses the exact same report layout/calculations below, just
   // without the date filters on jobs/maintenance — so it lines up with the
@@ -574,7 +574,7 @@ export const printMonthlySummary = ({ jobs, equipment, maintenance, drivers, fue
   const totalFuel     = monthJobs.reduce((s, j) => s + (j.fuelUsed || 0), 0);
   const totalFuelCost = totalFuel * fuelPrice;
   const maintCost     = monthMaintenance.reduce((s, m) => s + (m.cost || 0), 0);
-  const netProfit     = totalRevenue - totalFuelCost - maintCost - totalSalariesPaid;
+  const netProfit     = totalRevenue - totalFuelCost - maintCost - totalSalariesPaid - totalTaxDeductions;
 
   const equip = [...new Set(monthJobs.map((j) => j.equipmentId))].map((id) => {
     const eq       = equipment.find((e) => e.id === id);
@@ -622,6 +622,7 @@ export const printMonthlySummary = ({ jobs, equipment, maintenance, drivers, fue
           <tr><td style="font-weight:600">تكلفة الوقود</td><td>${formatCurrency(totalFuelCost)}</td></tr>
           <tr><td style="font-weight:600">تكاليف الصيانة</td><td>${formatCurrency(maintCost)}</td></tr>
           ${totalSalariesPaid ? `<tr><td style="font-weight:600">مرتبات السائقين</td><td>${formatCurrency(totalSalariesPaid)}</td></tr>` : ""}
+          ${totalTaxDeductions ? `<tr><td style="font-weight:600">ضرائب وخصومات</td><td>${formatCurrency(totalTaxDeductions)}</td></tr>` : ""}
           <tr class="total-row"><td>صافي الربح</td><td style="color:${netProfit>=0?"#15803d":"#991b1b"}">${formatCurrency(netProfit)}</td></tr>
         </table>
       </div>

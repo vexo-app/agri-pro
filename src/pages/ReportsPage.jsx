@@ -13,7 +13,7 @@ import { EmptyState } from "../components/ui/Card";
 import { ChartCard } from "../components/ui/ChartCard";
 import LoadingScreen       from "../components/ui/LoadingScreen";
 import Button               from "../components/ui/Button";
-import { TractorIcon, DriverIcon, ChartIcon, RevenueIcon, AcreIcon, FuelIcon, PrintIcon } from "../components/ui/Icons";
+import { TractorIcon, DriverIcon, ChartIcon, RevenueIcon, AcreIcon, FuelIcon, PrintIcon, ReceiptIcon } from "../components/ui/Icons";
 import { formatCurrency, formatNumber } from "../utils/formatters";
 import { useData }                from "../contexts/DataContext";
 import { calcTotalSalariesPaid }  from "../utils/salaryCalculations";
@@ -65,8 +65,9 @@ const Legend = ({ items }) => (
 // ── ReportsPage ───────────────────────────────────────────────────────────
 const ReportsPage = () => {
   const { report: equipReport, loading: eLoading } = useEquipment();
-  const { salaryEntries = [], equipment = [], jobs = [], drivers = [], maintenance = [], settings } = useData();
+  const { salaryEntries = [], equipment = [], jobs = [], drivers = [], maintenance = [], taxDeductions = [], settings } = useData();
   const totalSalariesPaid = calcTotalSalariesPaid(salaryEntries);
+  const totalTaxDeductions = taxDeductions.reduce((s, t) => s + (Number(t.amount) || 0), 0);
   const { report: driverReport, loading: dLoading } = useDrivers();
   const [tab, setTab] = useState("equipment");
 
@@ -77,15 +78,21 @@ const ReportsPage = () => {
   //   all-time KPI above, just given a month-filtered entry list first —
   //   so the monthly report uses the exact same profit methodology as the
   //   all-time one, scoped to the month instead of everything).
-  // - allTime: no month filter, using the page's own totalSalariesPaid so
-  //   its net-profit figure lines up exactly with this page's totalProfit
-  //   (totalGrossProfit - totalSalariesPaid).
+  // - allTime: no month filter, using the page's own totalSalariesPaid and
+  //   totalTaxDeductions so its net-profit figure lines up exactly with
+  //   this page's totalProfit (totalGrossProfit - totalSalariesPaid -
+  //   totalTaxDeductions).
   const handlePrintReport = (allTime) => {
     const now = new Date();
     const monthPrefix = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}`;
     const salariesForPeriod = allTime
       ? totalSalariesPaid
       : calcTotalSalariesPaid(salaryEntries.filter((e) => (e.date || "").startsWith(monthPrefix)));
+    const taxDeductionsForPeriod = allTime
+      ? totalTaxDeductions
+      : taxDeductions
+          .filter((t) => (t.date || "").startsWith(monthPrefix))
+          .reduce((s, t) => s + (Number(t.amount) || 0), 0);
 
     printMonthlySummary({
       jobs, equipment, maintenance, drivers,
@@ -94,6 +101,7 @@ const ReportsPage = () => {
       year:  now.getFullYear(),
       allTime,
       totalSalariesPaid: salariesForPeriod,
+      totalTaxDeductions: taxDeductionsForPeriod,
     });
   };
 
@@ -101,7 +109,7 @@ const ReportsPage = () => {
 
   const totalRevenue   = equipReport.reduce((s, e) => s + (e.totalRevenue  || 0), 0);
   const totalGrossProfit = equipReport.reduce((s, e) => s + (e.netProfit || 0), 0);
-  const totalProfit      = totalGrossProfit - totalSalariesPaid;
+  const totalProfit      = totalGrossProfit - totalSalariesPaid - totalTaxDeductions;
   const totalFuelCost  = equipReport.reduce((s, e) => s + (e.totalFuelCost || 0), 0);
   const totalMaintCost = equipReport.reduce((s, e) => s + (e.maintCost     || 0), 0);
 
@@ -169,13 +177,14 @@ const ReportsPage = () => {
       {equipReport.length > 0 && (
         <>
           {/* KPI strip */}
-          <div className="grid grid-cols-2 lg:grid-cols-5 gap-3 mb-6">
+          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3 mb-6">
             {[
               { label:"إجمالي الإيراد",  value:formatCurrency(totalRevenue),  color:"text-amber-400",  icon:<RevenueIcon size={18}/> },
-              { label:"صافي الربح",      value:formatCurrency(totalProfit),   color:totalProfit>=0?"text-green-400":"text-red-400", icon:<ChartIcon size={18}/> },
               { label:"تكلفة الوقود",    value:formatCurrency(totalFuelCost), color:"text-blue-400",   icon:<FuelIcon size={18}/> },
               { label:"تكاليف الصيانة",   value:formatCurrency(totalMaintCost),      color:"text-purple-400", icon:<AcreIcon size={18}/> },
               { label:"مرتبات السائقين", value:formatCurrency(totalSalariesPaid), color:"text-red-400",    icon:<DriverIcon size={18}/> },
+              { label:"ضرائب وخصومات",   value:formatCurrency(totalTaxDeductions), color:"text-red-400",    icon:<ReceiptIcon size={18}/> },
+              { label:"صافي الربح",      value:formatCurrency(totalProfit),   color:totalProfit>=0?"text-green-400":"text-red-400", icon:<ChartIcon size={18}/> },
             ].map((s) => (
               <div key={s.label} className="bg-surface border border-white/8 rounded-2xl p-4">
                 <div className={`mb-2 ${s.color}`}>{s.icon}</div>
