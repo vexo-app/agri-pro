@@ -14,15 +14,20 @@ const TaxDeductionForm = ({ initial, onSave, onClose }) => {
     register,
     handleSubmit,
     control,
+    watch,
     formState: { errors, isSubmitting },
   } = useForm({
     defaultValues: initial ?? {
       type:   TAX_DEDUCTION_TYPES.TAX,
+      otherLabel: "",
       amount: "",
       date:   todayISO(),
       notes:  "",
     },
   });
+
+  const type = watch("type");
+  const isOther = type === TAX_DEDUCTION_TYPES.OTHER;
 
   const onSubmit = async (data) => {
     const payload = {
@@ -31,6 +36,7 @@ const TaxDeductionForm = ({ initial, onSave, onClose }) => {
       date:   data.date,
       notes:  data.notes || "",
     };
+    if (data.type === TAX_DEDUCTION_TYPES.OTHER) payload.otherLabel = data.otherLabel || "";
     await onSave(payload);
     onClose();
   };
@@ -46,6 +52,16 @@ const TaxDeductionForm = ({ initial, onSave, onClose }) => {
             ))}
           </Select>
         </div>
+
+        {isOther && (
+          <div className="sm:col-span-2">
+            <Input label="اكتب نوع الخصم *" placeholder="مثال: خصم تأمينات، رسوم بنكية..."
+              {...register("otherLabel", {
+                required: isOther ? "اكتب نوع الخصم" : false,
+              })}
+              error={errors.otherLabel?.message} />
+          </div>
+        )}
 
         <Controller
           name="amount"

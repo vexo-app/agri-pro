@@ -89,7 +89,7 @@ const TaxDeductionsPage = () => {
                 <ReceiptIcon size={18} className="text-red-400 flex-shrink-0" />
                 <div className="flex-1 min-w-0">
                   <p className="text-sm font-semibold text-gray-200">
-                    {TAX_DEDUCTION_TYPE_LABELS[t.type] || "خصم"}
+                    {t.type === "other" && t.otherLabel ? t.otherLabel : (TAX_DEDUCTION_TYPE_LABELS[t.type] || "خصم")}
                   </p>
                   <div className="flex items-center gap-1.5 text-xs text-gray-500 mt-0.5">
                     <CalendarIcon size={11} />
