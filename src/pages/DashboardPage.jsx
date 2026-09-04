@@ -37,6 +37,30 @@ const tooltipStyle = {
   boxShadow:"0 8px 32px rgba(0,0,0,0.6)",
 };
 
+// ── Custom X-axis tick: shows a shortened name (to fit the chart width),
+// but wraps it in a native SVG <title> so hovering the label with the
+// mouse shows the full, untruncated name as a browser tooltip.
+const AngledNameTick = (props) => {
+  const { x, y, payload } = props;
+  const full = payload.value ?? "";
+  const short = full.length > 11 ? `${full.slice(0, 11)}…` : full;
+  return (
+    <g transform={`translate(${x},${y})`}>
+      <text
+        x={0} y={0} dy={6}
+        textAnchor="end"
+        fill="#6b7280"
+        fontSize={10}
+        fontFamily="Cairo"
+        transform="rotate(-15)"
+      >
+        {short}
+        <title>{full}</title>
+      </text>
+    </g>
+  );
+};
+
 // ── Custom Tooltip for area chart ─────────────────────────────────────────
 const AreaTooltip = ({ active, payload, label }) => {
   if (!active || !payload?.length) return null;
@@ -68,7 +92,6 @@ const BarTooltip = ({ active, payload, label }) => {
 };
 
 const shortNum = (v) => v >= 1_000_000 ? `${(v/1_000_000).toFixed(1)}م` : v >= 1_000 ? `${(v/1_000).toFixed(0)}k` : String(v);
-const truncName = (n = "") => n.length > 11 ? n.slice(0, 11) + "…" : n;
 
 // ── DashboardPage ─────────────────────────────────────────────────────────
 const DashboardPage = () => {
@@ -93,7 +116,7 @@ const DashboardPage = () => {
 
   // chart-ready data
   const barData = equipReport.slice(0, 5).map((eq) => ({
-    name:    truncName(eq.name),
+    name:    eq.name,
     revenue: eq.totalRevenue || 0,
   }));
 
@@ -372,9 +395,9 @@ const DashboardPage = () => {
                       <CartesianGrid vertical={false} stroke="rgba(255,255,255,0.05)"/>
                       <XAxis
                         dataKey="name"
-                        tick={{ fontSize:10, fill:"#6b7280", fontFamily:"Cairo" }}
+                        tick={<AngledNameTick />}
                         axisLine={false} tickLine={false}
-                        angle={-15} textAnchor="end" interval={0} dy={6}
+                        interval={0}
                       />
                       <YAxis
                         tick={{ fontSize:10, fill:"#4b5563" }}

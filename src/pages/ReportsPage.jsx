@@ -25,7 +25,49 @@ const TABS = [
 ];
 
 const shortNum  = (v) => v >= 1_000_000 ? `${(v/1_000_000).toFixed(1)}م` : v >= 1_000 ? `${(v/1_000).toFixed(0)}k` : String(v);
-const truncName = (n = "") => n.length > 10 ? n.slice(0, 10) + "…" : n;
+const truncateLabel = (n = "", max) => n.length > max ? `${n.slice(0, max)}…` : n;
+
+// ── Custom axis ticks: show a shortened name (to fit the chart), but wrap
+// it in a native SVG <title> so hovering the label with the mouse shows the
+// full, untruncated name as a browser tooltip.
+const AngledNameTick = (props) => {
+  const { x, y, payload } = props;
+  const full = payload.value ?? "";
+  return (
+    <g transform={`translate(${x},${y})`}>
+      <text
+        x={0} y={0} dy={6}
+        textAnchor="end"
+        fill="#6b7280"
+        fontSize={11}
+        fontFamily="Cairo"
+        transform="rotate(-15)"
+      >
+        {truncateLabel(full, 10)}
+        <title>{full}</title>
+      </text>
+    </g>
+  );
+};
+
+const HorizontalNameTick = (props) => {
+  const { x, y, payload } = props;
+  const full = payload.value ?? "";
+  return (
+    <g transform={`translate(${x},${y})`}>
+      <text
+        x={0} y={0} dy={4}
+        textAnchor="end"
+        fill="#9ca3af"
+        fontSize={11}
+        fontFamily="Cairo"
+      >
+        {truncateLabel(full, 10)}
+        <title>{full}</title>
+      </text>
+    </g>
+  );
+};
 
 // ── Tooltip ───────────────────────────────────────────────────────────────
 const CustomTooltip = ({ active, payload, label, moneyKeys = [] }) => {
@@ -114,20 +156,20 @@ const ReportsPage = () => {
   const totalMaintCost = equipReport.reduce((s, e) => s + (e.maintCost     || 0), 0);
 
   const revenueVsProfit = equipReport.map((eq) => ({
-    name:    truncName(eq.name),
+    name:    eq.name,
     revenue: eq.totalRevenue || 0,
     profit:  Math.max(0, eq.netProfit || 0),
     loss:    Math.abs(Math.min(0, eq.netProfit || 0)),
   }));
 
   const costBreakdown = equipReport.map((eq) => ({
-    name:  truncName(eq.name),
+    name:  eq.name,
     fuel:  eq.totalFuelCost || 0,
     maint: eq.maintCost     || 0,
   }));
 
   const acresData = equipReport.map((eq) => ({
-    name:  truncName(eq.name),
+    name:  eq.name,
     acres: eq.totalAcres || 0,
   }));
 
@@ -137,7 +179,7 @@ const ReportsPage = () => {
   const marginData = equipReport
     .filter((eq) => (eq.totalRevenue || 0) > 0)
     .map((eq, i) => ({
-      name:  truncName(eq.name),
+      name:  eq.name,
       value: Math.max(0, Math.round(eq.margin || 0)),
       fill:  RADIAL_COLORS[i % RADIAL_COLORS.length],
     }));
@@ -231,8 +273,8 @@ const ReportsPage = () => {
                     ))}
                   </defs>
                   <CartesianGrid vertical={false} stroke="rgba(255,255,255,0.05)"/>
-                  <XAxis dataKey="name" tick={{ fontSize:11, fill:"#6b7280", fontFamily:"Cairo" }}
-                    axisLine={false} tickLine={false} angle={-15} textAnchor="end" interval={0} dy={6}/>
+                  <XAxis dataKey="name" tick={<AngledNameTick />}
+                    axisLine={false} tickLine={false} interval={0}/>
                   <YAxis tick={{ fontSize:10, fill:"#4b5563" }} axisLine={false} tickLine={false} tickFormatter={shortNum}/>
                   <Tooltip content={<CustomTooltip moneyKeys={["revenue","profit","loss"]}/>}
                     cursor={{ fill:"rgba(255,255,255,0.04)", radius:8 }}/>
@@ -283,8 +325,8 @@ const ReportsPage = () => {
                       ))}
                     </defs>
                     <CartesianGrid vertical={false} stroke="rgba(255,255,255,0.05)"/>
-                    <XAxis dataKey="name" tick={{ fontSize:10, fill:"#6b7280" }}
-                      axisLine={false} tickLine={false} angle={-15} textAnchor="end" interval={0} dy={6}/>
+                    <XAxis dataKey="name" tick={<AngledNameTick />}
+                      axisLine={false} tickLine={false} interval={0}/>
                     <YAxis tick={{ fontSize:10, fill:"#4b5563" }} axisLine={false} tickLine={false} tickFormatter={shortNum}/>
                     <Tooltip content={<CustomTooltip moneyKeys={["fuel","maint"]}/>}
                       cursor={{ fill:"rgba(255,255,255,0.04)" }}/>
@@ -318,7 +360,7 @@ const ReportsPage = () => {
                       axisLine={false} tickLine={false} tickFormatter={shortNum}
                       domain={[0, maxAcres * 1.15]}/>
                     <YAxis type="category" dataKey="name" width={76}
-                      tick={{ fontSize:11, fill:"#9ca3af", fontFamily:"Cairo" }}
+                      tick={<HorizontalNameTick />}
                       axisLine={false} tickLine={false}/>
                     <Tooltip
                       cursor={{ fill:"rgba(255,255,255,0.04)" }}
@@ -365,7 +407,7 @@ const ReportsPage = () => {
                     {marginData.map((d) => (
                       <div key={d.name} className="flex items-center gap-3">
                         <div className="w-3 h-3 rounded-full flex-shrink-0" style={{ background:d.fill }}/>
-                        <span className="text-xs text-gray-300 flex-1">{d.name}</span>
+                        <span className="text-xs text-gray-300 flex-1 truncate" title={d.name}>{d.name}</span>
                         <span className="text-xs font-bold tabular-nums" style={{ color:d.fill }}>{d.value}%</span>
                       </div>
                     ))}
