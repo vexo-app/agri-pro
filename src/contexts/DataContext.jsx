@@ -17,6 +17,7 @@ import { driverCostService }   from "../services/driverCostService";
 import { salaryService }       from "../services/salaryService";
 import { attendanceService }   from "../services/attendanceService";
 import { custodyService }      from "../services/custodyService";
+import { taxDeductionService } from "../services/taxDeductionService";
 import { backupService }       from "../services/backupService";
 import { DEFAULT_FUEL_PRICE, BACKUP_INTERVAL_MS } from "../config/constants";
 import { driverCostToSalaryEntry } from "../utils/migrateDriverCosts";
@@ -30,6 +31,7 @@ const initialState = {
   salaryEntries: [],
   attendance:    [],
   custody:       [],
+  taxDeductions: [],
   settings:      { fuelPrice: DEFAULT_FUEL_PRICE },
   loading:       true,
   error:         null,
@@ -71,6 +73,10 @@ const reducer = (state, action) => {
     case "ADD_CUSTODY":    return { ...state, custody: [action.payload, ...state.custody] };
     case "UPDATE_CUSTODY": return { ...state, custody: state.custody.map(c => c.id === action.payload.id ? action.payload : c) };
     case "DELETE_CUSTODY": return { ...state, custody: state.custody.filter(c => c.id !== action.payload) };
+
+    case "ADD_TAX_DEDUCTION":    return { ...state, taxDeductions: [action.payload, ...state.taxDeductions] };
+    case "UPDATE_TAX_DEDUCTION": return { ...state, taxDeductions: state.taxDeductions.map(t => t.id === action.payload.id ? action.payload : t) };
+    case "DELETE_TAX_DEDUCTION": return { ...state, taxDeductions: state.taxDeductions.filter(t => t.id !== action.payload) };
 
     case "UPDATE_SETTINGS": return { ...state, settings: { ...state.settings, ...action.payload } };
     // Only overwrite the collections that actually loaded successfully this
@@ -211,10 +217,12 @@ export const DataProvider = ({ children }) => {
           safeFetch(salaryService.getAll(user.uid)),
           safeFetch(attendanceService.getAll(user.uid)),
           safeFetch(custodyService.getAll(user.uid)),
+          safeFetch(taxDeductionService.getAll(user.uid)),
         ]);
         const [
           equipmentR, jobsR, driversR, maintenanceR, settingsR,
           paymentsR, driverCostsR, salaryEntriesR, attendanceR, custodyR,
+          taxDeductionsR,
         ] = results;
 
         if (cancelled) return;
@@ -280,6 +288,7 @@ export const DataProvider = ({ children }) => {
         if (mergedSalaryEntries !== undefined) payload.salaryEntries = mergedSalaryEntries;
         if (attendanceR.ok)   payload.attendance   = attendanceR.data;
         if (custodyR.ok)      payload.custody      = custodyR.data;
+        if (taxDeductionsR.ok) payload.taxDeductions = taxDeductionsR.data;
 
         dispatch({ type: "SET_LOADED", payload });
 
@@ -361,6 +370,7 @@ export const DataProvider = ({ children }) => {
           salaryEntries: state.salaryEntries,
           attendance:    state.attendance,
           custodyTransactions: state.custody,
+          taxDeductions: state.taxDeductions,
           settings:      state.settings,
         });
         localStorage.setItem(`lastBackupAt:${user.uid}`, String(Date.now()));
@@ -656,6 +666,35 @@ export const DataProvider = ({ children }) => {
     toast.success("تم حذف السجل");
   }, [user, trackWrite]);
 
+  const addTaxDeduction = useCallback(async (d) => {
+    const { id, promise } = taxDeductionService.add(user.uid, d);
+    dispatch({ type: "ADD_TAX_DEDUCTION", payload: { id, ...d } });
+    trackWrite(promise, {
+      rollback: () => dispatch({ type: "DELETE_TAX_DEDUCTION", payload: id }),
+      errorMessage: "تعذر حفظ الحركة، تم التراجع عنها",
+    });
+    toast.success("تم تسجيل الحركة");
+    return id;
+  }, [user, trackWrite]);
+  const updateTaxDeduction = useCallback(async (id, d) => {
+    const previous = stateRef.current.taxDeductions.find((t) => t.id === id);
+    dispatch({ type: "UPDATE_TAX_DEDUCTION", payload: { id, ...d } });
+    trackWrite(taxDeductionService.update(user.uid, id, d), {
+      rollback: () => previous && dispatch({ type: "UPDATE_TAX_DEDUCTION", payload: previous }),
+      errorMessage: "تعذر حفظ تعديل الحركة، تم التراجع عنه",
+    });
+    toast.success("تم تحديث السجل");
+  }, [user, trackWrite]);
+  const deleteTaxDeduction = useCallback(async (id) => {
+    const previous = stateRef.current.taxDeductions.find((t) => t.id === id);
+    dispatch({ type: "DELETE_TAX_DEDUCTION", payload: id });
+    trackWrite(taxDeductionService.remove(user.uid, id), {
+      rollback: () => previous && dispatch({ type: "ADD_TAX_DEDUCTION", payload: previous }),
+      errorMessage: "تعذر حذف الحركة، تم استرجاعها",
+    });
+    toast.success("تم حذف السجل");
+  }, [user, trackWrite]);
+
   const saveSettings = useCallback(async (d) => {
     const previous = stateRef.current.settings;
     dispatch({ type: "UPDATE_SETTINGS", payload: d });
@@ -679,6 +718,7 @@ export const DataProvider = ({ children }) => {
     addSalaryEntry, updateSalaryEntry, deleteSalaryEntry,
     addAttendance, updateAttendance, deleteAttendance,
     addCustody, updateCustody, deleteCustody,
+    addTaxDeduction, updateTaxDeduction, deleteTaxDeduction,
     saveSettings,
   };
 

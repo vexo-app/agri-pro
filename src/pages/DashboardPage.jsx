@@ -74,7 +74,7 @@ const truncName = (n = "") => n.length > 11 ? n.slice(0, 11) + "…" : n;
 const DashboardPage = () => {
   const navigate = useNavigate();
   const {
-    totals, totalMaintCost, totalSalaries, netProfit, margin,
+    totals, totalMaintCost, totalSalaries, totalTaxDeductions, netProfit, margin,
     dailyRevenue, workTypeBreakdown,
     equipReport, bestEquipment,
     recentJobs,
@@ -206,6 +206,7 @@ const DashboardPage = () => {
             <SummaryRow label="تكلفة الوقود"    value={formatCurrency(totals.totalFuelCost)} valueColor="text-red-400" sensitive/>
             <SummaryRow label="تكاليف الصيانة"  value={formatCurrency(totalMaintCost)}  valueColor="text-red-400" sensitive/>
             <SummaryRow label="مرتبات السائقين" value={formatCurrency(totalSalaries||0)} valueColor="text-red-400" sensitive/>
+            <SummaryRow label="ضرائب وخصومات"   value={formatCurrency(totalTaxDeductions||0)} valueColor="text-red-400" sensitive/>
             <div className="border-t border-white/8 mt-2 pt-2">
               <SummaryRow label="صافي الربح" value={formatCurrency(netProfit)}
                 valueColor={netProfit>=0?"text-green-400":"text-red-400"} bold sensitive/>

@@ -12,7 +12,7 @@ import { calcTotalSalariesPaid } from "../utils/salaryCalculations";
 export const useDashboard = () => {
   const {
     jobs, equipment, maintenance, drivers, payments = [],
-    settings, salaryEntries = [], loading,
+    settings, salaryEntries = [], taxDeductions = [], loading,
   } = useData();
 
   const fuelPrice = settings.fuelPrice;
@@ -32,7 +32,12 @@ export const useDashboard = () => {
     [salaryEntries]
   );
 
-  const netProfit = totals.netProfit - totalMaintCost - totalSalaries;
+  const totalTaxDeductions = useMemo(
+    () => taxDeductions.reduce((s, t) => s + (Number(t.amount) || 0), 0),
+    [taxDeductions]
+  );
+
+  const netProfit = totals.netProfit - totalMaintCost - totalSalaries - totalTaxDeductions;
 
   const margin = totals.totalRevenue > 0
     ? (netProfit / totals.totalRevenue) * 100
@@ -59,6 +64,7 @@ export const useDashboard = () => {
     totals,
     totalMaintCost,
     totalSalaries,
+    totalTaxDeductions,
     netProfit,
     margin,
     dailyRevenue,

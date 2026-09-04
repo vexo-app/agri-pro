@@ -11,7 +11,7 @@ import ProfileModal from "../../features/profile/ProfileModal";
 import {
   HomeIcon, TractorIcon, ClipboardIcon,
   DriverIcon, WrenchIcon, ChartIcon,
-  FuelIcon, LogoutIcon, AlertIcon, WalletIcon, ShieldIcon, BugIcon, MegaphoneIcon, DownloadIcon,
+  FuelIcon, LogoutIcon, AlertIcon, WalletIcon, ShieldIcon, BugIcon, MegaphoneIcon, DownloadIcon, ReceiptIcon,
 } from "../ui/Icons";
 
 const NAV_ITEMS = [
@@ -22,6 +22,7 @@ const NAV_ITEMS = [
   { to: "/drivers",       label: "السائقون",        Icon: DriverIcon    },
   { to: "/maintenance",   label: "الصيانة",         Icon: WrenchIcon    },
   { to: "/custody",       label: "العهدة",          Icon: WalletIcon    },
+  { to: "/tax-deductions", label: "الضرائب والخصومات", Icon: ReceiptIcon },
   { to: "/notifications", label: "التنبيهات",       Icon: AlertIcon, badge: true },
   { to: "/reports",       label: "التقارير",        Icon: ChartIcon     },
 ];

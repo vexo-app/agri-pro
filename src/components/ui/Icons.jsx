@@ -152,6 +152,11 @@ export const WalletIcon = (p) => <Icon {...p} d={[
   "M17 10h.01"
 ]} />;
 
+export const ReceiptIcon = (p) => <Icon {...p} d={[
+  "M6 2h12a1 1 0 011 1v18l-3-2-2 2-2-2-2 2-2-2-3 2V3a1 1 0 011-1z",
+  "M8 7h8M8 11h8M8 15h5"
+]} />;
+
 export const ArrowUpCircleIcon = (p) => <Icon {...p} d={[
   "M12 22a10 10 0 100-20 10 10 0 000 20z",
   "M12 16V8M8 12l4-4 4 4"

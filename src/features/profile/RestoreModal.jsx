@@ -8,7 +8,17 @@ import { formatDateTime } from "../../utils/formatters";
 import Modal from "../../components/ui/Modal";
 import Button from "../../components/ui/Button";
 import { AlertIcon, ChevronLeftIcon, ClockIcon, RestoreIcon } from "../../components/ui/Icons";
-import { COUNT_LABELS } from "../../config/constants";
+
+const COUNT_LABELS = {
+  equipment:     "المعدات",
+  jobs:          "سجل الشغل",
+  drivers:       "السائقين",
+  maintenance:   "الصيانة",
+  payments:      "الدفعات",
+  salaryEntries: "المرتبات",
+  attendance:    "الحضور",
+  custodyTransactions: "العهدة",
+};
 
 const CONFIRM_WORD = "استرجاع";
 

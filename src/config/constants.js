@@ -32,19 +32,6 @@ export const COLLECTIONS = {
 export const BACKUP_INTERVAL_MS = 24 * 60 * 60 * 1000; // 24 hours
 export const MAX_BACKUPS_KEPT   = 7;                    // keep last 7 snapshots
 
-// أسامي مجموعات البيانات المعروضة في شاشات الاستيراد/الاسترجاع (ImportModal،
-// RestoreModal) — كانت متكررة بنفس القيمة بالظبط في الملفين.
-export const COUNT_LABELS = {
-  equipment:     "المعدات",
-  jobs:          "سجل الشغل",
-  drivers:       "السائقين",
-  maintenance:   "الصيانة",
-  payments:      "الدفعات",
-  salaryEntries: "المرتبات",
-  attendance:    "الحضور",
-  custodyTransactions: "العهدة",
-};
-
 // حد أقصى منطقي (مليار جنيه) لأي حقل مالي/كمّي (سعر، تكلفة، مبلغ، راتب...).
 // مش قيد على العمل الفعلي (ولا شركة هتوصل للرقم ده)، الهدف بس إنه يمسك
 // أخطاء الكتابة (زي صفر زيادة بالغلط) ويمنع أي قيمة غير منطقية تدخل
@@ -283,6 +270,24 @@ export const ATTENDANCE_LABELS = {
   absent:  "غياب",
   late:    "تأخير",
   half:    "نصف يوم",
+};
+
+// ─── Taxes & Deductions (ضرائب وخصومات) ─────────────────────────────────────────
+// سجل مستقل عن العهدة — مبالغ متغيرة بتواريخ مختلفة (ضرائب، رسوم حكومية،
+// غرامات، خصومات أخرى) بتتخصم من صافي الربح في الداشبورد، لكن ملهاش أي
+// تأثير على رصيد العهدة نفسه.
+export const TAX_DEDUCTION_TYPES = {
+  TAX:           "tax",
+  GOV_FEE:       "gov_fee",
+  FINE:          "fine",
+  OTHER:         "other",
+};
+
+export const TAX_DEDUCTION_TYPE_LABELS = {
+  tax:      "ضريبة",
+  gov_fee:  "رسوم حكومية",
+  fine:     "غرامة",
+  other:    "خصم آخر",
 };
 
 // ─── Custody (العهدة) ──────────────────────────────────────────────────────────
