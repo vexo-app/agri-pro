@@ -12,10 +12,12 @@ import DriverReportCard    from "../features/reports/DriverReportCard";
 import { EmptyState } from "../components/ui/Card";
 import { ChartCard } from "../components/ui/ChartCard";
 import LoadingScreen       from "../components/ui/LoadingScreen";
-import { TractorIcon, DriverIcon, ChartIcon, RevenueIcon, AcreIcon, FuelIcon } from "../components/ui/Icons";
+import Button               from "../components/ui/Button";
+import { TractorIcon, DriverIcon, ChartIcon, RevenueIcon, AcreIcon, FuelIcon, PrintIcon } from "../components/ui/Icons";
 import { formatCurrency, formatNumber } from "../utils/formatters";
 import { useData }                from "../contexts/DataContext";
 import { calcTotalSalariesPaid }  from "../utils/salaryCalculations";
+import { printMonthlySummary }    from "../utils/pdfGenerator";
 
 const TABS = [
   { id: "equipment", label: "المعدات",  Icon: TractorIcon },
@@ -63,10 +65,24 @@ const Legend = ({ items }) => (
 // ── ReportsPage ───────────────────────────────────────────────────────────
 const ReportsPage = () => {
   const { report: equipReport, loading: eLoading } = useEquipment();
-  const { salaryEntries = [] } = useData();
+  const { salaryEntries = [], equipment = [], jobs = [], drivers = [], maintenance = [], settings } = useData();
   const totalSalariesPaid = calcTotalSalariesPaid(salaryEntries);
   const { report: driverReport, loading: dLoading } = useDrivers();
   const [tab, setTab] = useState("equipment");
+
+  // Exports the current calendar month as a printable PDF summary (browser
+  // print dialog → "Save as PDF"), using the exact same raw collections
+  // and existing printMonthlySummary() logic from utils/pdfGenerator.js —
+  // no new calculations here, it just supplies the function's own inputs.
+  const handlePrintMonthlySummary = () => {
+    const now = new Date();
+    printMonthlySummary({
+      jobs, equipment, maintenance, drivers,
+      fuelPrice: settings.fuelPrice,
+      month: now.getMonth() + 1,
+      year:  now.getFullYear(),
+    });
+  };
 
   if (eLoading || dLoading) return <LoadingScreen />;
 
@@ -119,12 +135,17 @@ const ReportsPage = () => {
     <div className="p-4 lg:p-6 max-w-6xl mx-auto" dir="rtl">
 
       {/* Header */}
-      <div className="mb-6">
-        <h1 className="text-xl font-extrabold text-gray-100 flex items-center gap-2">
-          <ChartIcon size={22} className="text-brand-400"/>
-          التقارير
-        </h1>
-        <p className="text-sm text-gray-500 mt-0.5">تحليل أداء المعدات والسائقين</p>
+      <div className="flex items-center justify-between flex-wrap gap-3 mb-6">
+        <div>
+          <h1 className="text-xl font-extrabold text-gray-100 flex items-center gap-2">
+            <ChartIcon size={22} className="text-brand-400"/>
+            التقارير
+          </h1>
+          <p className="text-sm text-gray-500 mt-0.5">تحليل أداء المعدات والسائقين</p>
+        </div>
+        <Button variant="ghost" onClick={handlePrintMonthlySummary} icon={<PrintIcon size={16} />} title="طباعة التقرير الشهري">
+          طباعة التقرير الشهري
+        </Button>
       </div>
 
       {equipReport.length > 0 && (
