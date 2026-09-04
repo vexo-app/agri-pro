@@ -551,19 +551,28 @@ export const downloadEquipmentReportPdf = (args) => {
 };
 
 // ── 3. Monthly Summary ────────────────────────────────────────────────────────
-export const printMonthlySummary = ({ jobs, equipment, maintenance, drivers, fuelPrice, month, year }) => {
+export const printMonthlySummary = ({ jobs, equipment, maintenance, drivers, fuelPrice, month, year, allTime = false, totalSalariesPaid = 0 }) => {
   const today = new Date().toLocaleDateString("ar-EG");
-  const monthLabel = new Date(year, month - 1).toLocaleDateString("ar-EG", { month:"long", year:"numeric" });
+  // allTime reuses the exact same month-report layout/calculations below,
+  // just without the month filter — so it lines up with the Reports page's
+  // own all-time totals instead of one calendar month. totalSalariesPaid
+  // (0 by default, so the existing monthly call is unaffected) is only
+  // meant to be passed in allTime mode, to match ReportsPage's own
+  // "totalProfit = totalGrossProfit - totalSalariesPaid" net-profit figure.
+  const periodLabel = allTime
+    ? "كل الوقت"
+    : new Date(year, month - 1).toLocaleDateString("ar-EG", { month:"long", year:"numeric" });
+  const reportTitle = allTime ? "التقرير الشامل" : "التقرير الشهري";
 
   const prefix = `${year}-${String(month).padStart(2,"0")}`;
-  const monthJobs = jobs.filter((j) => j.date?.startsWith(prefix));
+  const monthJobs = allTime ? jobs : jobs.filter((j) => j.date?.startsWith(prefix));
 
   const totalRevenue  = monthJobs.reduce((s, j) => s + (j.acres * j.pricePerAcre), 0);
   const totalAcres    = monthJobs.reduce((s, j) => s + (j.acres || 0), 0);
   const totalFuel     = monthJobs.reduce((s, j) => s + (j.fuelUsed || 0), 0);
   const totalFuelCost = totalFuel * fuelPrice;
   const maintCost     = maintenance.reduce((s, m) => s + (m.cost || 0), 0);
-  const netProfit     = totalRevenue - totalFuelCost - maintCost;
+  const netProfit     = totalRevenue - totalFuelCost - maintCost - totalSalariesPaid;
 
   const equip = [...new Set(monthJobs.map((j) => j.equipmentId))].map((id) => {
     const eq       = equipment.find((e) => e.id === id);
@@ -577,8 +586,8 @@ export const printMonthlySummary = ({ jobs, equipment, maintenance, drivers, fue
     <div class="page">
       <div class="header">
         <div>
-          <h1>التقرير الشهري</h1>
-          <p class="brand">زراعي برو · ${monthLabel}</p>
+          <h1>${reportTitle}</h1>
+          <p class="brand">زراعي برو · ${periodLabel}</p>
         </div>
         <div class="meta"><p>تاريخ الطباعة: ${today}</p></div>
       </div>
@@ -610,15 +619,16 @@ export const printMonthlySummary = ({ jobs, equipment, maintenance, drivers, fue
           <tr><td style="font-weight:600">إجمالي الإيراد</td><td style="color:#15803d;font-weight:700">${formatCurrency(totalRevenue)}</td></tr>
           <tr><td style="font-weight:600">تكلفة الوقود</td><td>${formatCurrency(totalFuelCost)}</td></tr>
           <tr><td style="font-weight:600">تكاليف الصيانة</td><td>${formatCurrency(maintCost)}</td></tr>
+          ${totalSalariesPaid ? `<tr><td style="font-weight:600">مرتبات السائقين</td><td>${formatCurrency(totalSalariesPaid)}</td></tr>` : ""}
           <tr class="total-row"><td>صافي الربح</td><td style="color:${netProfit>=0?"#15803d":"#991b1b"}">${formatCurrency(netProfit)}</td></tr>
         </table>
       </div>
 
-      <div class="footer">زراعي برو · التقرير الشهري · ${monthLabel} · ${today}</div>
+      <div class="footer">زراعي برو · ${reportTitle} · ${periodLabel} · ${today}</div>
     </div>
   `;
 
-  printWindow(html, `تقرير ${monthLabel}`);
+  printWindow(html, `تقرير ${periodLabel}`);
 };
 
 // ── 4. Driver Payslip ─────────────────────────────────────────────────────────

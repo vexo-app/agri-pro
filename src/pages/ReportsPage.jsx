@@ -70,17 +70,21 @@ const ReportsPage = () => {
   const { report: driverReport, loading: dLoading } = useDrivers();
   const [tab, setTab] = useState("equipment");
 
-  // Exports the current calendar month as a printable PDF summary (browser
-  // print dialog → "Save as PDF"), using the exact same raw collections
-  // and existing printMonthlySummary() logic from utils/pdfGenerator.js —
-  // no new calculations here, it just supplies the function's own inputs.
-  const handlePrintMonthlySummary = () => {
+  // Exports a PDF via the existing printMonthlySummary() — no new
+  // calculations, just two different sets of its own existing inputs:
+  // - monthly: current calendar month only (unchanged from before).
+  // - allTime: no month filter, plus totalSalariesPaid so its net-profit
+  //   figure lines up with this page's own totalProfit (totalGrossProfit -
+  //   totalSalariesPaid), instead of only reflecting one month.
+  const handlePrintReport = (allTime) => {
     const now = new Date();
     printMonthlySummary({
       jobs, equipment, maintenance, drivers,
       fuelPrice: settings.fuelPrice,
       month: now.getMonth() + 1,
       year:  now.getFullYear(),
+      allTime,
+      totalSalariesPaid: allTime ? totalSalariesPaid : 0,
     });
   };
 
@@ -143,9 +147,14 @@ const ReportsPage = () => {
           </h1>
           <p className="text-sm text-gray-500 mt-0.5">تحليل أداء المعدات والسائقين</p>
         </div>
-        <Button variant="ghost" onClick={handlePrintMonthlySummary} icon={<PrintIcon size={16} />} title="طباعة التقرير الشهري">
-          طباعة التقرير الشهري
-        </Button>
+        <div className="flex gap-2">
+          <Button variant="ghost" onClick={() => handlePrintReport(false)} icon={<PrintIcon size={16} />} title="طباعة عمليات الشهر الحالي فقط">
+            طباعة الشهر الحالي
+          </Button>
+          <Button variant="ghost" onClick={() => handlePrintReport(true)} icon={<PrintIcon size={16} />} title="طباعة تقرير شامل يطابق أرقام هذه الصفحة">
+            طباعة تقرير شامل
+          </Button>
+        </div>
       </div>
 
       {equipReport.length > 0 && (
