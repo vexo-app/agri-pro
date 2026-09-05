@@ -1,13 +1,36 @@
 // src/features/drivers/DriverForm.jsx
-import React from "react";
+import React, { useState } from "react";
 import { useForm, Controller } from "react-hook-form";
 import { Input, NumberInput, Select } from "../../components/ui/Input";
 import Button from "../../components/ui/Button";
 import {
-  DRIVER_STATUS, DRIVER_STATUS_LABELS, TEAM_ROLE, TEAM_ROLE_LABELS, MAX_MONEY_VALUE,
+  DRIVER_STATUS, DRIVER_STATUS_LABELS, TEAM_ROLE, MAX_MONEY_VALUE,
+  STAFF_POSITIONS, STAFF_POSITION_LABELS,
 } from "../../config/constants";
 
+// قيمة وهمية في قايمة "نوع العضو" لما يكون سائق ومسماه مش "سائق" عادي —
+// اختيارها بيفتح خانة يكتب فيها المستخدم المسمى اللي هو عايزه.
+const CUSTOM_POSITION = "__custom__";
+
 const DriverForm = ({ initial, defaultRole, onSave, onClose }) => {
+  // الدور (role) بقى محدد ضمنيًا من التبويب اللي بتضيف منه، مش اختيار حر
+  // في الفورم — عشان كده مبيتغيرش لو انت بتعدّل عضو موجود.
+  const role = initial?.role || defaultRole || TEAM_ROLE.DRIVER;
+  const isDriverRole = role === TEAM_ROLE.DRIVER;
+
+  const savedPosition = initial?.position || "";
+  const isCustomDriverPosition = isDriverRole && savedPosition && savedPosition !== "driver";
+
+  const [position, setPosition] = useState(() => {
+    if (isDriverRole) return isCustomDriverPosition ? CUSTOM_POSITION : "driver";
+    return savedPosition === STAFF_POSITIONS.ACCOUNTANT
+      ? STAFF_POSITIONS.ACCOUNTANT
+      : STAFF_POSITIONS.ADMIN;
+  });
+  const [customPosition, setCustomPosition] = useState(
+    isCustomDriverPosition ? savedPosition : ""
+  );
+
   const {
     register,
     handleSubmit,
@@ -17,16 +40,20 @@ const DriverForm = ({ initial, defaultRole, onSave, onClose }) => {
     defaultValues: initial ?? {
       name: "", phone: "", salary: "",
       status: DRIVER_STATUS.ACTIVE,
-      role: defaultRole || TEAM_ROLE.DRIVER,
     },
   });
 
   const onSubmit = async (data) => {
+    const finalPosition = isDriverRole
+      ? (position === CUSTOM_POSITION ? (customPosition.trim() || "أخرى") : "driver")
+      : position;
+
     await onSave({
       ...data,
       salary: Number(data.salary) || 0,
       status: data.status || DRIVER_STATUS.ACTIVE,
-      role: data.role || TEAM_ROLE.DRIVER,
+      role,
+      position: finalPosition,
     });
     onClose();
   };
@@ -44,11 +71,34 @@ const DriverForm = ({ initial, defaultRole, onSave, onClose }) => {
           />
         </div>
 
-        <Select label="نوع العضو" {...register("role")}>
-          {Object.entries(TEAM_ROLE_LABELS).map(([value, label]) => (
-            <option key={value} value={value}>{label}</option>
-          ))}
-        </Select>
+        {isDriverRole ? (
+          <Select
+            label="نوع العضو"
+            value={position}
+            onChange={(e) => setPosition(e.target.value)}
+          >
+            <option value="driver">سائق</option>
+            <option value={CUSTOM_POSITION}>أخرى</option>
+          </Select>
+        ) : (
+          <Select
+            label="نوع العضو"
+            value={position}
+            onChange={(e) => setPosition(e.target.value)}
+          >
+            <option value={STAFF_POSITIONS.ADMIN}>{STAFF_POSITION_LABELS.admin}</option>
+            <option value={STAFF_POSITIONS.ACCOUNTANT}>{STAFF_POSITION_LABELS.accountant}</option>
+          </Select>
+        )}
+
+        {isDriverRole && position === CUSTOM_POSITION && (
+          <Input
+            label="اكتب نوع العضو"
+            placeholder="مثال: مشرف، عامل صيانة..."
+            value={customPosition}
+            onChange={(e) => setCustomPosition(e.target.value)}
+          />
+        )}
 
         <Input
           label="رقم الهاتف"

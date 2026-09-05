@@ -7,7 +7,7 @@ import {
   EditIcon, TrashIcon, PhoneIcon, AlertIcon, TractorIcon, CheckCircleIcon, ClearIcon,
 } from "../../components/ui/Icons";
 import { formatNumber, getInitial } from "../../utils/formatters";
-import { DRIVER_STATUS, TEAM_ROLE, TEAM_ROLE_LABELS } from "../../config/constants";
+import { DRIVER_STATUS, TEAM_ROLE, TEAM_ROLE_LABELS, STAFF_POSITION_LABELS } from "../../config/constants";
 
 const StatItem = ({ label, value, color = "text-gray-200" }) => (
   <div className="flex flex-col gap-0.5">
@@ -20,11 +20,17 @@ const DriverCard = ({ driver, onEdit, onDelete, onPaySalary, onCancelPaySalary }
   const navigate = useNavigate();
   const {
     id, name, phone, totalAcres = 0, ops = 0, salary = 0,
-    status, role = TEAM_ROLE.DRIVER, unpaidThisMonth, lastPaidBaseEntry, assignedEquipment = [],
+    status, role = TEAM_ROLE.DRIVER, position, unpaidThisMonth, lastPaidBaseEntry, assignedEquipment = [],
   } = driver;
 
   const isInactive = status === DRIVER_STATUS.INACTIVE;
   const isStaff    = role !== TEAM_ROLE.DRIVER;
+  // للإداريين/المحاسبين بنعرض المسمى الدقيق (إداري أو محاسب) بدل التصنيف
+  // العام. لو سائق بمسمى مخصوص (اختار "أخرى" وكتب اسم)، بنعرضه هو كمان.
+  const isCustomDriverTitle = !isStaff && position && position !== "driver";
+  const roleBadgeLabel = isStaff
+    ? (STAFF_POSITION_LABELS[position] || TEAM_ROLE_LABELS[role])
+    : position;
 
   return (
     <Card hover className={isInactive ? "opacity-60" : ""}>
@@ -37,7 +43,7 @@ const DriverCard = ({ driver, onEdit, onDelete, onPaySalary, onCancelPaySalary }
           <div className="flex-1 min-w-0">
             <div className="flex items-center gap-2 flex-wrap">
               <h3 className="text-sm font-extrabold text-gray-100 truncate">{name}</h3>
-              {isStaff && <Badge variant="blue">{TEAM_ROLE_LABELS[role]}</Badge>}
+              {(isStaff || isCustomDriverTitle) && <Badge variant="blue">{roleBadgeLabel}</Badge>}
               {isInactive && <Badge variant="gray">غير نشط</Badge>}
             </div>
 
