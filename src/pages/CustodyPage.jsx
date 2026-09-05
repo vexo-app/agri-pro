@@ -20,6 +20,24 @@ import {
 } from "../config/constants";
 import { printCustodyReport, downloadCustodyReportPdf } from "../utils/pdfGenerator";
 
+// نفس فكرة صفحة التقارير بالظبط: اختيارين بس (الشهر الحالي / الشهر السابق)
+// عشان الزرار ده لتحميل شهر محدد بسرعة، مش لعمل تقرير بمدى مخصص.
+const MONTH_DOWNLOAD_OPTIONS = [
+  { value: "current",  label: "الشهر الحالي"  },
+  { value: "previous", label: "الشهر السابق" },
+];
+
+// بيرجع "YYYY-MM" بالظبط زي الـ prefix اللي بتتفلتر بيه الحركات في باقي
+// التطبيق — نفس الهيلبر المستخدم في صفحة التقارير، عشان الاختيارين ميختلفوش
+// عن بعض بين الصفحتين.
+const resolveMonthPrefix = (choice) => {
+  const now = new Date();
+  const base = choice === "previous"
+    ? new Date(now.getFullYear(), now.getMonth() - 1, 1)
+    : now;
+  return `${base.getFullYear()}-${String(base.getMonth() + 1).padStart(2, "0")}`;
+};
+
 const CATEGORY_ICONS = {
   equipment: TractorIcon,
   driver:    DriverIcon,
@@ -35,6 +53,7 @@ const CustodyPage = () => {
   const { drivers, equipment, settings } = useData();
   const { confirm, confirmState } = useConfirm();
   const [modal, setModal] = useState(null);
+  const [downloadMonth, setDownloadMonth] = useState("current");
 
   const handleSave = async (data) => {
     if (modal.mode === "add") await addCustody(data);
@@ -68,6 +87,18 @@ const CustodyPage = () => {
     company: settings.company,
   });
 
+  // تحميل شهر واحد بس (الحالي أو السابق) — نفس المصروفات والحركات المعروضة
+  // في التقرير الشامل، لكن متفلترة على الشهر ده فقط. الحسابات كلها بتتعمل
+  // جوه buildCustodyReportHtml نفسها من قايمة الحركات مباشرة، مش من
+  // totalExpenses/expensesByCategory الكاملين اللي فوق دول.
+  const handleDownloadMonthly = () => downloadCustodyReportPdf({
+    transactions: transactions,
+    getLinkedName,
+    company: settings.company,
+    month: resolveMonthPrefix(downloadMonth),
+    allTime: false,
+  });
+
   if (loading) return <LoadingScreen />;
 
   return (
@@ -81,11 +112,31 @@ const CustodyPage = () => {
           </h1>
           <p className="text-sm text-gray-500 mt-0.5">فلوس رجل الأعمال ومصروفاتها على الميكنة والسائقين</p>
         </div>
-        <div className="flex gap-2">
+        <div className="flex items-center gap-2 flex-wrap">
           <Button variant="ghost" onClick={handlePrint} icon={<PrintIcon size={16} />} title="طباعة تقرير شامل بالعهدة">
             طباعة تقرير
           </Button>
           <DownloadReportButton onDownload={handleDownload} title="تحميل تقرير العهدة PDF" />
+
+          {/* تحميل شهر واحد بس — نفس عنصر اختيار الشهر المستخدم في صفحة
+              التقارير، بنفس الشكل، عشان يبقى نفس هوية الاختيار في التطبيق. */}
+          <div className="flex items-center gap-2">
+            <select
+              value={downloadMonth}
+              onChange={(e) => setDownloadMonth(e.target.value)}
+              aria-label="اختر الشهر"
+              className="bg-surface-2 border border-white/10 rounded-xl px-3 py-2 text-sm text-gray-200 focus:outline-none focus:border-brand-600"
+            >
+              {MONTH_DOWNLOAD_OPTIONS.map((o) => (
+                <option key={o.value} value={o.value}>{o.label}</option>
+              ))}
+            </select>
+            <DownloadReportButton
+              onDownload={handleDownloadMonthly}
+              title="تحميل تقرير العهدة الشهري PDF"
+            />
+          </div>
+
           <Button variant="info" onClick={() => setModal({ mode: "add", type: CUSTODY_TYPES.DEPOSIT })}
             icon={<ArrowUpCircleIcon size={16} />}>
             إضافة فلوس

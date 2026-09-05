@@ -735,7 +735,7 @@ const buildCustodyReportNumber = () => {
   return `${d.getFullYear()}${pad(d.getMonth() + 1)}${pad(d.getDate())}`;
 };
 
-const buildCustodyReportHtml = ({ transactions, totalExpenses, expensesByCategory, getLinkedName, company = {} }) => {
+const buildCustodyReportHtml = ({ transactions, totalExpenses, expensesByCategory, getLinkedName, company = {}, month = null, allTime = true }) => {
   const today = new Date().toLocaleDateString("ar-EG");
   const printedAt = formatDateTime(new Date());
   const reportNo = buildCustodyReportNumber();
@@ -745,7 +745,28 @@ const buildCustodyReportHtml = ({ transactions, totalExpenses, expensesByCategor
   // التقرير المطبوع بيعرض المصروفات بس (من غير حركات الإضافة/الرصيد) —
   // شاشة العهدة في التطبيق نفسها لسه بتعرض كل الحركات والرصيد زي ما هي،
   // الفلترة دي خاصة بالتقرير المطبوع فقط.
-  const expensesOnly = transactions.filter((t) => t.type !== "deposit");
+  const allExpenses = transactions.filter((t) => t.type !== "deposit");
+
+  // Month-scoped download (allTime=false + a "YYYY-MM" month): filter by
+  // that prefix and recompute the total/category breakdown from the
+  // filtered list itself — never from the page's all-time totals passed
+  // in — so a monthly download can't accidentally show all-time numbers.
+  const expensesOnly = (!allTime && month) ? allExpenses.filter((t) => (t.date || "").startsWith(month)) : allExpenses;
+  const periodTotalExpenses = (!allTime && month)
+    ? expensesOnly.reduce((s, t) => s + (Number(t.amount) || 0), 0)
+    : totalExpenses;
+  const periodExpensesByCategory = (!allTime && month)
+    ? expensesOnly.reduce((acc, t) => {
+        const key = t.category || "other";
+        acc[key] = (acc[key] || 0) + (Number(t.amount) || 0);
+        return acc;
+      }, {})
+    : expensesByCategory;
+
+  const periodLabel = (!allTime && month)
+    ? new Date(`${month}-01`).toLocaleDateString("ar-EG", { month: "long", year: "numeric" })
+    : "كل الوقت";
+  const reportTitle = (!allTime && month) ? "تقرير العهدة الشهري" : "تقرير العهدة";
 
   // Sort oldest → newest for a chronological ledger read
   const sorted = [...expensesOnly].sort((a, b) => (a.date || "").localeCompare(b.date || ""));
@@ -768,7 +789,7 @@ const buildCustodyReportHtml = ({ transactions, totalExpenses, expensesByCategor
   }).join("");
 
   const categoryRows = Object.entries(categoryLabels).map(([key, label]) => {
-    const amount = expensesByCategory?.[key] || 0;
+    const amount = periodExpensesByCategory?.[key] || 0;
     if (amount === 0) return "";
     return `<tr><td style="font-weight:600">${label}</td><td style="color:#991b1b">${formatCurrency(amount)}</td></tr>`;
   }).join("");
@@ -799,7 +820,7 @@ const buildCustodyReportHtml = ({ transactions, totalExpenses, expensesByCategor
           </div>
         </div>
         <div class="inv-meta">
-          <span class="inv-tag">تقرير العهدة</span>
+          <span class="inv-tag">${reportTitle} · ${periodLabel}</span>
           <div class="inv-no">رقم ${reportNo}</div>
           <div class="inv-date">صدر: ${printedAt}</div>
           <div class="inv-badge-note">
@@ -811,7 +832,7 @@ const buildCustodyReportHtml = ({ transactions, totalExpenses, expensesByCategor
 
       <div class="grid-2">
         <div class="stat-box" style="grid-column:1 / -1;">
-          <div class="stat-val" style="color:#991b1b">${formatCurrency(totalExpenses)}</div>
+          <div class="stat-val" style="color:#991b1b">${formatCurrency(periodTotalExpenses)}</div>
           <div class="stat-lbl">إجمالي المصروف</div>
         </div>
       </div>
@@ -832,10 +853,10 @@ const buildCustodyReportHtml = ({ transactions, totalExpenses, expensesByCategor
           <tbody>${rows}</tbody>
           <tr class="total-row">
             <td colspan="4">إجمالي المصروف</td>
-            <td style="color:#991b1b">${formatCurrency(totalExpenses)}</td>
+            <td style="color:#991b1b">${formatCurrency(periodTotalExpenses)}</td>
           </tr>
         </table>
-      </div>` : `<div class="section"><p style="color:#666;text-align:center;padding:20px 0;">لا توجد حركات مسجلة بعد</p></div>`}
+      </div>` : `<div class="section"><p style="color:#666;text-align:center;padding:20px 0;">لا توجد حركات مسجلة${(!allTime && month) ? " في هذا الشهر" : " بعد"}</p></div>`}
 
       <div class="inv-closing">
         <div class="inv-sign-section">
@@ -855,7 +876,8 @@ const buildCustodyReportHtml = ({ transactions, totalExpenses, expensesByCategor
     </div>
   `;
 
-  return { html, title: `تقرير العهدة - ${today}`, filename: `تقرير-العهدة-${today}` };
+  const titleSuffix = (!allTime && month) ? periodLabel : today;
+  return { html, title: `${reportTitle} - ${titleSuffix}`, filename: `تقرير-العهدة-${titleSuffix}` };
 };
 
 export const printCustodyReport = (args) => {
