@@ -67,7 +67,7 @@ const DriverDetailPage = () => {
 
   if (loading) return <LoadingScreen />;
   if (!driver) return (
-    <div className="p-6 text-center text-gray-400">السائق غير موجود</div>
+    <div className="p-6 text-center text-gray-400">العضو غير موجود</div>
   );
 
   const monthlySummary   = getMonthSummary(driverId, selectedMonth);
@@ -123,7 +123,7 @@ const DriverDetailPage = () => {
       {/* Back */}
       <button onClick={() => navigate("/drivers")}
         className="flex items-center gap-2 text-sm text-gray-400 hover:text-gray-200 mb-5 transition-colors">
-        ← السائقون
+        ← فريق العمل
       </button>
 
       {/* Driver header */}

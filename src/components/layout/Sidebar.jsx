@@ -19,7 +19,7 @@ const NAV_ITEMS = [
   { to: "/equipment",     label: "المعدات",         Icon: TractorIcon   },
   { to: "/jobs",          label: "سجل الشغل",       Icon: ClipboardIcon },
   { to: "/clients",       label: "العملاء والديون", Icon: AlertIcon     },
-  { to: "/drivers",       label: "السائقون",        Icon: DriverIcon    },
+  { to: "/drivers",       label: "فريق العمل",      Icon: DriverIcon    },
   { to: "/maintenance",   label: "الصيانة",         Icon: WrenchIcon    },
   { to: "/custody",       label: "العهدة",          Icon: WalletIcon    },
   { to: "/tax-deductions", label: "الضرائب والخصومات", Icon: ReceiptIcon },

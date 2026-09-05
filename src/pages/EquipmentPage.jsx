@@ -14,11 +14,14 @@ import Button           from "../components/ui/Button";
 import { EmptyState }   from "../components/ui/Card";
 import LoadingScreen    from "../components/ui/LoadingScreen";
 import { PlusIcon, TractorIcon, LinkIcon } from "../components/ui/Icons";
-import { EQUIPMENT_CATEGORY } from "../config/constants";
+import { EQUIPMENT_CATEGORY, TEAM_ROLE } from "../config/constants";
 
 const EquipmentPage = () => {
   const { report, loading, addEquipment, updateEquipment, deleteEquipment } = useEquipment();
   const { report: driverReport } = useDrivers();
+  // إسناد المعدات لسائقين بس — الإداريين والمحاسبين مش بيقودوا معدات.
+  // getDriver() فاضلة بتدوّر في كل الفريق عشان لو فيه بيانات قديمة تفضل بتتعرض صح.
+  const assignableDrivers = driverReport.filter((d) => (d.role || TEAM_ROLE.DRIVER) === TEAM_ROLE.DRIVER);
   const { addJob, fuelPrice }    = useJobs();
   const { confirm, confirmState } = useConfirm();
   const [modal, setModal] = useState(null);
@@ -139,7 +142,7 @@ const EquipmentPage = () => {
         onClose={() => setModal(null)}
         title={modal?.mode==="add" ? "إضافة معدة جديدة" : "تعديل المعدة"}>
         {(modal?.mode==="add" || modal?.mode==="edit") && (
-          <EquipmentForm initial={modal.data} drivers={driverReport} baseEquipment={baseList}
+          <EquipmentForm initial={modal.data} drivers={assignableDrivers} baseEquipment={baseList}
             onSave={handleSaveEquipment} onClose={() => setModal(null)}/>
         )}
       </Modal>
@@ -149,7 +152,7 @@ const EquipmentPage = () => {
         {modal?.mode==="quickJob" && (
           <JobForm
             equipment={report}
-            drivers={driverReport}
+            drivers={assignableDrivers}
             fuelPrice={fuelPrice}
             initial={{ equipmentId: modal.equipmentId, driverId: modal.driverId || "" }}
             onSave={handleSaveJob}

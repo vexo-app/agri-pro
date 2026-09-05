@@ -8,7 +8,7 @@ const TITLES = {
   "/":              "لوحة التحكم",
   "/equipment":     "المعدات",
   "/jobs":          "سجل الشغل",
-  "/drivers":       "السائقون",
+  "/drivers":       "فريق العمل",
   "/maintenance":   "الصيانة",
   "/reports":       "التقارير",
   "/clients":       "العملاء والديون",

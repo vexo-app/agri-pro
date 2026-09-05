@@ -13,6 +13,7 @@ import { EmptyState }   from "../components/ui/Card";
 import LoadingScreen    from "../components/ui/LoadingScreen";
 import { PlusIcon, ClipboardIcon, RevenueIcon, FuelIcon, WrenchIcon, ProfitIcon, AcreIcon } from "../components/ui/Icons";
 import { formatCurrency, formatNumber } from "../utils/formatters";
+import { TEAM_ROLE } from "../config/constants";
 
 const SummaryBadge = ({ Icon, label, value, color }) => (
   <div className="bg-surface border border-white/8 rounded-2xl px-4 py-3 flex-1 min-w-[120px]">
@@ -26,7 +27,10 @@ const SummaryBadge = ({ Icon, label, value, color }) => (
 
 const JobsPage = () => {
   const { jobs, totals, totalMaintCost, netProfit, filters, setFilters, clearFilters, hasActiveFilters, loading, addJob, updateJob, deleteJob, fuelPrice } = useJobs();
-  const { equipment, drivers, addPayment } = useData();
+  const { equipment, drivers: allTeamMembers, addPayment } = useData();
+  // العمليات الميدانية بتتسند لسائقين بس — الإداريين والمحاسبين مالهمش
+  // علاقة بيها، فمش بيظهروا في قوايم الإسناد/الفلترة دي.
+  const drivers = allTeamMembers.filter((d) => (d.role || TEAM_ROLE.DRIVER) === TEAM_ROLE.DRIVER);
   const { confirm, confirmState } = useConfirm();
   const [modal, setModal] = useState(null);
 

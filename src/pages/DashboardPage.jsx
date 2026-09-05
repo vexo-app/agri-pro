@@ -228,7 +228,7 @@ const DashboardPage = () => {
             <SummaryRow label="إجمالي الإيراد"  value={formatCurrency(totalRevenue)}         valueColor="text-amber-400" sensitive/>
             <SummaryRow label="تكلفة الوقود"    value={formatCurrency(totals.totalFuelCost)} valueColor="text-red-400" sensitive/>
             <SummaryRow label="تكاليف الصيانة"  value={formatCurrency(totalMaintCost)}  valueColor="text-red-400" sensitive/>
-            <SummaryRow label="مرتبات السائقين" value={formatCurrency(totalSalaries||0)} valueColor="text-red-400" sensitive/>
+            <SummaryRow label="مرتبات الفريق" value={formatCurrency(totalSalaries||0)} valueColor="text-red-400" sensitive/>
             <SummaryRow label="ضرائب وخصومات"   value={formatCurrency(totalTaxDeductions||0)} valueColor="text-red-400" sensitive/>
             <div className="border-t border-white/8 mt-2 pt-2">
               <SummaryRow label="صافي الربح" value={formatCurrency(netProfit)}
@@ -430,7 +430,7 @@ const DashboardPage = () => {
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
         {[
           { Icon:TractorIcon,   label:"المعدات",    value:equipment.length },
-          { Icon:DriverIcon,    label:"السائقون",   value:drivers.length },
+          { Icon:DriverIcon,    label:"فريق العمل", value:drivers.length },
           { Icon:ClipboardIcon, label:"العمليات",   value:recentJobs.length },
           { Icon:FuelIcon,      label:"سعر الوقود", value:`${fuelPrice} ج.م/ل` },
         ].map(({ Icon, label, value }) => (

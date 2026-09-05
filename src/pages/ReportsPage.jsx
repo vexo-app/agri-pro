@@ -15,6 +15,7 @@ import LoadingScreen       from "../components/ui/LoadingScreen";
 import Button               from "../components/ui/Button";
 import { TractorIcon, DriverIcon, ChartIcon, RevenueIcon, AcreIcon, FuelIcon, PrintIcon, ReceiptIcon } from "../components/ui/Icons";
 import { formatCurrency, formatNumber } from "../utils/formatters";
+import { TEAM_ROLE } from "../config/constants";
 import { useData }                from "../contexts/DataContext";
 import { calcTotalSalariesPaid }  from "../utils/salaryCalculations";
 import { printMonthlySummary }    from "../utils/pdfGenerator";
@@ -110,7 +111,10 @@ const ReportsPage = () => {
   const { salaryEntries = [], equipment = [], jobs = [], drivers = [], maintenance = [], taxDeductions = [], settings } = useData();
   const totalSalariesPaid = calcTotalSalariesPaid(salaryEntries);
   const totalTaxDeductions = taxDeductions.reduce((s, t) => s + (Number(t.amount) || 0), 0);
-  const { report: driverReport, loading: dLoading } = useDrivers();
+  const { report: driverReportAll, loading: dLoading } = useDrivers();
+  // تقرير الأداء ده خاص بالعمليات الميدانية (أفدنة/عمليات/إيراد) — مالهاش
+  // معنى للإداريين والمحاسبين، فبيفلتر بس السائقين الفعليين.
+  const driverReport = driverReportAll.filter((d) => (d.role || TEAM_ROLE.DRIVER) === TEAM_ROLE.DRIVER);
   const [tab, setTab] = useState("equipment");
 
   // Exports a PDF via the existing printMonthlySummary() — no new
@@ -224,7 +228,7 @@ const ReportsPage = () => {
               { label:"إجمالي الإيراد",  value:formatCurrency(totalRevenue),  color:"text-amber-400",  icon:<RevenueIcon size={18}/> },
               { label:"تكلفة الوقود",    value:formatCurrency(totalFuelCost), color:"text-blue-400",   icon:<FuelIcon size={18}/> },
               { label:"تكاليف الصيانة",   value:formatCurrency(totalMaintCost),      color:"text-purple-400", icon:<AcreIcon size={18}/> },
-              { label:"مرتبات السائقين", value:formatCurrency(totalSalariesPaid), color:"text-red-400",    icon:<DriverIcon size={18}/> },
+              { label:"مرتبات الفريق", value:formatCurrency(totalSalariesPaid), color:"text-red-400",    icon:<DriverIcon size={18}/> },
               { label:"ضرائب وخصومات",   value:formatCurrency(totalTaxDeductions), color:"text-red-400",    icon:<ReceiptIcon size={18}/> },
               { label:"صافي الربح",      value:formatCurrency(totalProfit),   color:totalProfit>=0?"text-green-400":"text-red-400", icon:<ChartIcon size={18}/> },
             ].map((s) => (

@@ -7,7 +7,7 @@ import {
   EditIcon, TrashIcon, PhoneIcon, AlertIcon, TractorIcon, CheckCircleIcon, ClearIcon,
 } from "../../components/ui/Icons";
 import { formatNumber, getInitial } from "../../utils/formatters";
-import { DRIVER_STATUS } from "../../config/constants";
+import { DRIVER_STATUS, TEAM_ROLE, TEAM_ROLE_LABELS } from "../../config/constants";
 
 const StatItem = ({ label, value, color = "text-gray-200" }) => (
   <div className="flex flex-col gap-0.5">
@@ -20,10 +20,11 @@ const DriverCard = ({ driver, onEdit, onDelete, onPaySalary, onCancelPaySalary }
   const navigate = useNavigate();
   const {
     id, name, phone, totalAcres = 0, ops = 0, salary = 0,
-    status, unpaidThisMonth, lastPaidBaseEntry, assignedEquipment = [],
+    status, role = TEAM_ROLE.DRIVER, unpaidThisMonth, lastPaidBaseEntry, assignedEquipment = [],
   } = driver;
 
   const isInactive = status === DRIVER_STATUS.INACTIVE;
+  const isStaff    = role !== TEAM_ROLE.DRIVER;
 
   return (
     <Card hover className={isInactive ? "opacity-60" : ""}>
@@ -36,6 +37,7 @@ const DriverCard = ({ driver, onEdit, onDelete, onPaySalary, onCancelPaySalary }
           <div className="flex-1 min-w-0">
             <div className="flex items-center gap-2 flex-wrap">
               <h3 className="text-sm font-extrabold text-gray-100 truncate">{name}</h3>
+              {isStaff && <Badge variant="blue">{TEAM_ROLE_LABELS[role]}</Badge>}
               {isInactive && <Badge variant="gray">غير نشط</Badge>}
             </div>
 
@@ -46,11 +48,13 @@ const DriverCard = ({ driver, onEdit, onDelete, onPaySalary, onCancelPaySalary }
               </div>
             )}
 
-            {/* Only ops + acres — no revenue on the list, see driver detail for financials */}
-            <div className="flex gap-4 mt-3 flex-wrap">
-              <StatItem label="أفدنة"  value={formatNumber(totalAcres)} color="text-blue-400" />
-              <StatItem label="عمليات" value={ops} />
-            </div>
+            {/* أفدنة/عمليات مالهاش معنى غير للسائقين (المرتبطين بعمليات ميدانية) */}
+            {!isStaff && (
+              <div className="flex gap-4 mt-3 flex-wrap">
+                <StatItem label="أفدنة"  value={formatNumber(totalAcres)} color="text-blue-400" />
+                <StatItem label="عمليات" value={ops} />
+              </div>
+            )}
 
             {/* Alerts / status badges */}
             {(unpaidThisMonth || assignedEquipment.length > 0) && (

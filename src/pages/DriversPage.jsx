@@ -12,10 +12,20 @@ import { StatCard, EmptyState } from "../components/ui/Card";
 import LoadingScreen      from "../components/ui/LoadingScreen";
 import PrivacyToggle      from "../components/ui/PrivacyToggle";
 import {
-  PlusIcon, DriverIcon, RevenueIcon, ClearIcon, CheckCircleIcon, WalletIcon,
+  PlusIcon, DriverIcon, UserIcon, RevenueIcon, ClearIcon, CheckCircleIcon, WalletIcon,
 } from "../components/ui/Icons";
 import { formatCurrency, todayISO } from "../utils/formatters";
-import { DRIVER_STATUS, SALARY_ENTRY_TYPES } from "../config/constants";
+import {
+  DRIVER_STATUS, SALARY_ENTRY_TYPES, TEAM_ROLE,
+} from "../config/constants";
+
+// ── فريق العمل: تبويبين بيفلتروا نفس القايمة حسب "نوع العضو" ────────────────
+// نفس البيانات، نفس الفورم، نفس منطق الرواتب/الحضور — فرق واحد بس بيتفلتر
+// عليه (role)، عشان المعمارية تفضل بسيطة (كيان واحد، مش فيتشر جديد).
+const TABS = [
+  { role: TEAM_ROLE.DRIVER, label: "السائقون",             Icon: DriverIcon },
+  { role: TEAM_ROLE.STAFF,  label: "الإداريون والمحاسبون", Icon: UserIcon   },
+];
 
 const DriversPage = () => {
   const {
@@ -24,6 +34,7 @@ const DriversPage = () => {
   } = useDrivers();
   const { addSalaryEntry, deleteSalaryEntry, salaryEntries, currentMonth } = useSalary();
   const { confirm, confirmState } = useConfirm();
+  const [activeTab, setActiveTab] = useState(TEAM_ROLE.DRIVER);
   const [modal, setModal]         = useState(null);
   const [search, setSearch]       = useState("");
   const [showInactive, setShowInactive] = useState(false);
@@ -32,9 +43,17 @@ const DriversPage = () => {
   const [cancelTarget, setCancelTarget] = useState(null); // driver currently having their payment cancelled
   const [cancelling, setCancelling]     = useState(false);
 
-  // Salary-wide totals for THIS MONTH — across all drivers (not machine/job revenue).
+  // أعضاء التبويب الحالي بس (السائقين، أو الإداريين والمحاسبين)
+  const tabReport = useMemo(
+    () => report.filter((d) => (d.role || TEAM_ROLE.DRIVER) === activeTab),
+    [report, activeTab]
+  );
+  const tabMemberIds = useMemo(() => new Set(tabReport.map((d) => d.id)), [tabReport]);
+
+  // Salary-wide totals for THIS MONTH — scoped to the active tab only, so
+  // the KPI numbers above always match exactly what's listed below them.
   const salaryTotals = useMemo(() => {
-    const activeWithSalary = report.filter(
+    const activeWithSalary = tabReport.filter(
       (d) => d.status !== DRIVER_STATUS.INACTIVE && Number(d.salary) > 0
     );
     const baseDue = activeWithSalary.reduce((s, d) => s + (Number(d.salary) || 0), 0);
@@ -44,6 +63,7 @@ const DriversPage = () => {
     const bonusesThisMonth = salaryEntries
       .filter((e) =>
         e.type === SALARY_ENTRY_TYPES.BONUS &&
+        tabMemberIds.has(e.driverId) &&
         (e.date || "").startsWith(currentMonth)
       )
       .reduce((s, e) => s + (Number(e.amount) || 0), 0);
@@ -51,6 +71,7 @@ const DriversPage = () => {
     const deductionsThisMonth = salaryEntries
       .filter((e) =>
         (e.type === SALARY_ENTRY_TYPES.DEDUCTION || e.type === SALARY_ENTRY_TYPES.ADVANCE_REPAY) &&
+        tabMemberIds.has(e.driverId) &&
         (e.date || "").startsWith(currentMonth)
       )
       .reduce((s, e) => s + (Number(e.amount) || 0), 0);
@@ -61,18 +82,20 @@ const DriversPage = () => {
       .filter((e) =>
         e.type === SALARY_ENTRY_TYPES.BASE &&
         e.paid &&
+        tabMemberIds.has(e.driverId) &&
         (e.date || "").startsWith(currentMonth)
       )
       .reduce((s, e) => s + (Number(e.amount) || 0), 0);
 
     const remaining = Math.max(0, due - paid);
 
-    // إجمالي السلف والخصومات اللي اتسجلت للسائقين الشهر ده — بيتحسب من قيود
-    // "سلفة" و"خصم" (وسداد السلف) مباشرة (مش محتاج "صرف راتب" رسمي عشان يظهر)،
-    // وبيرجع صفر أول كل شهر زي باقي المربعات.
+    // إجمالي السلف والخصومات اللي اتسجلت لأعضاء التبويب الحالي الشهر ده —
+    // بيتحسب من قيود "سلفة" و"خصم" (وسداد السلف) مباشرة (مش محتاج "صرف
+    // راتب" رسمي عشان يظهر)، وبيرجع صفر أول كل شهر زي باقي المربعات.
     const advancesThisMonth = salaryEntries
       .filter((e) =>
         e.type === SALARY_ENTRY_TYPES.ADVANCE &&
+        tabMemberIds.has(e.driverId) &&
         (e.date || "").startsWith(currentMonth)
       )
       .reduce((s, e) => s + (Number(e.amount) || 0), 0);
@@ -80,16 +103,16 @@ const DriversPage = () => {
     const advancesAndDeductionsThisMonth = advancesThisMonth + deductionsThisMonth;
 
     return { due, paid, remaining, advancesAndDeductionsThisMonth };
-  }, [report, salaryEntries, currentMonth]);
+  }, [tabReport, tabMemberIds, salaryEntries, currentMonth]);
 
   const visibleDrivers = useMemo(() => {
     const q = search.trim().toLowerCase();
-    return report.filter((d) => {
+    return tabReport.filter((d) => {
       if (!showInactive && d.status === DRIVER_STATUS.INACTIVE) return false;
       if (!q) return true;
       return d.name?.toLowerCase().includes(q) || d.phone?.toLowerCase().includes(q);
     });
-  }, [report, search, showInactive]);
+  }, [tabReport, search, showInactive]);
 
   const handleSaveDriver = async (data) => {
     if (modal.mode === "add") await addDriver(data);
@@ -104,7 +127,7 @@ const DriversPage = () => {
     const message = hasHistory ? (
       <>
         <p className="mb-2">
-          السائق <span className="font-bold text-gray-200">{drv.name}</span> عليه سجلات مرتبطة:
+          <span className="font-bold text-gray-200">{drv.name}</span> عليه سجلات مرتبطة:
         </p>
         <ul className="list-disc list-inside text-gray-300 mb-2 space-y-0.5">
           {counts.jobs > 0 && <li>{counts.jobs} عملية</li>}
@@ -112,11 +135,11 @@ const DriversPage = () => {
           {counts.attendance > 0 && <li>{counts.attendance} سجل حضور</li>}
         </ul>
         <p>
-          حذفه هيسيب السجلات دي من غير سائق مرتبط بيها. لو السائق سايب الشغل بس عايز تحتفظ بتاريخه،
+          حذفه هيسيب السجلات دي من غير عضو مرتبط بيها. لو سايب الشغل بس عايز تحتفظ بتاريخه،
           الأفضل تغيّر حالته لـ "غير نشط" من زرار التعديل بدل الحذف.
         </p>
       </>
-    ) : "هل تريد حذف هذا السائق؟";
+    ) : "هل تريد حذف هذا العضو؟";
 
     const ok = await confirm(drv.id, message);
     if (ok) deleteDriver(drv.id);
@@ -133,7 +156,7 @@ const DriversPage = () => {
         date:     todayISO(),
         paid:     true,
         reason:   "",
-        notes:    "صرف سريع من قسم السائقين",
+        notes:    "صرف سريع من فريق العمل",
       });
       setPayTarget(null);
     } finally {
@@ -154,6 +177,9 @@ const DriversPage = () => {
 
   if (loading) return <LoadingScreen />;
 
+  const isDriverTab = activeTab === TEAM_ROLE.DRIVER;
+  const addLabel    = isDriverTab ? "إضافة سائق" : "إضافة إداري أو محاسب";
+
   return (
     <div className="p-4 lg:p-6 max-w-4xl mx-auto" dir="rtl">
 
@@ -161,20 +187,38 @@ const DriversPage = () => {
         <div>
           <h1 className="text-xl font-extrabold text-gray-100 flex items-center gap-2">
             <DriverIcon size={22} className="text-brand-400"/>
-            السائقون
+            فريق العمل
           </h1>
-          <p className="text-sm text-gray-500 mt-0.5">{report.length} سائق مسجل</p>
+          <p className="text-sm text-gray-500 mt-0.5">{report.length} عضو مسجل</p>
         </div>
         <Button onClick={() => setModal({ mode:"add" })} icon={<PlusIcon size={16}/>}>
-          إضافة سائق
+          {addLabel}
         </Button>
+      </div>
+
+      {/* التبويبان: السائقون / الإداريون والمحاسبون */}
+      <div className="flex items-center gap-2 mb-5 bg-surface-2 border border-white/8 rounded-2xl p-1.5">
+        {TABS.map(({ role, label, Icon }) => (
+          <button
+            key={role}
+            onClick={() => setActiveTab(role)}
+            className={`flex-1 flex items-center justify-center gap-2 text-sm font-bold px-3 py-2.5 rounded-xl transition-colors ${
+              activeTab === role
+                ? "bg-brand-600 text-white shadow-lg shadow-brand-900/30"
+                : "text-gray-400 hover:text-gray-200"
+            }`}
+          >
+            <Icon size={16} />
+            {label}
+          </button>
+        ))}
       </div>
 
       <div className="mb-4">
         <PrivacyToggle />
       </div>
 
-      {/* KPIs — driver SALARIES this month (not machine/job revenue) */}
+      {/* KPIs — SALARIES this month for the active tab (not machine/job revenue) */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 mb-6">
         <StatCard icon={<RevenueIcon size={24}/>} label="إجمالي رواتب الشهر المستحقة"  value={formatCurrency(salaryTotals.due)}       color="amber" sensitive/>
         <StatCard icon={<RevenueIcon size={24}/>} label="إجمالي الرواتب المصروفة"       value={formatCurrency(salaryTotals.paid)}      color="green" sensitive/>
@@ -213,12 +257,12 @@ const DriversPage = () => {
       </div>
 
       {visibleDrivers.length === 0 ? (
-        report.length === 0 ? (
+        tabReport.length === 0 ? (
           <EmptyState
             icon={<DriverIcon size={48} className="text-gray-600 mx-auto mb-2"/>}
-            title="لا يوجد سائقون بعد"
-            description="أضف سائقيك لتتبع أدائهم وكشف مرتباتهم"
-            action={<Button onClick={() => setModal({ mode:"add" })} icon={<PlusIcon size={16}/>}>إضافة أول سائق</Button>}
+            title={isDriverTab ? "لا يوجد سائقون بعد" : "لا يوجد إداريون أو محاسبون بعد"}
+            description={isDriverTab ? "أضف سائقيك لتتبع أدائهم وكشف مرتباتهم" : "أضف أعضاء الإدارة والمحاسبة لمتابعة رواتبهم وحضورهم"}
+            action={<Button onClick={() => setModal({ mode:"add" })} icon={<PlusIcon size={16}/>}>{addLabel}</Button>}
           />
         ) : (
           <EmptyState
@@ -245,9 +289,9 @@ const DriversPage = () => {
       {/* Modals */}
       <Modal open={modal?.mode === "add" || modal?.mode === "edit"}
         onClose={() => setModal(null)}
-        title={modal?.mode === "add" ? "إضافة سائق جديد" : "تعديل بيانات السائق"}>
+        title={modal?.mode === "add" ? "إضافة عضو جديد" : "تعديل بيانات العضو"}>
         {(modal?.mode === "add" || modal?.mode === "edit") && (
-          <DriverForm initial={modal.data} onSave={handleSaveDriver} onClose={() => setModal(null)}/>
+          <DriverForm initial={modal.data} defaultRole={activeTab} onSave={handleSaveDriver} onClose={() => setModal(null)}/>
         )}
       </Modal>
 
@@ -259,7 +303,7 @@ const DriversPage = () => {
         {payTarget && (
           <>
             <p className="text-sm text-gray-400 mb-6 leading-relaxed">
-              هل تريد صرف الراتب الأساسي للسائق{" "}
+              هل تريد صرف الراتب الأساسي لـ{" "}
               <span className="font-bold text-gray-200">{payTarget.name}</span>{" "}
               بمبلغ{" "}
               <span className="font-bold text-green-400">{formatCurrency(payTarget.salary || 0)}</span>{" "}
@@ -283,7 +327,7 @@ const DriversPage = () => {
         {cancelTarget && (
           <>
             <p className="text-sm text-gray-400 mb-6 leading-relaxed">
-              هل تريد إلغاء صرف الراتب الأساسي للسائق{" "}
+              هل تريد إلغاء صرف الراتب الأساسي لـ{" "}
               <span className="font-bold text-gray-200">{cancelTarget.name}</span>{" "}
               بمبلغ{" "}
               <span className="font-bold text-red-400">

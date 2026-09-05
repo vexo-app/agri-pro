@@ -3,16 +3,22 @@ import React from "react";
 import { useForm, Controller } from "react-hook-form";
 import { Input, NumberInput, Select } from "../../components/ui/Input";
 import Button from "../../components/ui/Button";
-import { DRIVER_STATUS, DRIVER_STATUS_LABELS, MAX_MONEY_VALUE } from "../../config/constants";
+import {
+  DRIVER_STATUS, DRIVER_STATUS_LABELS, TEAM_ROLE, TEAM_ROLE_LABELS, MAX_MONEY_VALUE,
+} from "../../config/constants";
 
-const DriverForm = ({ initial, onSave, onClose }) => {
+const DriverForm = ({ initial, defaultRole, onSave, onClose }) => {
   const {
     register,
     handleSubmit,
     control,
     formState: { errors, isSubmitting },
   } = useForm({
-    defaultValues: initial ?? { name: "", phone: "", salary: "", status: DRIVER_STATUS.ACTIVE },
+    defaultValues: initial ?? {
+      name: "", phone: "", salary: "",
+      status: DRIVER_STATUS.ACTIVE,
+      role: defaultRole || TEAM_ROLE.DRIVER,
+    },
   });
 
   const onSubmit = async (data) => {
@@ -20,6 +26,7 @@ const DriverForm = ({ initial, onSave, onClose }) => {
       ...data,
       salary: Number(data.salary) || 0,
       status: data.status || DRIVER_STATUS.ACTIVE,
+      role: data.role || TEAM_ROLE.DRIVER,
     });
     onClose();
   };
@@ -30,12 +37,18 @@ const DriverForm = ({ initial, onSave, onClose }) => {
 
         <div className="sm:col-span-2">
           <Input
-            label="اسم السائق *"
+            label="الاسم *"
             placeholder="الاسم الكامل"
             error={errors.name?.message}
-            {...register("name", { required: "اسم السائق مطلوب" })}
+            {...register("name", { required: "الاسم مطلوب" })}
           />
         </div>
+
+        <Select label="نوع العضو" {...register("role")}>
+          {Object.entries(TEAM_ROLE_LABELS).map(([value, label]) => (
+            <option key={value} value={value}>{label}</option>
+          ))}
+        </Select>
 
         <Input
           label="رقم الهاتف"
