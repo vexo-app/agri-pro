@@ -21,7 +21,7 @@ import {
 } from "../utils/formatters";
 import {
   SALARY_ENTRY_LABELS, SALARY_ENTRY_COLORS,
-  SALARY_ENTRY_TYPES, ATTENDANCE_LABELS,
+  SALARY_ENTRY_TYPES, ATTENDANCE_LABELS, TEAM_ROLE,
 } from "../config/constants";
 import { printDriverPayslip, downloadDriverPayslipPdf } from "../utils/pdfGenerator";
 
@@ -64,6 +64,7 @@ const DriverDetailPage = () => {
   const [modal, setModal] = useState(null);
 
   const driver = report.find((d) => d.id === driverId);
+  const isStaff = driver && (driver.role || TEAM_ROLE.DRIVER) !== TEAM_ROLE.DRIVER;
 
   if (loading) return <LoadingScreen />;
   if (!driver) return (
@@ -133,9 +134,11 @@ const DriverDetailPage = () => {
         </div>
         <div className="flex-1">
           <h1 className="text-xl font-extrabold text-gray-100">{driver.name}</h1>
-          <p className="text-sm text-gray-500 mt-0.5">
-            {driver.ops} عملية · {formatNumber(driver.totalAcres)} فدان
-          </p>
+          {!isStaff && (
+            <p className="text-sm text-gray-500 mt-0.5">
+              {driver.ops} عملية · {formatNumber(driver.totalAcres)} فدان
+            </p>
+          )}
         </div>
         <div className="flex items-center gap-2">
           <Button variant="ghost" size="sm" onClick={handlePrintPayslip}>
@@ -146,11 +149,13 @@ const DriverDetailPage = () => {
       </div>
 
       {/* KPI cards — كل القيم دي جايه من نفس ملخص الشهر تحت، فهي دايمًا متطابقة */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 mb-6">
+      <div className={`grid grid-cols-2 ${isStaff ? "lg:grid-cols-3" : "lg:grid-cols-4"} gap-3 mb-6`}>
         <StatCard icon={<DriverIcon size={22}/>}  label="الراتب الأساسي" value={formatCurrency(monthlySummary.base)}       color="green" />
         <StatCard icon={<StarIcon size={22}/>}    label="الحوافز"        value={formatCurrency(monthlySummary.bonuses)}    color="blue" />
         <StatCard icon={<AlertIcon size={22}/>}   label="الخصومات"       value={formatCurrency(monthlySummary.deductions)} color="red" />
-        <StatCard icon={<AcreIcon size={22}/>}    label="إجمالي الأفدنة" value={`${formatNumber(driver.totalAcres || 0)} ف`} color="blue" />
+        {!isStaff && (
+          <StatCard icon={<AcreIcon size={22}/>}    label="إجمالي الأفدنة" value={`${formatNumber(driver.totalAcres || 0)} ف`} color="blue" />
+        )}
       </div>
 
       {/* Month selector */}

@@ -659,7 +659,7 @@ const buildDriverPayslipHtml = ({ driver, month, summary, entries, attendance })
         </div>
         <div class="meta">
           <p>تاريخ الطباعة: ${today}</p>
-          <p>السائق: ${escapeHtml(driver.name)}</p>
+          <p>${driver.role === "staff" ? "الاسم" : "السائق"}: ${escapeHtml(driver.name)}</p>
           ${driver.phone ? `<p>الهاتف: ${escapeHtml(driver.phone)}</p>` : ""}
         </div>
       </div>
