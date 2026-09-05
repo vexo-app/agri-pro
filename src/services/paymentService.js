@@ -3,7 +3,7 @@ import {
   collection, doc,
   setDoc, updateDoc, deleteDoc,
   getDocs, query, where,
-  serverTimestamp,
+  serverTimestamp, writeBatch,
 } from "firebase/firestore";
 import { db } from "../config/firebase";
 
@@ -39,5 +39,16 @@ export const paymentService = {
 
   remove(userId, id) {
     return deleteDoc(doc(col(userId), id));
+  },
+
+  // بيمسح كل الدفعات المرتبطة بعملية معينة دفعة واحدة (batch) — مستخدمة
+  // لما بنحذف عملية من "سجل الشغل" ومعاها كل معلوماتها المالية.
+  async removeByJob(userId, jobId) {
+    const q = query(col(userId), where("jobId", "==", jobId));
+    const snap = await getDocs(q);
+    if (snap.empty) return;
+    const batch = writeBatch(db);
+    snap.docs.forEach((d) => batch.delete(d.ref));
+    await batch.commit();
   },
 };

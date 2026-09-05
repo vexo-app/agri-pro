@@ -7,6 +7,8 @@ import {
   signOut,
   updateProfile,
   sendPasswordResetEmail,
+  reauthenticateWithCredential,
+  EmailAuthProvider,
 } from "firebase/auth";
 import { serverTimestamp } from "firebase/firestore";
 import { auth } from "../config/firebase";
@@ -70,8 +72,20 @@ export const AuthProvider = ({ children }) => {
 
   const resetPassword = (email) => sendPasswordResetEmail(auth, email);
 
+  // بيتأكد إن الباسورد المدخل فعلًا هو باسورد صاحب الحساب الحالي — من
+  // غير ما يغيّر أي حاجة في الجلسة. مستخدم قبل أي إجراء حساس (زي حذف
+  // عملية معاها معلومات مالية). بيرمي error.code = "auth/wrong-password"
+  // (أو "auth/invalid-credential" في نسخ SDK الأحدث) لو الباسورد غلط.
+  const reauthenticate = (password) => {
+    if (!auth.currentUser?.email) {
+      return Promise.reject(new Error("لا يوجد مستخدم مسجل دخول"));
+    }
+    const cred = EmailAuthProvider.credential(auth.currentUser.email, password);
+    return reauthenticateWithCredential(auth.currentUser, cred);
+  };
+
   return (
-    <AuthContext.Provider value={{ user, loading, login, register, logout, resetPassword }}>
+    <AuthContext.Provider value={{ user, loading, login, register, logout, resetPassword, reauthenticate }}>
       {children}
     </AuthContext.Provider>
   );

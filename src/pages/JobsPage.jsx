@@ -2,12 +2,11 @@
 import React, { useState } from "react";
 import { useJobs }      from "../hooks/useJobs";
 import { useData }      from "../contexts/DataContext";
-import { useConfirm }   from "../hooks/useConfirm";
 import JobCard          from "../features/jobs/JobCard";
 import JobForm          from "../features/jobs/JobForm";
 import JobFilters       from "../features/jobs/JobFilters";
+import DeleteJobDialog  from "../features/jobs/DeleteJobDialog";
 import Modal            from "../components/ui/Modal";
-import ConfirmDialog    from "../components/ui/ConfirmDialog";
 import Button           from "../components/ui/Button";
 import { EmptyState }   from "../components/ui/Card";
 import LoadingScreen    from "../components/ui/LoadingScreen";
@@ -27,12 +26,12 @@ const SummaryBadge = ({ Icon, label, value, color }) => (
 
 const JobsPage = () => {
   const { jobs, totals, totalMaintCost, netProfit, filters, setFilters, clearFilters, hasActiveFilters, loading, addJob, updateJob, deleteJob, fuelPrice } = useJobs();
-  const { equipment, drivers: allTeamMembers, addPayment } = useData();
+  const { equipment, drivers: allTeamMembers, payments, addPayment } = useData();
   // العمليات الميدانية بتتسند لسائقين بس — الإداريين والمحاسبين مالهمش
   // علاقة بيها، فمش بيظهروا في قوايم الإسناد/الفلترة دي.
   const drivers = allTeamMembers.filter((d) => (d.role || TEAM_ROLE.DRIVER) === TEAM_ROLE.DRIVER);
-  const { confirm, confirmState } = useConfirm();
   const [modal, setModal] = useState(null);
+  const [deleteTargetId, setDeleteTargetId] = useState(null); // job id currently pending delete confirmation
 
   const openAdd    = ()      => setModal({ mode: "add" });
   const openEdit   = (job)   => setModal({ mode: "edit", data: job });
@@ -64,9 +63,15 @@ const JobsPage = () => {
     }
   };
 
-  const handleDelete = async (id) => {
-    const ok = await confirm(id);
-    if (ok) deleteJob(id);
+  const handleDelete = (id) => setDeleteTargetId(id);
+
+  // الدفعات (المعلومات المالية) المرتبطة بالعملية المطلوب حذفها — بتتحسب
+  // عشان نوريها للمستخدم في نافذة التأكيد قبل ما يدخل الباسورد.
+  const targetPayments  = deleteTargetId ? payments.filter((p) => p.jobId === deleteTargetId) : [];
+  const targetPaymentsTotal = targetPayments.reduce((s, p) => s + (Number(p.amount) || 0), 0);
+
+  const handleConfirmDelete = async () => {
+    await deleteJob(deleteTargetId);
   };
 
   if (loading) return <LoadingScreen />;
@@ -127,8 +132,13 @@ const JobsPage = () => {
           fuelPrice={fuelPrice} onSave={handleSave} onClose={closeModal} />}
       </Modal>
 
-      <ConfirmDialog open={confirmState.open} onClose={confirmState.reject}
-        onConfirm={confirmState.accept} message="هل تريد حذف هذه العملية؟" />
+      <DeleteJobDialog
+        open={!!deleteTargetId}
+        onClose={() => setDeleteTargetId(null)}
+        onConfirm={handleConfirmDelete}
+        paymentsCount={targetPayments.length}
+        paymentsTotal={targetPaymentsTotal}
+      />
     </div>
   );
 };

@@ -61,6 +61,9 @@ const reducer = (state, action) => {
     case "ADD_PAYMENT":    return { ...state, payments: [action.payload, ...state.payments] };
     case "UPDATE_PAYMENT": return { ...state, payments: state.payments.map(p => p.id === action.payload.id ? action.payload : p) };
     case "DELETE_PAYMENT": return { ...state, payments: state.payments.filter(p => p.id !== action.payload) };
+    // بيحذف كل الدفعات المرتبطة بعملية معينة دفعة واحدة — مستخدمة لما
+    // بنحذف عملية من "سجل الشغل" ومعاها كل معلوماتها المالية.
+    case "DELETE_PAYMENTS_BY_JOB": return { ...state, payments: state.payments.filter(p => p.jobId !== action.payload) };
 
     case "ADD_SALARY":    return { ...state, salaryEntries: [action.payload, ...state.salaryEntries] };
     case "UPDATE_SALARY": return { ...state, salaryEntries: state.salaryEntries.map(s => s.id === action.payload.id ? action.payload : s) };
@@ -468,23 +471,32 @@ export const DataProvider = ({ children }) => {
     toast.success("تم تحديث العملية");
   }, [user, trackWrite]);
   const deleteJob = useCallback(async (id) => {
-    // Block the delete entirely if any payment still references this job —
-    // deleting the job would otherwise orphan those payments (jobId
-    // pointing at a job that no longer exists). Checked before any
-    // dispatch/write so nothing (not even an optimistic UI removal) happens
-    // until this passes.
-    const hasPayments = stateRef.current.payments.some((p) => p.jobId === id);
-    if (hasPayments) {
-      toast.error("لا يمكن حذف العملية لوجود دفعات مرتبطة بها");
-      return;
-    }
-    const previous = stateRef.current.jobs.find((j) => j.id === id);
+    // حذف العملية بيمسح معاه كل الدفعات (المعلومات المالية) المرتبطة بيها —
+    // القرار ده بيتاخد فعليًا في JobsPage (بعد ما المستخدم يشوف عدد
+    // ومبلغ الدفعات ويأكد بالباسورد)، هنا بس بننفذ الحذف المتلازم فعليًا.
+    const previousJob = stateRef.current.jobs.find((j) => j.id === id);
+    const relatedPayments = stateRef.current.payments.filter((p) => p.jobId === id);
+
+    dispatch({ type: "DELETE_PAYMENTS_BY_JOB", payload: id });
     dispatch({ type: "DELETE_JOB", payload: id });
-    trackWrite(jobService.remove(user.uid, id), {
-      rollback: () => previous && dispatch({ type: "ADD_JOB", payload: previous }),
+
+    const writePromise = (async () => {
+      await paymentService.removeByJob(user.uid, id);
+      await jobService.remove(user.uid, id);
+    })();
+
+    trackWrite(writePromise, {
+      rollback: () => {
+        relatedPayments.forEach((p) => dispatch({ type: "ADD_PAYMENT", payload: p }));
+        previousJob && dispatch({ type: "ADD_JOB", payload: previousJob });
+      },
       errorMessage: "تعذر حذف العملية، تم استرجاعها",
     });
-    toast.success("تم حذف العملية");
+    toast.success(
+      relatedPayments.length > 0
+        ? `تم حذف العملية و${relatedPayments.length} دفعة مرتبطة بها`
+        : "تم حذف العملية"
+    );
   }, [user, trackWrite]);
 
   const addDriver = useCallback(async (d) => {
