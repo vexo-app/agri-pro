@@ -34,6 +34,22 @@
   input[type="number"]::-webkit-inner-spin-button,
   input[type="number"]::-webkit-outer-spin-button { -webkit-appearance: none; }
   input[type="number"] { -moz-appearance: textfield; }
+
+  /* Keyboard-only focus ring for buttons, links, and nav items —
+     brand-colored, visible on the dark background. Inputs/selects already
+     define their own focus ring per-component (see Input.jsx), so this is
+     scoped to buttons/links only to avoid doubling up on a second ring.
+     Uses :focus-visible so it never shows on a plain mouse/touch click. */
+  a, button, [tabindex] {
+    outline: none;
+  }
+  a:focus-visible,
+  button:focus-visible,
+  [tabindex]:focus-visible {
+    outline: 2px solid #22c55e;
+    outline-offset: 2px;
+    border-radius: 4px;
+  }
 }
 
 /* ── Components ──────────────────────────────────────── */

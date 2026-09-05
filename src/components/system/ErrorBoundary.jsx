@@ -33,8 +33,9 @@ class ErrorBoundary extends React.Component {
     if (!this.state.hasError) return this.props.children;
 
     return (
-      <div className="min-h-screen flex items-center justify-center p-6 bg-background" dir="rtl">
+      <div className="min-h-screen flex items-center justify-center p-6 bg-dark font-arabic" dir="rtl">
         <div className="max-w-sm w-full text-center">
+          <img src="/brand-icon.png" alt="زراعي برو" className="w-12 h-12 rounded-2xl mx-auto mb-5 opacity-90" />
           <div className="w-16 h-16 rounded-3xl bg-red-900/30 border border-red-800/50 flex items-center justify-center mx-auto mb-4">
             <AlertIcon size={28} className="text-red-400" />
           </div>

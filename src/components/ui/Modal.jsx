@@ -18,16 +18,22 @@ const Modal = ({ open, onClose, title, size = "md", children }) => {
     <div
       className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4 bg-black/80 backdrop-blur-sm"
       onClick={(e) => e.target === e.currentTarget && onClose()}
+      role="presentation"
     >
-      <div className={clsx(
-        "w-full bg-surface border border-white/10 rounded-t-3xl sm:rounded-2xl",
-        "max-h-[90vh] overflow-y-auto flex flex-col animate-slide-up",
-        widths[size]
-      )}>
+      <div
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="modal-title"
+        className={clsx(
+          "w-full bg-surface border border-white/10 rounded-t-3xl sm:rounded-2xl",
+          "max-h-[90vh] overflow-y-auto flex flex-col animate-slide-up",
+          widths[size]
+        )}>
         <div className="sticky top-0 bg-surface z-10 flex items-center justify-between px-6 py-4 border-b border-white/10 rounded-t-3xl sm:rounded-t-2xl">
-          <h2 className="text-base font-bold text-gray-100">{title}</h2>
+          <h2 id="modal-title" className="text-base font-bold text-gray-100">{title}</h2>
           <button
             onClick={onClose}
+            aria-label="إغلاق"
             className="w-8 h-8 flex items-center justify-center rounded-lg bg-surface-2 hover:bg-red-900/60 text-gray-400 hover:text-white transition-colors"
           >
             <CloseIcon size={16} />
