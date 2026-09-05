@@ -265,13 +265,15 @@ const ReportsPage = () => {
           </Button>
 
           {/* Monthly report download — pick the month, then download the exact
-              same figures this page shows for that month as a PDF file. */}
-          <div className="flex items-center gap-2 bg-surface-2 border border-white/8 rounded-xl p-1">
+              same figures this page shows for that month as a PDF file.
+              Select styled like the app's other month picker (Driver page)
+              so it reads as the same control, not a one-off widget. */}
+          <div className="flex items-center gap-2">
             <select
               value={downloadMonth}
               onChange={(e) => setDownloadMonth(e.target.value)}
               aria-label="اختر الشهر"
-              className="bg-transparent text-sm text-gray-200 rounded-lg px-2 py-1.5 focus:outline-none"
+              className="bg-surface-2 border border-white/10 rounded-xl px-3 py-2 text-sm text-gray-200 focus:outline-none focus:border-brand-600"
             >
               {MONTH_DOWNLOAD_OPTIONS.map((o) => (
                 <option key={o.value} value={o.value}>{o.label}</option>
