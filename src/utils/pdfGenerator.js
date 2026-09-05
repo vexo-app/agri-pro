@@ -536,7 +536,11 @@ export const downloadEquipmentReportPdf = (args) => {
 };
 
 // ── 3. Monthly Summary ────────────────────────────────────────────────────────
-export const printMonthlySummary = ({ jobs, equipment, maintenance, drivers, fuelPrice, month, year, allTime = false, totalSalariesPaid = 0, totalTaxDeductions = 0 }) => {
+// buildMonthlySummaryHtml() holds all the markup/calculations; both the print
+// button and the download button call it so the two outputs are always
+// byte-for-byte identical — only the last step (print dialog vs. PDF file)
+// differs, exactly like the equipment/custody/payslip reports above.
+const buildMonthlySummaryHtml = ({ jobs, equipment, maintenance, drivers, fuelPrice, month, year, allTime = false, totalSalariesPaid = 0, totalTaxDeductions = 0 }) => {
   const today = new Date().toLocaleDateString("ar-EG");
   // allTime reuses the exact same report layout/calculations below, just
   // without the date filters on jobs/maintenance — so it lines up with the
@@ -616,7 +620,17 @@ export const printMonthlySummary = ({ jobs, equipment, maintenance, drivers, fue
     </div>
   `;
 
-  printWindow(html, `تقرير ${periodLabel}`);
+  return { html, title: `تقرير ${periodLabel}`, filename: `${reportTitle}-${periodLabel}` };
+};
+
+export const printMonthlySummary = (args) => {
+  const { html, title } = buildMonthlySummaryHtml(args);
+  printWindow(html, title);
+};
+
+export const downloadMonthlySummaryPdf = (args) => {
+  const { html, filename } = buildMonthlySummaryHtml(args);
+  return downloadReportPdf(html, filename);
 };
 
 // ── 4. Driver Payslip ─────────────────────────────────────────────────────────

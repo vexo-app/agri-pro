@@ -13,12 +13,33 @@ import { EmptyState } from "../components/ui/Card";
 import { ChartCard } from "../components/ui/ChartCard";
 import LoadingScreen       from "../components/ui/LoadingScreen";
 import Button               from "../components/ui/Button";
+import DownloadReportButton from "../components/ui/DownloadReportButton";
 import { TractorIcon, DriverIcon, ChartIcon, RevenueIcon, AcreIcon, FuelIcon, PrintIcon, ReceiptIcon } from "../components/ui/Icons";
 import { formatCurrency, formatNumber } from "../utils/formatters";
 import { TEAM_ROLE } from "../config/constants";
 import { useData }                from "../contexts/DataContext";
 import { calcTotalSalariesPaid }  from "../utils/salaryCalculations";
-import { printMonthlySummary }    from "../utils/pdfGenerator";
+import { printMonthlySummary, downloadMonthlySummaryPdf } from "../utils/pdfGenerator";
+
+// ── Monthly download: only two choices on purpose (current / previous
+// month) — this button is for "give me last month's/this month's paperwork"
+// not general date-range reporting, so there's no calendar picker to build
+// or maintain.
+const MONTH_DOWNLOAD_OPTIONS = [
+  { value: "current",  label: "الشهر الحالي"  },
+  { value: "previous", label: "الشهر السابق" },
+];
+
+// Same {year, month} shape printMonthlySummary/downloadMonthlySummaryPdf
+// already expect — kept as one small helper so "current" and "previous"
+// can never drift out of sync with each other.
+const resolveMonth = (choice) => {
+  const now = new Date();
+  const base = choice === "previous"
+    ? new Date(now.getFullYear(), now.getMonth() - 1, 1)
+    : now;
+  return { year: base.getFullYear(), month: base.getMonth() + 1 };
+};
 
 const TABS = [
   { id: "equipment", label: "المعدات",  Icon: TractorIcon },
@@ -116,6 +137,7 @@ const ReportsPage = () => {
   // معنى للإداريين والمحاسبين، فبيفلتر بس السائقين الفعليين.
   const driverReport = driverReportAll.filter((d) => (d.role || TEAM_ROLE.DRIVER) === TEAM_ROLE.DRIVER);
   const [tab, setTab] = useState("equipment");
+  const [downloadMonth, setDownloadMonth] = useState("current");
 
   // Exports a PDF via the existing printMonthlySummary() — no new
   // calculations, just two different sets of its own existing inputs:
@@ -146,6 +168,30 @@ const ReportsPage = () => {
       month: now.getMonth() + 1,
       year:  now.getFullYear(),
       allTime,
+      totalSalariesPaid: salariesForPeriod,
+      totalTaxDeductions: taxDeductionsForPeriod,
+    });
+  };
+
+  // Downloads a real .pdf for exactly one calendar month (current or
+  // previous, per the dropdown) — same monthPrefix filtering approach as
+  // handlePrintReport above, just built from the chosen month/year instead
+  // of always "now".
+  const handleDownloadMonthly = () => {
+    const { year, month } = resolveMonth(downloadMonth);
+    const monthPrefix = `${year}-${String(month).padStart(2, "0")}`;
+    const salariesForPeriod = calcTotalSalariesPaid(
+      salaryEntries.filter((e) => (e.date || "").startsWith(monthPrefix))
+    );
+    const taxDeductionsForPeriod = taxDeductions
+      .filter((t) => (t.date || "").startsWith(monthPrefix))
+      .reduce((s, t) => s + (Number(t.amount) || 0), 0);
+
+    return downloadMonthlySummaryPdf({
+      jobs, equipment, maintenance, drivers,
+      fuelPrice: settings.fuelPrice,
+      month, year,
+      allTime: false,
       totalSalariesPaid: salariesForPeriod,
       totalTaxDeductions: taxDeductionsForPeriod,
     });
@@ -210,13 +256,32 @@ const ReportsPage = () => {
           </h1>
           <p className="text-sm text-gray-500 mt-0.5">تحليل أداء المعدات والسائقين</p>
         </div>
-        <div className="flex gap-2">
+        <div className="flex items-center gap-2 flex-wrap">
           <Button variant="ghost" onClick={() => handlePrintReport(false)} icon={<PrintIcon size={16} />} title="طباعة عمليات الشهر الحالي فقط">
             طباعة الشهر الحالي
           </Button>
           <Button variant="ghost" onClick={() => handlePrintReport(true)} icon={<PrintIcon size={16} />} title="طباعة تقرير شامل يطابق أرقام هذه الصفحة">
             طباعة تقرير شامل
           </Button>
+
+          {/* Monthly report download — pick the month, then download the exact
+              same figures this page shows for that month as a PDF file. */}
+          <div className="flex items-center gap-2 bg-surface-2 border border-white/8 rounded-xl p-1">
+            <select
+              value={downloadMonth}
+              onChange={(e) => setDownloadMonth(e.target.value)}
+              aria-label="اختر الشهر"
+              className="bg-transparent text-sm text-gray-200 rounded-lg px-2 py-1.5 focus:outline-none"
+            >
+              {MONTH_DOWNLOAD_OPTIONS.map((o) => (
+                <option key={o.value} value={o.value}>{o.label}</option>
+              ))}
+            </select>
+            <DownloadReportButton
+              onDownload={handleDownloadMonthly}
+              title="تحميل التقرير الشهري PDF"
+            />
+          </div>
         </div>
       </div>
 
