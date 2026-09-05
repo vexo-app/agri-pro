@@ -1,7 +1,7 @@
 // src/contexts/DataContext.jsx
 import React, { createContext, useContext, useCallback, useReducer, useEffect, useState, useRef } from "react";
 import toast from "react-hot-toast";
-import { waitForPendingWrites } from "firebase/firestore";
+import { waitForPendingWrites, writeBatch, doc, collection, query, where, getDocs } from "firebase/firestore";
 import { db } from "../config/firebase";
 import { useAuth }              from "./AuthContext";
 import { equipmentService }    from "../services/equipmentService";
@@ -473,7 +473,13 @@ export const DataProvider = ({ children }) => {
   const deleteJob = useCallback(async (id) => {
     // حذف العملية بيمسح معاه كل الدفعات (المعلومات المالية) المرتبطة بيها —
     // القرار ده بيتاخد فعليًا في JobsPage (بعد ما المستخدم يشوف عدد
-    // ومبلغ الدفعات ويأكد بالباسورد)، هنا بس بننفذ الحذف المتلازم فعليًا.
+    // ومبلغ الدفعات ويأكد بالباسورد)، هنا بس بننفذ الحذف الفعلي.
+    //
+    // الاتنين (العملية + كل الدفعات المرتبطة بيها) بيتمسحوا في batch واحد
+    // atomic — يا يتنفذوا مع بعض يا محدش يتنفذ خالص. من غير كده، لو
+    // النت اتقطع بعد ما الدفعات اتمسحت وقبل ما العملية تتمسح، كنا هنرجع
+    // العملية والدفعات في الواجهة (rollback محلي) بينما الدفعات بالفعل
+    // اتمسحت من Firestore فعليًا — تضارب دائم بين الشاشة والسيرفر.
     const previousJob = stateRef.current.jobs.find((j) => j.id === id);
     const relatedPayments = stateRef.current.payments.filter((p) => p.jobId === id);
 
@@ -481,8 +487,13 @@ export const DataProvider = ({ children }) => {
     dispatch({ type: "DELETE_JOB", payload: id });
 
     const writePromise = (async () => {
-      await paymentService.removeByJob(user.uid, id);
-      await jobService.remove(user.uid, id);
+      const paymentsSnap = await getDocs(
+        query(collection(db, "users", user.uid, "payments"), where("jobId", "==", id))
+      );
+      const batch = writeBatch(db);
+      paymentsSnap.docs.forEach((d) => batch.delete(d.ref));
+      batch.delete(doc(db, "users", user.uid, "jobs", id));
+      await batch.commit();
     })();
 
     trackWrite(writePromise, {
