@@ -19,6 +19,7 @@ import { TEAM_ROLE } from "../config/constants";
 import { useData }                from "../contexts/DataContext";
 import { calcTotalSalariesPaid }  from "../utils/salaryCalculations";
 import { downloadMonthlySummaryPdf } from "../utils/pdfGenerator";
+import { shortNum, truncateLabel, createAngledNameTick } from "../components/charts/chartHelpers";
 
 // ── Monthly report download: three choices — current month, previous
 // month, or every month (all time). No calendar picker, since those are
@@ -45,31 +46,10 @@ const TABS = [
   { id: "drivers",   label: "السائقون", Icon: DriverIcon  },
 ];
 
-const shortNum  = (v) => v >= 1_000_000 ? `${(v/1_000_000).toFixed(1)}م` : v >= 1_000 ? `${(v/1_000).toFixed(0)}k` : String(v);
-const truncateLabel = (n = "", max) => n.length > max ? `${n.slice(0, max)}…` : n;
-
 // ── Custom axis ticks: show a shortened name (to fit the chart), but wrap
 // it in a native SVG <title> so hovering the label with the mouse shows the
 // full, untruncated name as a browser tooltip.
-const AngledNameTick = (props) => {
-  const { x, y, payload } = props;
-  const full = payload.value ?? "";
-  return (
-    <g transform={`translate(${x},${y})`}>
-      <text
-        x={0} y={0} dy={6}
-        textAnchor="end"
-        fill="#6b7280"
-        fontSize={11}
-        fontFamily="Cairo"
-        transform="rotate(-15)"
-      >
-        {truncateLabel(full, 10)}
-        <title>{full}</title>
-      </text>
-    </g>
-  );
-};
+const AngledNameTick = createAngledNameTick({ fontSize: 11, maxLength: 10 });
 
 const HorizontalNameTick = (props) => {
   const { x, y, payload } = props;

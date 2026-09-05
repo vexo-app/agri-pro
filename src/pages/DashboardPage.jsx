@@ -23,6 +23,7 @@ import {
 } from "../components/ui/Icons";
 import { formatCurrency, formatNumber, formatDateShort } from "../utils/formatters";
 import { calcRevenue, calcFuelCost, calcRemainingAmount, derivePaymentStatus, getJobPaidAmount } from "../utils/calculations";
+import { shortNum, createAngledNameTick } from "../components/charts/chartHelpers";
 
 // ── Color palettes ────────────────────────────────────────────────────────
 const AREA_GREEN   = "#22c55e";
@@ -40,26 +41,7 @@ const tooltipStyle = {
 // ── Custom X-axis tick: shows a shortened name (to fit the chart width),
 // but wraps it in a native SVG <title> so hovering the label with the
 // mouse shows the full, untruncated name as a browser tooltip.
-const AngledNameTick = (props) => {
-  const { x, y, payload } = props;
-  const full = payload.value ?? "";
-  const short = full.length > 11 ? `${full.slice(0, 11)}…` : full;
-  return (
-    <g transform={`translate(${x},${y})`}>
-      <text
-        x={0} y={0} dy={6}
-        textAnchor="end"
-        fill="#6b7280"
-        fontSize={10}
-        fontFamily="Cairo"
-        transform="rotate(-15)"
-      >
-        {short}
-        <title>{full}</title>
-      </text>
-    </g>
-  );
-};
+const AngledNameTick = createAngledNameTick({ fontSize: 10, maxLength: 11 });
 
 // ── Custom Tooltip for area chart ─────────────────────────────────────────
 const AreaTooltip = ({ active, payload, label }) => {
@@ -90,8 +72,6 @@ const BarTooltip = ({ active, payload, label }) => {
     </div>
   );
 };
-
-const shortNum = (v) => v >= 1_000_000 ? `${(v/1_000_000).toFixed(1)}م` : v >= 1_000 ? `${(v/1_000).toFixed(0)}k` : String(v);
 
 // ── DashboardPage ─────────────────────────────────────────────────────────
 const DashboardPage = () => {
