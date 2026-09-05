@@ -39,6 +39,20 @@ export const calcRemainingAmount = (revenue, amountPaid) =>
   Math.max(0, revenue - (safeNum(amountPaid)));
 
 /**
+ * Builds a jobId → total-paid Map in a single O(payments) pass. Used by
+ * getJobPaidAmount/aggregateJobs below to avoid re-filtering the full
+ * `payments` array once per job (previously O(jobs × payments)).
+ */
+const buildPaidAmountsByJobId = (payments = []) => {
+  const map = new Map();
+  for (const p of payments) {
+    if (!p || !p.jobId) continue;
+    map.set(p.jobId, (map.get(p.jobId) || 0) + safeNum(p.amount));
+  }
+  return map;
+};
+
+/**
  * Single source of truth for "how much has this job been paid so far".
  * The `payments` collection (individual instalments, each with its own date
  * and notes) is the real record. If a job already has payment instalments,
@@ -46,13 +60,16 @@ export const calcRemainingAmount = (revenue, amountPaid) =>
  * have any instalment docs, so we fall back to the legacy `job.amountPaid`
  * field for them. Once a job has at least one instalment, that job's
  * `amountPaid` field is no longer read — everything flows through `payments`.
+ *
+ * `payments` normally accepts the raw payments array (as before, for any
+ * single/one-off lookup). Callers that need this for every job in a list
+ * (e.g. aggregateJobs) may instead pass a pre-built Map from
+ * buildPaidAmountsByJobId so the full array isn't re-filtered per job.
  */
 export const getJobPaidAmount = (job, payments = []) => {
-  const jobPayments = payments.filter((p) => p.jobId === job.id);
-  if (jobPayments.length > 0) {
-    return jobPayments.reduce((s, p) => s + (safeNum(p.amount)), 0);
-  }
-  return safeNum(job.amountPaid); // legacy fallback
+  const paidByJobId = payments instanceof Map ? payments : buildPaidAmountsByJobId(payments);
+  const total = paidByJobId.get(job.id);
+  return total !== undefined ? total : safeNum(job.amountPaid); // legacy fallback
 };
 
 export const derivePaymentStatus = (revenue, amountPaid) => {
@@ -75,11 +92,15 @@ export const aggregateJobs = (jobs, fuelPrice, payments = []) => {
   const totalFuelCost = calcFuelCost(totalFuel, fuelPrice);
   const netProfit     = totalRevenue - totalFuelCost;
 
-  // Payment aggregates — derived from the payments collection (see getJobPaidAmount)
-  const totalPaid      = jobs.reduce((s, j) => s + getJobPaidAmount(j, payments), 0);
+  // Payment aggregates — derived from the payments collection (see
+  // getJobPaidAmount). The jobId→paid Map is built once here (O(payments))
+  // and reused for every job below, instead of each job re-filtering the
+  // full payments array (previously O(jobs × payments)).
+  const paidByJobId    = buildPaidAmountsByJobId(payments);
+  const totalPaid      = jobs.reduce((s, j) => s + getJobPaidAmount(j, paidByJobId), 0);
   const totalRemaining = jobs.reduce((s, j) => {
     const rev = calcRevenue(j.acres, j.pricePerAcre);
-    return s + calcRemainingAmount(rev, getJobPaidAmount(j, payments));
+    return s + calcRemainingAmount(rev, getJobPaidAmount(j, paidByJobId));
   }, 0);
 
   return { totalRevenue, totalAcres, totalFuel, totalFuelCost, netProfit, totalPaid, totalRemaining };
