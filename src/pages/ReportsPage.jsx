@@ -12,27 +12,26 @@ import DriverReportCard    from "../features/reports/DriverReportCard";
 import { EmptyState } from "../components/ui/Card";
 import { ChartCard } from "../components/ui/ChartCard";
 import LoadingScreen       from "../components/ui/LoadingScreen";
-import Button               from "../components/ui/Button";
 import DownloadReportButton from "../components/ui/DownloadReportButton";
-import { TractorIcon, DriverIcon, ChartIcon, RevenueIcon, AcreIcon, FuelIcon, PrintIcon, ReceiptIcon } from "../components/ui/Icons";
+import { TractorIcon, DriverIcon, ChartIcon, RevenueIcon, AcreIcon, FuelIcon, ReceiptIcon } from "../components/ui/Icons";
 import { formatCurrency, formatNumber } from "../utils/formatters";
 import { TEAM_ROLE } from "../config/constants";
 import { useData }                from "../contexts/DataContext";
 import { calcTotalSalariesPaid }  from "../utils/salaryCalculations";
-import { printMonthlySummary, downloadMonthlySummaryPdf } from "../utils/pdfGenerator";
+import { downloadMonthlySummaryPdf } from "../utils/pdfGenerator";
 
-// ── Monthly download: only two choices on purpose (current / previous
-// month) — this button is for "give me last month's/this month's paperwork"
-// not general date-range reporting, so there's no calendar picker to build
-// or maintain.
+// ── Monthly report download: three choices — current month, previous
+// month, or every month (all time). No calendar picker, since those are
+// the only three ranges anyone actually asks for here.
 const MONTH_DOWNLOAD_OPTIONS = [
   { value: "current",  label: "الشهر الحالي"  },
   { value: "previous", label: "الشهر السابق" },
+  { value: "all",      label: "كل الشهور"     },
 ];
 
-// Same {year, month} shape printMonthlySummary/downloadMonthlySummaryPdf
-// already expect — kept as one small helper so "current" and "previous"
-// can never drift out of sync with each other.
+// Same {year, month} shape downloadMonthlySummaryPdf already expects —
+// kept as one small helper so "current" and "previous" can never drift
+// out of sync with each other. Not called for "all" (no single month).
 const resolveMonth = (choice) => {
   const now = new Date();
   const base = choice === "previous"
@@ -139,45 +138,22 @@ const ReportsPage = () => {
   const [tab, setTab] = useState("equipment");
   const [downloadMonth, setDownloadMonth] = useState("current");
 
-  // Exports a PDF via the existing printMonthlySummary() — no new
-  // calculations, just two different sets of its own existing inputs:
-  // - monthly: current calendar month only, with salaries paid *that month*
-  //   deducted from profit (same calcTotalSalariesPaid used for the
-  //   all-time KPI above, just given a month-filtered entry list first —
-  //   so the monthly report uses the exact same profit methodology as the
-  //   all-time one, scoped to the month instead of everything).
-  // - allTime: no month filter, using the page's own totalSalariesPaid and
-  //   totalTaxDeductions so its net-profit figure lines up exactly with
-  //   this page's totalProfit (totalGrossProfit - totalSalariesPaid -
-  //   totalTaxDeductions).
-  const handlePrintReport = (allTime) => {
-    const now = new Date();
-    const monthPrefix = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}`;
-    const salariesForPeriod = allTime
-      ? totalSalariesPaid
-      : calcTotalSalariesPaid(salaryEntries.filter((e) => (e.date || "").startsWith(monthPrefix)));
-    const taxDeductionsForPeriod = allTime
-      ? totalTaxDeductions
-      : taxDeductions
-          .filter((t) => (t.date || "").startsWith(monthPrefix))
-          .reduce((s, t) => s + (Number(t.amount) || 0), 0);
-
-    printMonthlySummary({
-      jobs, equipment, maintenance, drivers,
-      fuelPrice: settings.fuelPrice,
-      month: now.getMonth() + 1,
-      year:  now.getFullYear(),
-      allTime,
-      totalSalariesPaid: salariesForPeriod,
-      totalTaxDeductions: taxDeductionsForPeriod,
-    });
-  };
-
-  // Downloads a real .pdf for exactly one calendar month (current or
-  // previous, per the dropdown) — same monthPrefix filtering approach as
-  // handlePrintReport above, just built from the chosen month/year instead
-  // of always "now".
+  // كان هنا زرار "طباعة الشهر الحالي" وزرار "طباعة تقرير شامل" — اتشالوا
+  // خالص، الصفحة دلوقتي تحميل بس. الدالة الواحدة دي بتغطي التلات اختيارات:
+  // شهر محدد (حالي/سابق) بيتفلتر بالـ monthPrefix، أو "كل الشهور" فبتستخدم
+  // إجماليات الصفحة الجاهزة (totalSalariesPaid/totalTaxDeductions) زي ما
+  // هي من غير أي فلترة، عشان تتطابق تمامًا مع الأرقام المعروضة فوق.
   const handleDownloadMonthly = () => {
+    if (downloadMonth === "all") {
+      return downloadMonthlySummaryPdf({
+        jobs, equipment, maintenance, drivers,
+        fuelPrice: settings.fuelPrice,
+        allTime: true,
+        totalSalariesPaid,
+        totalTaxDeductions,
+      });
+    }
+
     const { year, month } = resolveMonth(downloadMonth);
     const monthPrefix = `${year}-${String(month).padStart(2, "0")}`;
     const salariesForPeriod = calcTotalSalariesPaid(
@@ -257,22 +233,13 @@ const ReportsPage = () => {
           <p className="text-sm text-gray-500 mt-0.5">تحليل أداء المعدات والسائقين</p>
         </div>
         <div className="flex items-center gap-2 flex-wrap">
-          <Button variant="ghost" onClick={() => handlePrintReport(false)} icon={<PrintIcon size={16} />} title="طباعة عمليات الشهر الحالي فقط">
-            طباعة الشهر الحالي
-          </Button>
-          <Button variant="ghost" onClick={() => handlePrintReport(true)} icon={<PrintIcon size={16} />} title="طباعة تقرير شامل يطابق أرقام هذه الصفحة">
-            طباعة تقرير شامل
-          </Button>
-
-          {/* Monthly report download — pick the month, then download the exact
-              same figures this page shows for that month as a PDF file.
-              Select styled like the app's other month picker (Driver page)
-              so it reads as the same control, not a one-off widget. */}
+          {/* Monthly report download — pick the period, then download the
+              exact same figures this page shows for it as a PDF file. */}
           <div className="flex items-center gap-2">
             <select
               value={downloadMonth}
               onChange={(e) => setDownloadMonth(e.target.value)}
-              aria-label="اختر الشهر"
+              aria-label="اختر الفترة"
               className="bg-surface-2 border border-white/10 rounded-xl px-3 py-2 text-sm text-gray-200 focus:outline-none focus:border-brand-600"
             >
               {MONTH_DOWNLOAD_OPTIONS.map((o) => (
@@ -281,7 +248,7 @@ const ReportsPage = () => {
             </select>
             <DownloadReportButton
               onDownload={handleDownloadMonthly}
-              title="تحميل التقرير الشهري PDF"
+              title="تحميل التقرير PDF"
             />
           </div>
         </div>

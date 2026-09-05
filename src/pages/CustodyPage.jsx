@@ -12,24 +12,25 @@ import { Card, StatCard, EmptyState, SummaryRow } from "../components/ui/Card";
 import LoadingScreen   from "../components/ui/LoadingScreen";
 import {
   WalletIcon, ArrowUpCircleIcon, ArrowDownCircleIcon,
-  TrashIcon, EditIcon, CalendarIcon, AlertIcon, TractorIcon, DriverIcon, PrintIcon,
+  TrashIcon, EditIcon, CalendarIcon, AlertIcon, TractorIcon, DriverIcon,
 } from "../components/ui/Icons";
 import { formatCurrency, formatDateShort, todayISO } from "../utils/formatters";
 import {
   CUSTODY_TYPES, CUSTODY_EXPENSE_CATEGORY_LABELS,
 } from "../config/constants";
-import { printCustodyReport, downloadCustodyReportPdf } from "../utils/pdfGenerator";
+import { downloadCustodyReportPdf } from "../utils/pdfGenerator";
 
-// نفس فكرة صفحة التقارير بالظبط: اختيارين بس (الشهر الحالي / الشهر السابق)
-// عشان الزرار ده لتحميل شهر محدد بسرعة، مش لعمل تقرير بمدى مخصص.
+// نفس فكرة صفحة التقارير بالظبط: تلات اختيارات — الشهر الحالي، الشهر
+// السابق، أو كل الشهور (كل الوقت).
 const MONTH_DOWNLOAD_OPTIONS = [
   { value: "current",  label: "الشهر الحالي"  },
   { value: "previous", label: "الشهر السابق" },
+  { value: "all",      label: "كل الشهور"     },
 ];
 
 // بيرجع "YYYY-MM" بالظبط زي الـ prefix اللي بتتفلتر بيه الحركات في باقي
 // التطبيق — نفس الهيلبر المستخدم في صفحة التقارير، عشان الاختيارين ميختلفوش
-// عن بعض بين الصفحتين.
+// عن بعض بين الصفحتين. مش بينادَى لـ "all" (مفيش شهر واحد في الحالة دي).
 const resolveMonthPrefix = (choice) => {
   const now = new Date();
   const base = choice === "previous"
@@ -65,39 +66,31 @@ const CustodyPage = () => {
     if (ok) deleteCustody(id);
   };
 
-  const handlePrint = () => {
-    printCustodyReport({
+  // تحميل تقرير العهدة PDF — ثلاث حالات: "كل الشهور" بتستخدم إجماليات
+  // الصفحة الجاهزة (totalExpenses/expensesByCategory) زي ما هي، وشهر محدد
+  // (حالي/سابق) بيتفلتر بالـ month prefix وبيتحسب من جوه buildCustodyReportHtml
+  // نفسها من قايمة الحركات مباشرة، عشان الرقم يبقى مطابق 100% لهذا الشهر بس.
+  const handleDownload = () => {
+    if (downloadMonth === "all") {
+      return downloadCustodyReportPdf({
+        transactions: transactions,
+        totalDeposits,
+        totalExpenses,
+        balance,
+        expensesByCategory,
+        getLinkedName,
+        company: settings.company,
+      });
+    }
+
+    return downloadCustodyReportPdf({
       transactions: transactions,
-      totalDeposits,
-      totalExpenses,
-      balance,
-      expensesByCategory,
       getLinkedName,
       company: settings.company,
+      month: resolveMonthPrefix(downloadMonth),
+      allTime: false,
     });
   };
-
-  const handleDownload = () => downloadCustodyReportPdf({
-    transactions: transactions,
-    totalDeposits,
-    totalExpenses,
-    balance,
-    expensesByCategory,
-    getLinkedName,
-    company: settings.company,
-  });
-
-  // تحميل شهر واحد بس (الحالي أو السابق) — نفس المصروفات والحركات المعروضة
-  // في التقرير الشامل، لكن متفلترة على الشهر ده فقط. الحسابات كلها بتتعمل
-  // جوه buildCustodyReportHtml نفسها من قايمة الحركات مباشرة، مش من
-  // totalExpenses/expensesByCategory الكاملين اللي فوق دول.
-  const handleDownloadMonthly = () => downloadCustodyReportPdf({
-    transactions: transactions,
-    getLinkedName,
-    company: settings.company,
-    month: resolveMonthPrefix(downloadMonth),
-    allTime: false,
-  });
 
   if (loading) return <LoadingScreen />;
 
@@ -113,18 +106,13 @@ const CustodyPage = () => {
           <p className="text-sm text-gray-500 mt-0.5">فلوس رجل الأعمال ومصروفاتها على الميكنة والسائقين</p>
         </div>
         <div className="flex items-center gap-2 flex-wrap">
-          <Button variant="ghost" onClick={handlePrint} icon={<PrintIcon size={16} />} title="طباعة تقرير شامل بالعهدة">
-            طباعة تقرير
-          </Button>
-          <DownloadReportButton onDownload={handleDownload} title="تحميل تقرير العهدة PDF" />
-
-          {/* تحميل شهر واحد بس — نفس عنصر اختيار الشهر المستخدم في صفحة
+          {/* تحميل تقرير العهدة — نفس عنصر اختيار الفترة المستخدم في صفحة
               التقارير، بنفس الشكل، عشان يبقى نفس هوية الاختيار في التطبيق. */}
           <div className="flex items-center gap-2">
             <select
               value={downloadMonth}
               onChange={(e) => setDownloadMonth(e.target.value)}
-              aria-label="اختر الشهر"
+              aria-label="اختر الفترة"
               className="bg-surface-2 border border-white/10 rounded-xl px-3 py-2 text-sm text-gray-200 focus:outline-none focus:border-brand-600"
             >
               {MONTH_DOWNLOAD_OPTIONS.map((o) => (
@@ -132,8 +120,8 @@ const CustodyPage = () => {
               ))}
             </select>
             <DownloadReportButton
-              onDownload={handleDownloadMonthly}
-              title="تحميل تقرير العهدة الشهري PDF"
+              onDownload={handleDownload}
+              title="تحميل تقرير العهدة PDF"
             />
           </div>
 

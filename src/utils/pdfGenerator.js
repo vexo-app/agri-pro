@@ -536,10 +536,8 @@ export const downloadEquipmentReportPdf = (args) => {
 };
 
 // ── 3. Monthly Summary ────────────────────────────────────────────────────────
-// buildMonthlySummaryHtml() holds all the markup/calculations; both the print
-// button and the download button call it so the two outputs are always
-// byte-for-byte identical — only the last step (print dialog vs. PDF file)
-// differs, exactly like the equipment/custody/payslip reports above.
+// buildMonthlySummaryHtml() holds all the markup/calculations for the
+// downloadable PDF (current month / previous month / all time).
 const buildMonthlySummaryHtml = ({ jobs, equipment, maintenance, drivers, fuelPrice, month, year, allTime = false, totalSalariesPaid = 0, totalTaxDeductions = 0 }) => {
   const today = new Date().toLocaleDateString("ar-EG");
   // allTime reuses the exact same report layout/calculations below, just
@@ -621,11 +619,6 @@ const buildMonthlySummaryHtml = ({ jobs, equipment, maintenance, drivers, fuelPr
   `;
 
   return { html, title: `تقرير ${periodLabel}`, filename: `${reportTitle}-${periodLabel}` };
-};
-
-export const printMonthlySummary = (args) => {
-  const { html, title } = buildMonthlySummaryHtml(args);
-  printWindow(html, title);
 };
 
 export const downloadMonthlySummaryPdf = (args) => {
@@ -742,9 +735,9 @@ const buildCustodyReportHtml = ({ transactions, totalExpenses, expensesByCategor
 
   const categoryLabels = { equipment: "ميكنة", driver: "سائقين", other: "أخرى" };
 
-  // التقرير المطبوع بيعرض المصروفات بس (من غير حركات الإضافة/الرصيد) —
-  // شاشة العهدة في التطبيق نفسها لسه بتعرض كل الحركات والرصيد زي ما هي،
-  // الفلترة دي خاصة بالتقرير المطبوع فقط.
+  // التقرير بيعرض المصروفات بس (من غير حركات الإضافة/الرصيد) — شاشة العهدة
+  // في التطبيق نفسها لسه بتعرض كل الحركات والرصيد زي ما هي، الفلترة دي
+  // خاصة بملف الـ PDF فقط.
   const allExpenses = transactions.filter((t) => t.type !== "deposit");
 
   // Month-scoped download (allTime=false + a "YYYY-MM" month): filter by
@@ -878,11 +871,6 @@ const buildCustodyReportHtml = ({ transactions, totalExpenses, expensesByCategor
 
   const titleSuffix = (!allTime && month) ? periodLabel : today;
   return { html, title: `${reportTitle} - ${titleSuffix}`, filename: `تقرير-العهدة-${titleSuffix}` };
-};
-
-export const printCustodyReport = (args) => {
-  const { html, title } = buildCustodyReportHtml(args);
-  printWindow(html, title);
 };
 
 export const downloadCustodyReportPdf = (args) => {
