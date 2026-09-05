@@ -103,6 +103,16 @@ const safeFetch = (promise) => promise.then(
   (data) => ({ ok: true, data }),
   (err) => ({ ok: false, err })
 );
+
+// Local (per-device), safe flag: only ever set *after* a successful read
+// has confirmed the legacy `driverCosts` collection is fully drained (see
+// the load effect below). Its sole purpose is to skip re-fetching that
+// collection on every future app load once there is nothing left in it to
+// migrate. Never set on a failed read or a failed migration attempt, so an
+// account that hasn't finished migrating keeps getting checked exactly as
+// before until it's actually confirmed done.
+const driverCostsMigratedKey = (uid) => `driverCostsMigrated:${uid}`;
+
 const DataContext = createContext(null);
 
 export const DataProvider = ({ children }) => {
@@ -201,6 +211,18 @@ export const DataProvider = ({ children }) => {
     (async () => {
       try {
         dispatch({ type: "SET_LOADING", payload: true });
+
+        // Skip the legacy driverCosts read entirely once a previous load
+        // on this device already confirmed it's fully drained (flag is
+        // only ever set after that confirmation — see below). Otherwise,
+        // fetch it exactly as before so the migration below still runs
+        // for any account that hasn't finished (or hasn't started) yet.
+        const driverCostsAlreadyMigrated =
+          localStorage.getItem(driverCostsMigratedKey(user.uid)) === "1";
+        const driverCostsFetch = driverCostsAlreadyMigrated
+          ? Promise.resolve({ ok: true, data: [] })
+          : safeFetch(driverCostService.getAll(user.uid));
+
         // Every collection is fetched independently (safeFetch) so that a
         // single failed read doesn't take down the whole dashboard — but
         // unlike before, a failure is now tracked instead of silently
@@ -216,7 +238,7 @@ export const DataProvider = ({ children }) => {
           safeFetch(maintenanceService.getAll(user.uid)),
           safeFetch(settingsService.get(user.uid)),
           safeFetch(paymentService.getAll(user.uid)),
-          safeFetch(driverCostService.getAll(user.uid)),
+          driverCostsFetch,
           safeFetch(salaryService.getAll(user.uid)),
           safeFetch(attendanceService.getAll(user.uid)),
           safeFetch(custodyService.getAll(user.uid)),
@@ -240,6 +262,12 @@ export const DataProvider = ({ children }) => {
         // against a failed (and therefore unknown) salaryEntries list could
         // duplicate entries next time the real data loads.
         let mergedSalaryEntries = salaryEntriesR.ok ? salaryEntriesR.data : undefined;
+        // Tracks whether every leftover driverCosts doc found this round
+        // was successfully migrated and removed (stays false if the block
+        // below never runs, or if it throws partway through) — used only
+        // to decide whether it's now safe to stop reading this collection
+        // on future loads (see driverCostsMigrated flag further down).
+        let migrationSucceededThisRound = false;
         if (driverCostsR.ok && salaryEntriesR.ok && driverCostsR.data.length > 0 && !migratingDriverCostsRef.current) {
           migratingDriverCostsRef.current = true;
           try {
@@ -269,6 +297,10 @@ export const DataProvider = ({ children }) => {
                 })
               )
             ).filter(Boolean);
+            // Reaching this point means every item in driverCostsR.data was
+            // either already-migrated-and-removed or just migrated and
+            // removed above, with nothing throwing along the way.
+            migrationSucceededThisRound = true;
             if (migrated.length > 0) {
               mergedSalaryEntries = [...migrated, ...salaryEntriesR.data];
               toast.success(`تم دمج ${migrated.length} من تكاليف السائقين القديمة داخل نظام الرواتب`);
@@ -279,6 +311,21 @@ export const DataProvider = ({ children }) => {
           } finally {
             migratingDriverCostsRef.current = false;
           }
+        }
+
+        // Persist "fully migrated" locally, but only once a successful
+        // read this round has actually confirmed there's nothing left in
+        // driverCosts — either it was already empty, or everything found
+        // was just migrated and removed without error above. A failed
+        // read (driverCostsR.ok === false) or a failed/partial migration
+        // leaves this untouched, so the next load checks again exactly as
+        // it does today.
+        if (
+          !driverCostsAlreadyMigrated &&
+          driverCostsR.ok &&
+          (driverCostsR.data.length === 0 || migrationSucceededThisRound)
+        ) {
+          localStorage.setItem(driverCostsMigratedKey(user.uid), "1");
         }
 
         const payload = {};
