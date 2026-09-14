@@ -6,8 +6,10 @@ import "./index.css";
 import App from "./App";
 import * as serviceWorkerRegistration from "./serviceWorkerRegistration";
 import { initGlobalErrorLogger } from "./utils/globalErrorLogger";
+import { initPostHog } from "./config/posthog";
 
 initGlobalErrorLogger();
+initPostHog();
 
 const root = ReactDOM.createRoot(document.getElementById("root"));
 root.render(

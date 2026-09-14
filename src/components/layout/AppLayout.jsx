@@ -7,12 +7,17 @@ import BottomNav    from "./BottomNav";
 import OfflineBanner from "../ui/OfflineBanner";
 import SubscriptionStatusBanner from "./SubscriptionStatusBanner";
 import { FOCUS_FUEL_PRICE_EVENT } from "../../utils/uiEvents";
+import { trackPageview } from "../../config/posthog";
 
 const AppLayout = () => {
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const { pathname } = useLocation();
 
   useEffect(() => { setSidebarOpen(false); }, [pathname]);
+
+  // PostHog pageview — يبعت المسار بس (منقّى من أي اسم حقيقي، شوف
+  // src/config/posthog.js) مع كل تنقل بين الصفحات جوه التطبيق.
+  useEffect(() => { trackPageview(pathname); }, [pathname]);
 
   // audit roadmap Phase 7: على الموبايل حقل سعر الوقود مش ظاهر إلا لو
   // درج القائمة الجانبية مفتوح — فبانر "سعر الوقود" (شوف DashboardPage.jsx)

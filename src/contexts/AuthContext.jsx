@@ -17,6 +17,7 @@ import { auth } from "../config/firebase";
 import { userProfileService } from "../services/userProfileService";
 import { billingService } from "../services/billingService";
 import { backupService } from "../services/backupService";
+import { identifyUser, resetPostHogUser } from "../config/posthog";
 
 const AuthContext = createContext(null);
 
@@ -49,7 +50,14 @@ export const AuthProvider = ({ children }) => {
     const unsub = onAuthStateChanged(auth, (firebaseUser) => {
       setUser(firebaseUser);
       setLoading(false);
-      if (firebaseUser) touchLastActive(firebaseUser);
+      if (firebaseUser) {
+        touchLastActive(firebaseUser);
+        // PostHog identify — best-effort، مش شرط لتسجيل الدخول (شوف
+        // src/config/posthog.js).
+        identifyUser(firebaseUser.uid, firebaseUser.email);
+      } else {
+        resetPostHogUser();
+      }
     });
     return unsub;
   }, []);
