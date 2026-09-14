@@ -6,7 +6,7 @@
 // المشروع لشرح ليه شكل الكود "OWNER:CODE" — قرار مؤقت لحد Phase 3.
 import React, { useState, useEffect, useCallback } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
-import { signInAnonymously } from "firebase/auth";
+import { signInAnonymously, signOut } from "firebase/auth";
 import { auth } from "../config/firebase";
 import { useAuth } from "../contexts/AuthContext";
 import { guestAccessService } from "../services/guestAccessService";
@@ -57,6 +57,29 @@ const GuestLoginPage = () => {
       if (!current || !current.isAnonymous) {
         const cred = await signInAnonymously(auth);
         current = cred.user;
+      } else {
+        // ⚠️ باگ حقيقي (مُبلَّغ من صاحب المشروع): guestSessions/{uid} في
+        // firestore.rules بيسمح create بس، مفيش update خالص (قرار متعمّد،
+        // شوف التعليق هناك). لو الـanonymous user ده أصلاً معاه جلسة ضيف
+        // قديمة (استخدم كود مختلف قبل كده من نفس الجهاز/المتصفح)، محاولة
+        // استخدام كود جديد بنفس الـuid هتحاول تعمل set() على مستند
+        // guestSessions موجود بالفعل — ده بيتحسب "update" مش "create" في
+        // نظر القواعد، فبيترفض بصمت (permission-denied) حتى لو الكود
+        // الجديد نفسه سليم 100%. ده بالظبط سبب "اشتغل أول مرة بس": أول كود
+        // بيعدي عادي لأن مفيش guestSessions doc لسه، وأي كود بعد كده من
+        // نفس الجهاز بيترفض. الحل من غير أي تغيير في firestore.rules:
+        // نتأكد إن الجلسة الحالية (لو موجودة) بتاعة نفس الكود المطلوب،
+        // وإلا نعمل sign out ونبدأ هوية anonymous جديدة تمامًا قبل
+        // المحاولة — كده الـcreate بيفضل create فعلي دايمًا.
+        const existingSession = await guestAccessService.getSession(current.uid).catch(() => null);
+        const sameCode = existingSession
+          && existingSession.ownerUid === parsed.ownerUid
+          && existingSession.code === parsed.code;
+        if (existingSession && !sameCode) {
+          await signOut(auth);
+          const cred = await signInAnonymously(auth);
+          current = cred.user;
+        }
       }
       await guestAccessService.redeem(current.uid, parsed.ownerUid, parsed.code);
       navigate("/guest/app", { replace: true });
