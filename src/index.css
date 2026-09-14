@@ -71,6 +71,19 @@
     to   { transform: translateY(0);    opacity: 1; }
   }
 
+  /* Subtle "fade + rise" entrance for list/grid items on first render
+     (guest-facing read-only pages — GuestHomePage.jsx/GuestSectionPage.jsx).
+     Pair with an inline `style={{ animationDelay: `${i * 40}ms` }}` per item
+     for a staggered cascade instead of everything popping in at once.
+     transform/opacity only — no layout thrash, no JS animation library. */
+  .animate-fade-up {
+    animation: fadeUp 0.35s cubic-bezier(0.16, 1, 0.3, 1) both;
+  }
+  @keyframes fadeUp {
+    from { transform: translateY(8px); opacity: 0; }
+    to   { transform: translateY(0);   opacity: 1; }
+  }
+
   /* Tabular numbers */
   .tabular-nums { font-variant-numeric: tabular-nums; }
 

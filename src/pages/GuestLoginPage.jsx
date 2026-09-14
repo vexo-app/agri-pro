@@ -100,8 +100,9 @@ const GuestLoginPage = () => {
   // غير ما ياخد باله).
   if (isRealUser) {
     return (
-      <div className="min-h-screen bg-dark flex items-center justify-center p-6 font-arabic" dir="rtl">
-        <div className="max-w-sm w-full bg-surface border border-white/8 rounded-2xl p-6 text-center">
+      <div className="min-h-screen bg-dark flex items-center justify-center p-6 font-arabic relative overflow-hidden" dir="rtl">
+        <div className="pointer-events-none absolute -top-32 -left-32 w-96 h-96 rounded-full bg-amber-500/10 blur-3xl" />
+        <div className="relative max-w-sm w-full bg-surface border border-white/8 rounded-2xl p-6 text-center animate-fade-up">
           <UserIcon size={32} className="mx-auto text-amber-400 mb-3" />
           <h2 className="text-base font-bold text-gray-100 mb-2">انت مسجل دخول بحساب عادي</h2>
           <p className="text-sm text-gray-400 mb-4">
@@ -114,13 +115,21 @@ const GuestLoginPage = () => {
   }
 
   return (
-    <div className="min-h-screen bg-dark flex items-center justify-center p-6 font-arabic" dir="rtl">
-      <div className="max-w-sm w-full bg-surface border border-white/8 rounded-2xl p-6">
+    <div className="min-h-screen bg-dark flex items-center justify-center p-6 font-arabic relative overflow-hidden" dir="rtl">
+      {/* توهج خفيف بلون البراند خلف البطاقة — عشان الخلفية متبقاش مسطحة
+          تمامًا، بدون أي صورة/مكتبة إضافية (CSS بحت). */}
+      <div className="pointer-events-none absolute -top-40 right-1/2 translate-x-1/2 w-[32rem] h-[32rem] rounded-full bg-brand-500/10 blur-3xl" />
+
+      <div className="relative max-w-sm w-full bg-surface border border-white/8 rounded-2xl p-6 animate-fade-up">
         <div className="flex flex-col items-center mb-5 text-center">
-          <div className="w-12 h-12 rounded-2xl bg-brand-900/40 flex items-center justify-center mb-3">
-            <LockIcon size={22} className="text-brand-400" />
-          </div>
-          <h1 className="text-lg font-bold text-gray-100">الوصول للضيوف</h1>
+          {/* نفس شعار البراند المستخدم في AuthPage.jsx وGuestSidebar.jsx —
+              بدل أيقونة قفل منفصلة، عشان الشاشة متبقاش فيها رمزين للهوية
+              فوق بعض. */}
+          <img src="/brand-icon.png" alt="زراعي برو" className="w-14 h-14 rounded-2xl mb-3 shadow-lg shadow-brand-900/50" />
+          <h1 className="text-lg font-bold text-gray-100 flex items-center gap-1.5">
+            <LockIcon size={16} className="text-brand-400" />
+            الوصول للضيوف
+          </h1>
           <p className="text-xs text-gray-500 mt-1">وصول قراءة فقط لبيانات صاحب الحساب اللي بعتلك الكود</p>
         </div>
 
@@ -137,7 +146,9 @@ const GuestLoginPage = () => {
             className="text-center"
           />
           {error && (
-            <p className="text-xs text-red-400 text-center">{ERROR_MESSAGES[error] || ERROR_MESSAGES["permission-denied"]}</p>
+            <p className="text-xs text-red-300 text-center bg-red-900/30 border border-red-800/40 rounded-xl px-3 py-2.5 leading-relaxed">
+              {ERROR_MESSAGES[error] || ERROR_MESSAGES["permission-denied"]}
+            </p>
           )}
           <Button type="submit" className="w-full" loading={submitting} disabled={!manualCode.trim()}>
             دخول

@@ -3,7 +3,7 @@ import React, { useState, useEffect } from "react";
 import { Outlet, useLocation } from "react-router-dom";
 import { useGuest } from "../../contexts/GuestContext";
 import GuestSidebar from "./GuestSidebar";
-import { MenuIcon } from "../ui/Icons";
+import { MenuIcon, EyeIcon } from "../ui/Icons";
 
 /**
  * الشكل العام لواجهة الضيف: بانر ثابت واضح فوق كل صفحة (البرومبت الأصلي
@@ -42,8 +42,9 @@ const GuestLayout = () => {
           <button className="lg:hidden text-amber-300" onClick={() => setSidebarOpen(true)}>
             <MenuIcon size={18} />
           </button>
+          <EyeIcon size={16} className="hidden sm:block text-amber-400 flex-shrink-0" />
           <span className="flex-1 truncate">
-            انت بتشوف بيانات <span className="font-bold">{companyLabel}</span> — قراءة فقط
+            انت بتشوف بيانات <span className="font-bold">{companyLabel}</span> — قراءة فقط، مفيش تعديل أو حذف
           </span>
         </div>
 
