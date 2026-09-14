@@ -28,7 +28,7 @@ const GuestHomePage = () => {
       <h1 className="text-lg font-bold text-gray-100 mb-1">اختار قسم</h1>
       <p className="text-xs text-gray-500 mb-5">وصول قراءة فقط للأقسام اللي المالك فعّلها ليك.</p>
       <div className="grid grid-cols-1 xs:grid-cols-2 lg:grid-cols-3 gap-3">
-        {visible.map(({ to, label, section, Icon }, i) => (
+        {visible.map(({ to, label, section, Icon, description }, i) => (
           <Link
             key={to}
             to={to}
@@ -41,7 +41,7 @@ const GuestHomePage = () => {
             <span className="flex flex-col gap-0.5 min-w-0">
               <span className="text-sm font-bold text-gray-100">{label}</span>
               <span className="text-xs text-gray-500 leading-snug">
-                {GUEST_SECTIONS[section]?.description}
+                {description || GUEST_SECTIONS[section]?.description}
               </span>
             </span>
           </Link>

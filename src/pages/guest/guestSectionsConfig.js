@@ -62,6 +62,10 @@ export const GUEST_SECTIONS = {
     fields: [
       { key: "fuelRate", label: "معدل الوقود", format: money, numeric: true },
     ],
+    // كارت المعدة قابل للضغط عليه لعرض تفاصيلها الكاملة (نفس تصميم
+    // EquipmentDetailPage.jsx بتاع صاحب الحساب، من غير أي زرار تعديل/طباعة)
+    // — راجع GuestEquipmentDetailPage.jsx.
+    detailPath: (i) => `/guest/app/equipment/${i.id}`,
   },
   jobs: {
     label: "سجل الشغل",
@@ -106,6 +110,10 @@ export const GUEST_SECTIONS = {
     fields: [
       { key: "salary", label: "الراتب", format: money, numeric: true },
     ],
+    // كارت العضو قابل للضغط عليه لعرض ملخص كشف راتبه الكامل (نفس تصميم
+    // DriverDetailPage.jsx بتاع صاحب الحساب، من غير أي إضافة/حذف قيود) —
+    // راجع GuestDriverDetailPage.jsx.
+    detailPath: (i) => `/guest/app/drivers/${i.id}`,
   },
   maintenance: {
     label: "الصيانة",

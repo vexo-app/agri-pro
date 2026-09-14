@@ -7,14 +7,22 @@ import { auth } from "../../config/firebase";
 import { useGuest } from "../../contexts/GuestContext";
 import {
   TractorIcon, ClipboardIcon, DriverIcon, WrenchIcon,
-  WalletIcon, ReceiptIcon, TruckIcon, LogoutIcon,
+  WalletIcon, ReceiptIcon, TruckIcon, LogoutIcon, UsersGroupIcon,
 } from "../ui/Icons";
 
 // نفس مفاتيح sections في guestAccess (firestore.rules → sectionOpen).
 // Exported عشان GuestHomePage.jsx يستخدم نفس الليستة (زرارات الأقسام).
+//
+// ⚠️ "العملاء" مش section مستقل في guestAccess.sections — مفيش أي
+// collection منفصلة للعملاء أصلاً عند صاحب الحساب (اسم العميل حقل عادي
+// جوه مستند job). فبتظهر بس لو قسم "jobs" مفعّل (نفس المفتاح section:
+// "jobs")، وبتاخد description مخصوص ليها بدل وصف قسم سجل الشغل نفسه —
+// راجع GuestClientsListPage.jsx.
 export const NAV_ITEMS = [
   { section: "equipment",     to: "/guest/app/equipment",      label: "المعدات",   Icon: TractorIcon   },
   { section: "jobs",          to: "/guest/app/jobs",           label: "سجل الشغل", Icon: ClipboardIcon },
+  { section: "jobs",          to: "/guest/app/clients",        label: "العملاء",   Icon: UsersGroupIcon,
+    description: "كل عميل: عدد العمليات، الإيراد، المدفوع والمتبقي عليه" },
   { section: "drivers",       to: "/guest/app/drivers",        label: "فريق العمل", Icon: DriverIcon    },
   { section: "maintenance",   to: "/guest/app/maintenance",    label: "الصيانة",   Icon: WrenchIcon    },
   { section: "custody",       to: "/guest/app/custody",        label: "العهدة",    Icon: WalletIcon    },

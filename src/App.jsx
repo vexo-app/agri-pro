@@ -43,6 +43,11 @@ import GuestRoute      from "./components/layout/GuestRoute";
 import GuestLayout     from "./components/layout/GuestLayout";
 import GuestHomePage    from "./pages/guest/GuestHomePage";
 import GuestSectionPage from "./pages/guest/GuestSectionPage";
+import GuestEquipmentDetailPage from "./pages/guest/GuestEquipmentDetailPage";
+import GuestDriverDetailPage    from "./pages/guest/GuestDriverDetailPage";
+import GuestSupplierDetailPage  from "./pages/guest/GuestSupplierDetailPage";
+import GuestClientsListPage     from "./pages/guest/GuestClientsListPage";
+import GuestClientDetailPage    from "./pages/guest/GuestClientDetailPage";
 
 const App = () => (
   <ErrorBoundary>
@@ -57,12 +62,17 @@ const App = () => (
         <Route element={<GuestRoute><GuestLayout /></GuestRoute>}>
           <Route path="/guest/app"                element={<GuestHomePage />} />
           <Route path="/guest/app/equipment"      element={<GuestSectionPage section="equipment" />} />
+          <Route path="/guest/app/equipment/:equipmentId" element={<GuestEquipmentDetailPage />} />
           <Route path="/guest/app/jobs"           element={<GuestSectionPage section="jobs" />} />
           <Route path="/guest/app/drivers"        element={<GuestSectionPage section="drivers" />} />
+          <Route path="/guest/app/drivers/:driverId" element={<GuestDriverDetailPage />} />
           <Route path="/guest/app/maintenance"    element={<GuestSectionPage section="maintenance" />} />
           <Route path="/guest/app/custody"        element={<GuestSectionPage section="custody" />} />
           <Route path="/guest/app/tax-deductions" element={<GuestSectionPage section="taxDeductions" />} />
           <Route path="/guest/app/suppliers"      element={<GuestSectionPage section="suppliers" />} />
+          <Route path="/guest/app/suppliers/:supplierName" element={<GuestSupplierDetailPage />} />
+          <Route path="/guest/app/clients"        element={<GuestClientsListPage />} />
+          <Route path="/guest/app/clients/:clientName" element={<GuestClientDetailPage />} />
         </Route>
 
         <Route element={<ProtectedRoute><AppLayout /></ProtectedRoute>}>
