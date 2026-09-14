@@ -22,6 +22,7 @@ import { formatCurrency, todayISO } from "../utils/formatters";
 import {
   DRIVER_STATUS, SALARY_ENTRY_TYPES, TEAM_ROLE,
 } from "../config/constants";
+import { trackEvent } from "../config/posthog";
 
 // ── فريق العمل: تبويبين بيفلتروا نفس القايمة حسب "نوع العضو" ────────────────
 // نفس البيانات، نفس الفورم، نفس منطق الرواتب/الحضور — فرق واحد بس بيتفلتر
@@ -112,8 +113,13 @@ const DriversPage = () => {
   }, [tabReport, search, showInactive]);
 
   const handleSaveDriver = async (data) => {
-    if (modal.mode === "add") await addDriver(data);
-    else await updateDriver(modal.data.id, data);
+    if (modal.mode === "add") {
+      await addDriver(data);
+      trackEvent("team_member_created", { team_role: data.role || activeTab });
+    } else {
+      await updateDriver(modal.data.id, data);
+      trackEvent("team_member_updated", { team_role: data.role || activeTab });
+    }
     setModal(null);
   };
 
@@ -152,6 +158,7 @@ const DriversPage = () => {
         reason:   "",
         notes:    "صرف سريع من فريق العمل",
       });
+      trackEvent("salary_paid");
       setPayTarget(null);
     } finally {
       setPaying(false);

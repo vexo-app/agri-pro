@@ -23,15 +23,17 @@ import LocalExportSection from "../features/profile/LocalExportSection";
 import DeleteAccountSection from "../features/profile/DeleteAccountSection";
 import RestoreModal from "../features/profile/RestoreModal";
 import ImportModal from "../features/profile/ImportModal";
+import GuestAccessSection from "../features/profile/GuestAccessSection";
 import BillingPage from "./BillingPage";
-import { PrintIcon, LockIcon, CloudUploadIcon, TrashIcon, WalletIcon } from "../components/ui/Icons";
+import { PrintIcon, LockIcon, CloudUploadIcon, TrashIcon, WalletIcon, UsersGroupIcon } from "../components/ui/Icons";
 
 const TABS = [
-  { id: "billing",  label: "الاشتراك",          Icon: WalletIcon      },
-  { id: "invoice",  label: "بيانات الفاتورة",   Icon: PrintIcon       },
-  { id: "security", label: "الأمان",            Icon: LockIcon        },
-  { id: "backup",   label: "النسخ الاحتياطي",   Icon: CloudUploadIcon },
-  { id: "danger",   label: "منطقة الخطر",       Icon: TrashIcon       },
+  { id: "billing",     label: "الاشتراك",          Icon: WalletIcon      },
+  { id: "invoice",     label: "بيانات الفاتورة",   Icon: PrintIcon       },
+  { id: "security",    label: "الأمان",            Icon: LockIcon        },
+  { id: "backup",      label: "النسخ الاحتياطي",   Icon: CloudUploadIcon },
+  { id: "guestAccess", label: "الوصول للضيوف",     Icon: UsersGroupIcon  },
+  { id: "danger",      label: "منطقة الخطر",       Icon: TrashIcon       },
 ];
 
 const ProfilePage = () => {
@@ -94,6 +96,8 @@ const ProfilePage = () => {
           <LocalExportSection onOpenImport={() => setImportOpen(true)} />
         </div>
       )}
+
+      {tab === "guestAccess" && <GuestAccessSection />}
 
       {tab === "danger" && <DeleteAccountSection />}
 

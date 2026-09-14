@@ -206,13 +206,194 @@ service cloud.firestore {
         (!('netProfit' in data)            || isSignedMoney(data.netProfit));
     }
 
+    // ─── الوصول للضيوف (Guest Access) — قراءة فقط ────────────────────────
+    // ميزة "كود ضيف مؤقت": صاحب الحساب بيولّد كود بيدّيه لحد تاني (محاسب/
+    // شريك/مورد) وصول read-only لبيانات حسابه هو، بصلاحية وتوقيت بيحددهم
+    // هو. هوية الضيف = Firebase Anonymous Auth (مفيش أي مستخدم/باسورد
+    // جديد ولا Cloud Function). قرارين مهمين اتاخدوا عمدًا (بالاتفاق) بعد
+    // مراجعة حدود Firestore Rules الفعلية — موثقين هنا عشان محدش يحاول
+    // "يصلحهم" بعدين على أساس إنهم قصور:
+    //
+    // 1) سويتش "إظهار البيانات المالية" لكل قسم — مبني على أساس القسم
+    //    كامل، مش على مستوى الحقل جوه المستند. Firestore Rules بتسمح
+    //    بمستند كامل أو تمنعه بالكامل وقت القراءة، مفيش إخفاء حقل بعينه
+    //    (زي pricePerAcre) من جوه مستند مسموح أصلاً (زي jobs) — ده قيد
+    //    حقيقي في المنتج نفسه مش في القواعد. يعني عمليًا: لو "البيانات
+    //    المالية" مقفولة لقسم معيّن، القسم ده بيتخفى بالكامل عن الضيف
+    //    (زي enabled=false بالظبط)، مش إنه يظهر بدون أرقام.
+    //
+    // 2) اختيار "عملاء بعينهم" — مفيش collection اسمها clients أصلاً في
+    //    المشروع (useClients.js بيجمّعهم من حقل client جوه مستندات jobs).
+    //    الفلترة دي بتتطبق على قسم jobs بس (حقل client في كل مستند)، ومش
+    //    بتمتد لأي قسم تاني (زي payments).
+    //
+    // ⚠️ ملحوظة لازم تتاخد بعين الاعتبار وقت بناء واجهة الضيف (Phase 2):
+    // فلترة jobs بحقل client معتمدة على resource.data.client، وFirestore
+    // بيرفض أي query list/onSnapshot لو مفيهاش where('client','in',
+    // allowedClients) مطابق تمامًا (Firestore بيتأكد إن الـquery نفسها
+    // "مثبتة" هترجع بس مستندات تعدي القاعدة، مش إنه بيفحص كل نتيجة لوحدها
+    // بعد الجلب) — يعني query عادي من غير الشرط ده هيفشل بالكامل لو فيه
+    // allowedClients محدد، مش هيرجع نتايج جزئية.
+    //
+    // الوقت: فترة الصلاحية العامة (validFrom/validUntil) timestamp عادي.
+    // ساعات اليوم الاختيارية (dailyStartMinute/dailyEndMinute) بتتخزن
+    // كدقايق من نص الليل بتوقيت UTC — التحويل من توقيت الشركة المحلي
+    // بيحصل في الواجهة وقت إنشاء/تعديل الكود (Phase 2/3)، مش هنا، عشان
+    // القاعدة تفضل بسيطة ومعتمدة بالكامل على request.time (وقت السيرفر).
+    // النافذة دي مش بتدعم عبور نص الليل (زي 10 بليل لـ2 الصبح) — start
+    // لازم يكون أصغر من end وإلا تتحسب Invalid وترفض القراءة كلها.
+
+    function isAnonymousGuest() {
+      return isSignedIn() && request.auth.token.firebase.sign_in_provider == 'anonymous';
+    }
+
+    function hasGuestSession() {
+      return isAnonymousGuest() &&
+        exists(/databases/$(database)/documents/guestSessions/$(request.auth.uid));
+    }
+
+    function guestSessionData() {
+      return get(/databases/$(database)/documents/guestSessions/$(request.auth.uid)).data;
+    }
+
+    function hasGuestAccessDoc(ownerUid, code) {
+      return exists(/databases/$(database)/documents/users/$(ownerUid)/guestAccess/$(code));
+    }
+
+    function guestAccessData(ownerUid, code) {
+      return get(/databases/$(database)/documents/users/$(ownerUid)/guestAccess/$(code)).data;
+    }
+
+    function withinGeneralPeriod(access) {
+      return request.time >= access.validFrom && request.time <= access.validUntil;
+    }
+
+    // لو مفيش ساعات يوم محددة (الحقلين مش موجودين)، الفترة العامة كفاية.
+    // لو حقل واحد بس موجود (شكل غير متسق)، بنرفض بدل ما نفترض نية المالك
+    // (fail-closed) — الكتابة الصحيحة (isValidNewGuestAccess) بتمنع الحالة
+    // دي أصلًا فمن المفروض متوصلش هنا في الاستخدام العادي.
+    function withinDailyWindow(access) {
+      return
+        (!('dailyStartMinute' in access) && !('dailyEndMinute' in access)) ||
+        (
+          ('dailyStartMinute' in access) && ('dailyEndMinute' in access) &&
+          access.dailyStartMinute < access.dailyEndMinute &&
+          (request.time.hours() * 60 + request.time.minutes()) >= access.dailyStartMinute &&
+          (request.time.hours() * 60 + request.time.minutes()) < access.dailyEndMinute
+        );
+    }
+
+    function sectionOpen(access, section) {
+      return section in access.sections &&
+        access.sections[section].enabled == true &&
+        access.sections[section].financial == true;
+    }
+
+    // شرط "جلسة ضيف صالحة دلوقتي" — من غير فحص قسم معيّن. مستخدم في
+    // guestCanRead تحت، وكمان في users/{uid} (allow get) عشان الضيف يقدر
+    // يقرا اسم/إيميل المالك بس (لعرض بانر "انت بتشوف بيانات [الشركة]") —
+    // مفيش أي بيانات مالية في المستند ده، مجرد بروفايل. الترتيب هنا
+    // مقصود: كل شرط بيتأكد إن اللي قبله صح أولًا (short-circuit &&) قبل ما
+    // يحاول يقرا حقل ممكن يبقى مش موجود.
+    function guestSessionValid(ownerUid) {
+      return hasGuestSession() &&
+        guestSessionData().ownerUid == ownerUid &&
+        hasGuestAccessDoc(ownerUid, guestSessionData().code) &&
+        guestAccessData(ownerUid, guestSessionData().code).redeemedByUid == request.auth.uid &&
+        guestAccessData(ownerUid, guestSessionData().code).cancelled != true &&
+        withinGeneralPeriod(guestAccessData(ownerUid, guestSessionData().code)) &&
+        withinDailyWindow(guestAccessData(ownerUid, guestSessionData().code));
+    }
+
+    // نفس guestSessionValid + شرط القسم المحدد مفعّل وبياناته المالية ظاهرة.
+    function guestCanRead(ownerUid, section) {
+      return guestSessionValid(ownerUid) &&
+        sectionOpen(guestAccessData(ownerUid, guestSessionData().code), section);
+    }
+
+    // نفس شرط guestCanRead('jobs') بالظبط + فلترة العميل لو المالك حدد
+    // عملاء بعينهم (allowedClients). لو الحقل مش موجود أو null، كل
+    // العملاء مسموحين.
+    function guestCanReadJob(ownerUid, jobData) {
+      return guestCanRead(ownerUid, 'jobs') &&
+        (
+          !('allowedClients' in guestAccessData(ownerUid, guestSessionData().code)) ||
+          guestAccessData(ownerUid, guestSessionData().code).allowedClients == null ||
+          jobData.client in guestAccessData(ownerUid, guestSessionData().code).allowedClients
+        );
+    }
+
+    // فحص كتابة guestAccess وقت الإنشاء — المالك بس، ومستند نظيف من الأول
+    // (مفيش استخدام مسبق).
+    function isValidNewGuestAccess(data) {
+      return
+        data.name is string && data.name.size() <= 200 &&
+        data.validFrom is timestamp &&
+        data.validUntil is timestamp &&
+        data.validUntil > data.validFrom &&
+        (!('dailyStartMinute' in data) || (data.dailyStartMinute is number && data.dailyStartMinute >= 0 && data.dailyStartMinute < 1440)) &&
+        (!('dailyEndMinute' in data)   || (data.dailyEndMinute   is number && data.dailyEndMinute   > 0 && data.dailyEndMinute   <= 1440)) &&
+        (('dailyStartMinute' in data) == ('dailyEndMinute' in data)) &&
+        (!('allowedClients' in data) || data.allowedClients == null || (data.allowedClients is list && data.allowedClients.size() <= 500)) &&
+        data.sections is map &&
+        data.cancelled == false &&
+        data.redeemedByUid == null;
+    }
+
+    // فحص تعديل guestAccess من صاحب الحساب (تمديد/تعديل صلاحيات/إلغاء) —
+    // ممنوع يلمس redeemedByUid/redeemedAt نهائيًا (دول بيتغيروا بس من جوه
+    // ترانزاكشن استخدام الكود نفسها، شوف isValidGuestRedeem تحت).
+    //
+    // ⚠️ إصلاح (Phase 3): قبل كده كانت `after.redeemedAt == before.redeemedAt`
+    // مباشرة — بما إن redeemedAt مش بيتحط أصلاً على المستند إلا وقت
+    // الاستخدام (isValidNewGuestAccess مبتطلبوش)، أي تعديل من المالك (إلغاء/
+    // تمديد) على كود لسه ماتستخدمش كان هيحاول يقرا حقل مش موجود في
+    // before/after مع بعض، وده بيفشل تقييم القاعدة كلها (permission-denied)
+    // — يعني إلغاء/تمديد كود لسه ماتستخدمش (أكتر سيناريو متوقع في Phase 3)
+    // كان هيفشل دايمًا. اتصلح بنفس نمط الفحص بـ'in' المستخدم فوق لـ
+    // dailyStartMinute/dailyEndMinute: نتأكد الحقل موجود في الاتنين أو مش
+    // موجود في الاتنين، ونقارن القيمة بس لو موجود أصلاً.
+    function isValidOwnerGuestAccessUpdate(before, after) {
+      return
+        after.validFrom is timestamp &&
+        after.validUntil is timestamp &&
+        after.validUntil > after.validFrom &&
+        (!('dailyStartMinute' in after) || (after.dailyStartMinute is number && after.dailyStartMinute >= 0 && after.dailyStartMinute < 1440)) &&
+        (!('dailyEndMinute' in after)   || (after.dailyEndMinute   is number && after.dailyEndMinute   > 0 && after.dailyEndMinute   <= 1440)) &&
+        after.sections is map &&
+        after.redeemedByUid == before.redeemedByUid &&
+        (('redeemedAt' in before) == ('redeemedAt' in after)) &&
+        (!('redeemedAt' in before) || after.redeemedAt == before.redeemedAt);
+    }
+
+    // فحص "استخدام" الكود — بيحصل من الضيف نفسه (Anonymous) جوه الترانزاكشن
+    // الموصوفة في guestSessions تحت. بيغيّر بس redeemedByUid/redeemedAt، ومن
+    // null لقيمة، ومرة واحدة بس (before.redeemedByUid لازم يبقى null)،
+    // والكود لازم يكون لسه صالح زمنيًا ومش ملغي وقت الاستخدام.
+    function isValidGuestRedeem(before, after) {
+      return
+        before.redeemedByUid == null &&
+        after.redeemedByUid == request.auth.uid &&
+        before.cancelled != true &&
+        request.time >= before.validFrom &&
+        request.time <= before.validUntil &&
+        after.diff(before).affectedKeys().hasOnly(['redeemedByUid', 'redeemedAt']);
+    }
+
     // كل بيانات الشركة (معدات، شغل، سائقين، صيانة، مدفوعات، رواتب،
     // حضور، عهدة، إعدادات...) بقت جوه users/{uid}/... بدل collections
     // منفصلة على المستوى الأعلى فيها حقل userId. الفايدة: مفيش أي حاجة
     // ممكن تُقرأ أو تتكتب من غير ما تكون جوه مسار المستخدم نفسه أصلاً —
     // العزل بقى في بنية المسار مش في شرط بيتكرر يدوي في كل collection.
     match /users/{uid} {
-      allow get:             if isSignedIn() && (isOwner(uid) || isAdmin());
+      // || guestSessionValid(uid) اتضافت (Phase 2) عشان واجهة الضيف تقدر
+      // تعرض اسم/إيميل المالك في بانر "انت بتشوف بيانات [الشركة]" —
+      // بروفايل بس، مفيش بيانات مالية في المستند ده. القراءة دي بترفض
+      // تلقائيًا لو الكود منتهي/ملغي (guestSessionValid بتتحقق من الوقت
+      // والإلغاء)، عكس get() الخاص بمستند guestAccess نفسه اللي بيفضل
+      // مقروء حتى بعد الانتهاء (عشان واجهة الضيف تقدر تعرض "انتهت صلاحية
+      // الكود" بدل رفض عام).
+      allow get:             if isSignedIn() && (isOwner(uid) || isAdmin()) || guestSessionValid(uid);
       allow list:             if isSignedIn() && isAdmin();
       allow create, update:  if isSignedIn() && isOwner(uid);
       // كانت if false (منع كامل) — اتغيّرت عشان مسار "حذف الحساب نهائيًا"
@@ -248,65 +429,93 @@ service cloud.firestore {
         allow read: if isSignedIn() && (isOwner(uid) || isAdmin());
       }
 
+      // مستندات أكواد الوصول للضيوف بتاعة الحساب ده. القراءة عن طريق
+      // get() المباشر بس — مفيش list يسمح بتعداد كل الأكواد لغير صاحب
+      // الحساب/الأدمن (وهم أصلاً معاهم get+list كامل من match
+      // /{document=**} فوق، مفيش داعي نكررهم هنا).
+      match /guestAccess/{code} {
+        allow get: if isAnonymousGuest() && hasGuestSession() &&
+          guestSessionData().ownerUid == uid && guestSessionData().code == code;
+
+        allow create: if isSignedIn() && isOwner(uid) && isValidNewGuestAccess(request.resource.data);
+
+        allow update: if
+          (isSignedIn() && isOwner(uid) && isValidOwnerGuestAccessUpdate(resource.data, request.resource.data)) ||
+          (isAnonymousGuest() && isValidGuestRedeem(resource.data, request.resource.data));
+
+        allow delete: if isSignedIn() && isOwner(uid);
+      }
+
       match /equipment/{id} {
+        allow read:            if (isSignedIn() && (isOwner(uid) || isAdmin())) || guestCanRead(uid, 'equipment');
         allow create, update: if isSignedIn() && isOwner(uid) && isValidEquipment(request.resource.data);
         allow delete:          if isSignedIn() && isOwner(uid);
       }
 
       match /jobs/{id} {
+        allow read:   if (isSignedIn() && (isOwner(uid) || isAdmin())) || guestCanReadJob(uid, resource.data);
         allow create: if isSignedIn() && isOwner(uid) && 'acres' in request.resource.data && isValidJob(request.resource.data);
         allow update: if isSignedIn() && isOwner(uid) && isValidJob(request.resource.data);
         allow delete: if isSignedIn() && isOwner(uid);
       }
 
       match /drivers/{id} {
+        allow read:            if (isSignedIn() && (isOwner(uid) || isAdmin())) || guestCanRead(uid, 'drivers');
         allow create, update: if isSignedIn() && isOwner(uid) && isValidDriver(request.resource.data);
         allow delete:          if isSignedIn() && isOwner(uid);
       }
 
       match /maintenance/{id} {
+        allow read:   if (isSignedIn() && (isOwner(uid) || isAdmin())) || guestCanRead(uid, 'maintenance');
         allow create: if isSignedIn() && isOwner(uid) && 'cost' in request.resource.data && isValidMaintenance(request.resource.data);
         allow update: if isSignedIn() && isOwner(uid) && isValidMaintenance(request.resource.data);
         allow delete: if isSignedIn() && isOwner(uid);
       }
 
       match /payments/{id} {
+        allow read:   if (isSignedIn() && (isOwner(uid) || isAdmin())) || guestCanRead(uid, 'jobs');
         allow create: if isSignedIn() && isOwner(uid) && 'amount' in request.resource.data && isValidPayment(request.resource.data);
         allow update: if isSignedIn() && isOwner(uid) && isValidPayment(request.resource.data);
         allow delete: if isSignedIn() && isOwner(uid);
       }
 
       match /supplierInvoices/{id} {
+        allow read:   if (isSignedIn() && (isOwner(uid) || isAdmin())) || guestCanRead(uid, 'suppliers');
         allow create: if isSignedIn() && isOwner(uid) && 'amount' in request.resource.data && isValidSupplierInvoice(request.resource.data);
         allow update: if isSignedIn() && isOwner(uid) && isValidSupplierInvoice(request.resource.data);
         allow delete: if isSignedIn() && isOwner(uid);
       }
 
       match /supplierPayments/{id} {
+        allow read:   if (isSignedIn() && (isOwner(uid) || isAdmin())) || guestCanRead(uid, 'suppliers');
         allow create: if isSignedIn() && isOwner(uid) && 'amount' in request.resource.data && isValidSupplierPayment(request.resource.data);
         allow update: if isSignedIn() && isOwner(uid) && isValidSupplierPayment(request.resource.data);
         allow delete: if isSignedIn() && isOwner(uid);
       }
 
       match /salaryEntries/{id} {
+        allow read:   if (isSignedIn() && (isOwner(uid) || isAdmin())) || guestCanRead(uid, 'drivers');
         allow create: if isSignedIn() && isOwner(uid) && 'amount' in request.resource.data && isValidSalaryEntry(request.resource.data);
         allow update: if isSignedIn() && isOwner(uid) && isValidSalaryEntry(request.resource.data);
         allow delete: if isSignedIn() && isOwner(uid);
       }
 
       match /custodyTransactions/{id} {
+        allow read:   if (isSignedIn() && (isOwner(uid) || isAdmin())) || guestCanRead(uid, 'custody');
         allow create: if isSignedIn() && isOwner(uid) && 'amount' in request.resource.data && isValidCustodyTransaction(request.resource.data);
         allow update: if isSignedIn() && isOwner(uid) && isValidCustodyTransaction(request.resource.data);
         allow delete: if isSignedIn() && isOwner(uid);
       }
 
       match /taxDeductions/{id} {
+        allow read:   if (isSignedIn() && (isOwner(uid) || isAdmin())) || guestCanRead(uid, 'taxDeductions');
         allow create: if isSignedIn() && isOwner(uid) && 'amount' in request.resource.data && isValidTaxDeduction(request.resource.data);
         allow update: if isSignedIn() && isOwner(uid) && isValidTaxDeduction(request.resource.data);
         allow delete: if isSignedIn() && isOwner(uid);
       }
 
       match /attendance/{id} {
+        allow read:            if (isSignedIn() && (isOwner(uid) || isAdmin())) || guestCanRead(uid, 'drivers');
         allow create, update: if isSignedIn() && isOwner(uid) && isValidAttendance(request.resource.data);
         allow delete:          if isSignedIn() && isOwner(uid);
       }
@@ -328,6 +537,32 @@ service cloud.firestore {
         allow create, update: if isSignedIn() && isOwner(uid) && isValidDashboardSummary(request.resource.data);
         allow delete:          if isSignedIn() && isOwner(uid);
       }
+    }
+
+    // ربط uid الضيف المجهول (Anonymous Auth) بحساب المالك اللي هيشوف
+    // بياناته — بيتعمل مرة واحدة بس وقت أول استخدام لكود (create بس،
+    // مفيش update خالص). doc id = uid بتاع الضيف نفسه.
+    match /guestSessions/{guestUid} {
+      allow get:  if isSignedIn() && (request.auth.uid == guestUid || isAdmin());
+      allow list: if isSignedIn() && isAdmin();
+
+      // الترانزاكشن اللي بتستخدم الكود بتعمل create هنا + update على
+      // guestAccess بتاعة نفس الكود مع بعض. الشروط هنا بتتأكد إن الكود
+      // (اللي هيتحدّث في نفس الترانزاكشن) لسه صالح ومستخدمش قبل كده — نفس
+      // الفحص موجود تاني في isValidGuestRedeem لأن الاتنين لازم ينجحوا مع
+      // بعض عشان الترانزاكشن كلها تعدي.
+      allow create: if isAnonymousGuest() && request.auth.uid == guestUid &&
+        request.resource.data.keys().hasOnly(['ownerUid', 'code', 'createdAt']) &&
+        request.resource.data.ownerUid is string &&
+        request.resource.data.code is string &&
+        get(/databases/$(database)/documents/users/$(request.resource.data.ownerUid)/guestAccess/$(request.resource.data.code)).data.redeemedByUid == null &&
+        get(/databases/$(database)/documents/users/$(request.resource.data.ownerUid)/guestAccess/$(request.resource.data.code)).data.cancelled != true &&
+        request.time >= get(/databases/$(database)/documents/users/$(request.resource.data.ownerUid)/guestAccess/$(request.resource.data.code)).data.validFrom &&
+        request.time <= get(/databases/$(database)/documents/users/$(request.resource.data.ownerUid)/guestAccess/$(request.resource.data.code)).data.validUntil;
+
+      // ثابتة بعد الإنشاء — مفيش أي تعديل عليها من أي حد.
+      allow update: if false;
+      allow delete: if isSignedIn() && (resource.data.ownerUid == request.auth.uid || isAdmin());
     }
 
     // Automatic + manual data backups. Doc id under /backups is the userId

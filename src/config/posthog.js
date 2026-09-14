@@ -1,45 +1,36 @@
 // src/config/posthog.js
-// ─────────────────────────────────────────────
-// PostHog analytics. Replace POSTHOG_API_KEY below with your own Project
-// API Key (PostHog → Project Settings → Project API Key). Sign up free at
-// https://posthog.com — pick US Cloud, EU Cloud, or point POSTHOG_HOST at
-// your own self-hosted instance's URL.
-//
-// Deliberately additive/best-effort, same spirit as the rest of the app's
-// "offline never breaks anything" rule: if the key isn't set yet, or a
-// PostHog network call fails (offline, blocked, ad-blocker, whatever),
-// nothing here throws or blocks any real feature — it just silently
-// doesn't track anything that one time.
-//
-// Privacy: autocapture and session recording are OFF on purpose. Several
-// routes carry a real client/supplier/driver/equipment name or id in the
-// URL itself (e.g. /clients/كريم فتحي) — full autocapture would send that
-// to PostHog's servers as part of every click/pageview. Pageviews are sent
-// manually (see trackPageview, called from AppLayout.jsx) with the dynamic
-// segment replaced by ":id" first, so no real name ever leaves the app via
-// analytics.
-// ─────────────────────────────────────────────
 import posthog from "posthog-js";
 
-const POSTHOG_API_KEY = "YOUR_POSTHOG_PROJECT_API_KEY"; // ← replace this
-const POSTHOG_HOST     = "https://us.i.posthog.com";     // EU: https://eu.i.posthog.com — or your self-hosted URL
+const POSTHOG_API_KEY = process.env.REACT_APP_POSTHOG_KEY;
+const POSTHOG_HOST = process.env.REACT_APP_POSTHOG_HOST;
 
 let ready = false;
 
-export const initPostHog = () => {
-  if (!POSTHOG_API_KEY || POSTHOG_API_KEY === "YOUR_POSTHOG_PROJECT_API_KEY") {
-    // لسه محطوطش المفتاح الحقيقي — التتبع متعطّل بهدوء، مفيش أي تأثير
-    // على باقي التطبيق.
-    console.info("PostHog: no API key set yet — analytics disabled (see src/config/posthog.js)");
-    return;
+const requirePostHogVariable = (name, value) => {
+  if (value) return true;
+
+  if (process.env.NODE_ENV !== "production") {
+    throw new Error(
+      `${name} variable required by PostHog is missing or un-configured, this causes events to be silently missed. This error stops appearing once ${name} is configured`
+    );
   }
+
+  return false;
+};
+
+export const initPostHog = () => {
+  if (!requirePostHogVariable("REACT_APP_POSTHOG_KEY", POSTHOG_API_KEY)) return;
+  if (!requirePostHogVariable("REACT_APP_POSTHOG_HOST", POSTHOG_HOST)) return;
+
   try {
     posthog.init(POSTHOG_API_KEY, {
       api_host: POSTHOG_HOST,
-      autocapture: false,           // لا تتبع تلقائي للكليكات/الروابط — راجع ملاحظة الخصوصية فوق
-      capture_pageview: false,      // بنبعت pageview يدوي منقّى بدل ده — شوف trackPageview
-      disable_session_recording: true,
       persistence: "localStorage+cookie",
+      capture_exceptions: {
+        capture_unhandled_errors: true,
+        capture_unhandled_rejections: true,
+        capture_console_errors: false,
+      },
     });
     ready = true;
   } catch (err) {

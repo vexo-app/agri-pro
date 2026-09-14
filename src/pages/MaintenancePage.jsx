@@ -12,6 +12,7 @@ import { EmptyState, StatCard } from "../components/ui/Card";
 import LoadingScreen            from "../components/ui/LoadingScreen";
 import { PlusIcon, WrenchIcon, RevenueIcon } from "../components/ui/Icons";
 import { formatCurrency }       from "../utils/formatters";
+import { trackEvent }           from "../config/posthog";
 
 const MaintenancePage = () => {
   const { byEquipment, totalCost, loading, addMaintenance, updateMaintenance, deleteMaintenance } = useMaintenance();
@@ -24,8 +25,12 @@ const MaintenancePage = () => {
   const closeModal = ()       => setModal(null);
 
   const handleSave = async (formData) => {
-    if (modal.mode === "add") await addMaintenance(formData);
-    else await updateMaintenance(modal.data.id, formData);
+    if (modal.mode === "add") {
+      await addMaintenance(formData);
+      trackEvent("maintenance_recorded");
+    } else {
+      await updateMaintenance(modal.data.id, formData);
+    }
   };
 
   const handleDelete = async (id) => {

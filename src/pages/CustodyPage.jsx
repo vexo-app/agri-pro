@@ -21,6 +21,7 @@ import {
   CUSTODY_TYPES, CUSTODY_EXPENSE_CATEGORY_LABELS,
 } from "../config/constants";
 import { downloadCustodyReportPdf } from "../utils/pdfGenerator";
+import { trackEvent } from "../config/posthog";
 
 // نفس فكرة صفحة التقارير بالظبط: تلات اختيارات — الشهر الحالي، الشهر
 // السابق، أو كل الشهور (كل الوقت).
@@ -61,8 +62,12 @@ const CustodyPage = () => {
   const [downloadType, setDownloadType] = useState(CUSTODY_TYPES.EXPENSE);
 
   const handleSave = async (data) => {
-    if (modal.mode === "add") await addCustody(data);
-    else await updateCustody(modal.data.id, data);
+    if (modal.mode === "add") {
+      await addCustody(data);
+      trackEvent("custody_transaction_recorded", { transaction_type: data.type });
+    } else {
+      await updateCustody(modal.data.id, data);
+    }
   };
 
   const handleDelete = async (id) => {
@@ -98,6 +103,10 @@ const CustodyPage = () => {
         };
 
     await downloadCustodyReportPdf(args);
+    trackEvent("custody_report_downloaded", {
+      report_period: downloadMonth,
+      transaction_type: downloadType,
+    });
     setDownloadModalOpen(false);
   };
 

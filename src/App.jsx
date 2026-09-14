@@ -36,6 +36,14 @@ import AdminMessagesPage      from "./pages/AdminMessagesPage";
 import AdminBackupToExcelPage from "./pages/AdminBackupToExcelPage";
 import AdminDataIntegrityPage from "./pages/AdminDataIntegrityPage";
 
+// الوصول للضيوف (Phase 2) — مسار منفصل تمامًا عن /auth وعن ProtectedRoute
+// بتاع صاحب الحساب (راجع GUEST_ACCESS_DESIGN.md في المشروع).
+import GuestLoginPage from "./pages/GuestLoginPage";
+import GuestRoute      from "./components/layout/GuestRoute";
+import GuestLayout     from "./components/layout/GuestLayout";
+import GuestHomePage    from "./pages/guest/GuestHomePage";
+import GuestSectionPage from "./pages/guest/GuestSectionPage";
+
 const App = () => (
   <ErrorBoundary>
   <BrowserRouter>
@@ -43,6 +51,19 @@ const App = () => (
     <PrivacyProvider>
       <Routes>
         <Route path="/auth" element={<AuthPage />} />
+
+        {/* الوصول للضيوف (Phase 2) */}
+        <Route path="/guest" element={<GuestLoginPage />} />
+        <Route element={<GuestRoute><GuestLayout /></GuestRoute>}>
+          <Route path="/guest/app"                element={<GuestHomePage />} />
+          <Route path="/guest/app/equipment"      element={<GuestSectionPage section="equipment" />} />
+          <Route path="/guest/app/jobs"           element={<GuestSectionPage section="jobs" />} />
+          <Route path="/guest/app/drivers"        element={<GuestSectionPage section="drivers" />} />
+          <Route path="/guest/app/maintenance"    element={<GuestSectionPage section="maintenance" />} />
+          <Route path="/guest/app/custody"        element={<GuestSectionPage section="custody" />} />
+          <Route path="/guest/app/tax-deductions" element={<GuestSectionPage section="taxDeductions" />} />
+          <Route path="/guest/app/suppliers"      element={<GuestSectionPage section="suppliers" />} />
+        </Route>
 
         <Route element={<ProtectedRoute><AppLayout /></ProtectedRoute>}>
           <Route index                          element={<DashboardPage />} />

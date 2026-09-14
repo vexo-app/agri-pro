@@ -1,5 +1,5 @@
 // src/contexts/AuthContext.jsx
-import React, { createContext, useContext, useEffect, useState } from "react";
+import React, { createContext, useContext, useEffect, useRef, useState } from "react";
 import {
   onAuthStateChanged,
   signInWithEmailAndPassword,
@@ -45,18 +45,30 @@ const touchLastActive = (firebaseUser) => {
 export const AuthProvider = ({ children }) => {
   const [user, setUser]       = useState(null);
   const [loading, setLoading] = useState(true);
+  const identifiedUserId = useRef(null);
 
   useEffect(() => {
     const unsub = onAuthStateChanged(auth, (firebaseUser) => {
       setUser(firebaseUser);
       setLoading(false);
-      if (firebaseUser) {
+      // مستخدم anonymous (Phase 2 — الوصول للضيوف) مش "مستخدم" بالمعنى ده
+      // خالص — مفيش له بروفايل حقيقي (userProfileService.touch كانت
+      // هتنجح فعليًا وتنشئله users/{uid} فاضي لأنه isOwner(uid) لنفسه،
+      // بس ده مجرد تلويث للـcollection من غير أي فايدة)، ومفيش داعي
+      // نتابعه في PostHog كمستخدم. الـuid نفسه (setUser فوق) لسه لازم
+      // يتحدّث عادي عشان GuestContext/GuestRoute يعرفوا إنه anonymous.
+      if (firebaseUser && !firebaseUser.isAnonymous) {
         touchLastActive(firebaseUser);
-        // PostHog identify — best-effort، مش شرط لتسجيل الدخول (شوف
-        // src/config/posthog.js).
-        identifyUser(firebaseUser.uid, firebaseUser.email);
-      } else {
+        if (identifiedUserId.current && identifiedUserId.current !== firebaseUser.uid) {
+          resetPostHogUser();
+        }
+        if (identifiedUserId.current !== firebaseUser.uid) {
+          identifyUser(firebaseUser.uid, firebaseUser.email);
+          identifiedUserId.current = firebaseUser.uid;
+        }
+      } else if (!firebaseUser && identifiedUserId.current) {
         resetPostHogUser();
+        identifiedUserId.current = null;
       }
     });
     return unsub;

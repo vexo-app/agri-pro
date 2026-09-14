@@ -26,6 +26,7 @@ import { updateProfile } from "firebase/auth";
 import { auth } from "../../config/firebase";
 import { useAuth } from "../../contexts/AuthContext";
 import { useData } from "../../contexts/DataContext";
+import { trackEvent } from "../../config/posthog";
 import Button from "../../components/ui/Button";
 import { Input } from "../../components/ui/Input";
 import {
@@ -167,10 +168,11 @@ const OnboardingFlow = () => {
 
   const [saving, setSaving] = useState(false);
 
-  const finishOnboarding = async () => {
+  const finishOnboarding = async (completionPath) => {
     setSaving(true);
     try {
       await saveSettings({ onboardingCompleted: true });
+      trackEvent("onboarding_completed", { completion_path: completionPath });
     } catch (err) {
       // best-effort — لو الحفظ فشل (مثلاً أوف لاين)، متسيبش المستخدم عالق
       // على شاشة الإعداد؛ هيتحاول يتسجل تاني في أقرب فرصة يفتح فيها التطبيق.
@@ -180,7 +182,7 @@ const OnboardingFlow = () => {
     }
   };
 
-  const skipAll = () => finishOnboarding();
+  const skipAll = () => finishOnboarding("skipped");
 
   const validateStep2 = () => {
     const next = {};
@@ -326,7 +328,7 @@ const OnboardingFlow = () => {
         <p className="text-xs text-gray-500 leading-relaxed mb-8">
           يمكنك تعديل إعداداتك في أي وقت من صفحة الإعدادات.
         </p>
-        <Button className="w-full" size="lg" loading={saving} onClick={finishOnboarding}>
+        <Button className="w-full" size="lg" loading={saving} onClick={() => finishOnboarding("completed")}>
           الذهاب إلى لوحة التحكم
         </Button>
       </Shell>

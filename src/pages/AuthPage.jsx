@@ -6,6 +6,7 @@ import { useAuth } from "../contexts/AuthContext";
 import { EyeIcon, EyeOffIcon } from "../components/ui/Icons";
 import toast from "react-hot-toast";
 import { checkLoginLock, recordFailedLogin, clearLoginAttempts, formatRemaining } from "../utils/loginAttemptGuard";
+import { trackEvent } from "../config/posthog";
 
 const AuthPage = () => {
   const { login, register: registerUser, resetPassword } = useAuth();
@@ -49,10 +50,12 @@ const AuthPage = () => {
       if (mode === "login") {
         await login(data.email, data.password);
         clearLoginAttempts(data.email);
+        trackEvent("login_succeeded");
         toast.success("مرحباً بك!");
         navigate("/");
       } else if (mode === "register") {
         await registerUser(data.email, data.password, data.displayName);
+        trackEvent("account_registered");
         toast.success("تم إنشاء الحساب بنجاح! تحقق من بريدك الإلكتروني لتفعيل حسابك بالكامل", { duration: 5000 });
         navigate("/");
       } else {
@@ -65,6 +68,7 @@ const AuthPage = () => {
           // وقتها لازم يتعرض عادي عشان المستخدم يعرف يصلحها.
           if (err.code !== "auth/user-not-found") throw err;
         }
+        trackEvent("password_reset_requested");
         toast.success("تم إرسال رابط استعادة كلمة المرور إلى بريدك الإلكتروني");
         setMode("login");
         reset();

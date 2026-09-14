@@ -16,6 +16,7 @@ import LoadingScreen    from "../components/ui/LoadingScreen";
 import { PlusIcon, ClipboardIcon, RevenueIcon, FuelIcon, WrenchIcon, ProfitIcon, AcreIcon } from "../components/ui/Icons";
 import { formatCurrency, formatNumber } from "../utils/formatters";
 import { TEAM_ROLE } from "../config/constants";
+import { trackEvent } from "../config/posthog";
 
 const SummaryBadge = ({ Icon, label, value, color }) => (
   <div className="bg-surface border border-white/8 rounded-2xl px-4 py-3 flex-1 min-w-[120px]">
@@ -74,8 +75,10 @@ const JobsPage = () => {
           deletePayment(paymentId);
         });
       }
+      trackEvent("job_created", { has_initial_payment: Number(amountPaid) > 0 });
     } else {
       await updateJob(modal.data.id, formData);
+      trackEvent("job_updated");
     }
   };
 
@@ -88,6 +91,7 @@ const JobsPage = () => {
 
   const handleConfirmDelete = async () => {
     await deleteJob(deleteTargetId);
+    trackEvent("job_deleted");
   };
 
   if (loading) return <LoadingScreen />;

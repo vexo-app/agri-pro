@@ -23,6 +23,7 @@ import { calcTotalTaxDeductions } from "../utils/taxCalculations";
 import { aggregateSupplierInvoices, calcNetProfit } from "../utils/calculations";
 import { downloadMonthlySummaryPdf } from "../utils/pdfGenerator";
 import { shortNum, truncateLabel, createAngledNameTick } from "../components/charts/chartHelpers";
+import { trackEvent } from "../config/posthog";
 
 // ── Monthly report download: three choices — current month, previous
 // month, or every month (all time). No calendar picker, since those are
@@ -133,9 +134,9 @@ const ReportsPage = () => {
   // شهر محدد (حالي/سابق) بيتفلتر بالـ monthPrefix، أو "كل الشهور" فبتستخدم
   // إجماليات الصفحة الجاهزة (totalSalariesPaid/totalTaxDeductions) زي ما
   // هي من غير أي فلترة، عشان تتطابق تمامًا مع الأرقام المعروضة فوق.
-  const handleDownloadMonthly = () => {
+  const handleDownloadMonthly = async () => {
     if (downloadMonth === "all") {
-      return downloadMonthlySummaryPdf({
+      await downloadMonthlySummaryPdf({
         jobs, equipment, maintenance, drivers,
         fuelPrice: settings.fuelPrice,
         allTime: true,
@@ -143,6 +144,8 @@ const ReportsPage = () => {
         totalTaxDeductions,
         totalSupplierPaidOut,
       });
+      trackEvent("monthly_report_downloaded", { report_period: downloadMonth });
+      return;
     }
 
     const { year, month } = resolveMonth(downloadMonth);
@@ -162,7 +165,7 @@ const ReportsPage = () => {
       supplierPayments.filter((p) => (p.date || "").startsWith(monthPrefix))
     ).totalPaidOut;
 
-    return downloadMonthlySummaryPdf({
+    await downloadMonthlySummaryPdf({
       jobs, equipment, maintenance, drivers,
       fuelPrice: settings.fuelPrice,
       month, year,
@@ -171,6 +174,7 @@ const ReportsPage = () => {
       totalTaxDeductions: taxDeductionsForPeriod,
       totalSupplierPaidOut: supplierPaidOutForPeriod,
     });
+    trackEvent("monthly_report_downloaded", { report_period: downloadMonth });
   };
 
   if (eLoading || dLoading) return <LoadingScreen />;

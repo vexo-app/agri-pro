@@ -23,7 +23,13 @@ const ProtectedRoute = ({ children }) => {
   const location = useLocation();
 
   if (loading) return <LoadingScreen message="جاري التحقق من تسجيل الدخول..." />;
-  if (!user) {
+  // مستخدم anonymous (Phase 2 — الوصول للضيوف) مش مالك حساب حقيقي — لازم
+  // يتعامل معاه هنا زي غير مسجل دخول خالص، وإلا هيدخل هنا بـuid بتاعه
+  // هو (مفيش users/{uid} ليه أصلاً) بدل uid صاحب الحساب اللي المفروض
+  // يشوف بياناته، وكل قراءة/تحميل بيانات هتفشل permission-denied. مسار
+  // الضيف الحقيقي منفصل تمامًا: /guest (GuestLoginPage) و/guest/app/*
+  // (GuestRoute) في App.jsx.
+  if (!user || user.isAnonymous) {
     if (location.pathname === "/") return <LandingPage />;
     return <Navigate to="/auth" replace />;
   }

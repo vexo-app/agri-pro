@@ -18,6 +18,7 @@ import { EmptyState }   from "../components/ui/Card";
 import LoadingScreen    from "../components/ui/LoadingScreen";
 import { PlusIcon, TractorIcon, LinkIcon, AlertIcon, EditIcon } from "../components/ui/Icons";
 import { EQUIPMENT_CATEGORY, TEAM_ROLE } from "../config/constants";
+import { trackEvent } from "../config/posthog";
 
 const EquipmentPage = () => {
   const {
@@ -62,8 +63,13 @@ const EquipmentPage = () => {
   };
 
   const handleSaveEquipment = async (formData) => {
-    if (modal.mode === "add") await addEquipment(formData);
-    else await updateEquipment(modal.data.id, formData);
+    if (modal.mode === "add") {
+      await addEquipment(formData);
+      trackEvent("equipment_created", { equipment_category: formData.category || EQUIPMENT_CATEGORY.BASE });
+    } else {
+      await updateEquipment(modal.data.id, formData);
+      trackEvent("equipment_updated", { equipment_category: formData.category || EQUIPMENT_CATEGORY.BASE });
+    }
     setModal(null);
   };
 

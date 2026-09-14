@@ -12,6 +12,7 @@ import LoadingScreen        from "../components/ui/LoadingScreen";
 import FeatureIntroBanner   from "../components/common/FeatureIntroBanner";
 import { TruckIcon, AlertIcon, PlusIcon, RevenueIcon } from "../components/ui/Icons";
 import { formatCurrency } from "../utils/formatters";
+import { trackEvent } from "../config/posthog";
 
 const SuppliersPage = () => {
   const { suppliers, totalPayable, loading } = useSuppliers();
@@ -34,6 +35,7 @@ const SuppliersPage = () => {
 
   const handleSaveInvoice = async (data) => {
     await addSupplierInvoice(data);
+    trackEvent("supplier_invoice_created");
     setInvoiceModal(false);
   };
 
