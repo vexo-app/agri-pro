@@ -8,6 +8,7 @@
 // المالية = مستوى القسم كامل).
 import React, { useEffect, useState } from "react";
 import toast from "react-hot-toast";
+import QRCode from "qrcode";
 import { useAuth } from "../../contexts/AuthContext";
 import { useClients } from "../../hooks/useClients";
 import { guestAccessService } from "../../services/guestAccessService";
@@ -18,7 +19,10 @@ import Button from "../../components/ui/Button";
 import { Input } from "../../components/ui/Input";
 import Modal from "../../components/ui/Modal";
 import Section from "./Section";
-import { UsersGroupIcon, PlusIcon, LinkIcon, TrashIcon, ClockIcon, XCircleIcon } from "../../components/ui/Icons";
+import {
+  UsersGroupIcon, PlusIcon, LinkIcon, TrashIcon, ClockIcon, XCircleIcon,
+  SendIcon, AlertIcon,
+} from "../../components/ui/Icons";
 
 // حد Firestore الأقصى لقيم where(field,'in',array) — لو المالك اختار أكتر
 // من كده، الفلترة هترفض الطلب بالكامل مش هتقصّه لأول 30 (شوف
@@ -26,6 +30,25 @@ import { UsersGroupIcon, PlusIcon, LinkIcon, TrashIcon, ClockIcon, XCircleIcon }
 // بتسمح بحد 500 structurally، بس القيمة المفيدة عمليًا 30 بسبب حد الـ
 // query — فبنمنع اختيار أكتر من كده من الأساس هنا.
 const MAX_ALLOWED_CLIENTS = 30;
+
+// قوالب جاهزة (Phase 4) — بس بتملى اختيار الأقسام في الفورم، مفيش أي
+// حفظ إضافي أو حقل جديد؛ المالك لسه يقدر يعدّل بعد ما يختار القالب.
+const TEMPLATES = [
+  { id: "accountant", label: "قالب: محاسب",     sections: ["jobs", "custody", "taxDeductions", "suppliers"] },
+  { id: "supplier",   label: "قالب: مورد",       sections: ["suppliers"] },
+  { id: "partner",    label: "قالب: شريك/مستثمر", sections: ["equipment", "jobs", "drivers", "maintenance", "custody", "taxDeductions", "suppliers"] },
+  { id: "team",       label: "قالب: متابعة الفريق", sections: ["drivers", "equipment", "maintenance"] },
+];
+
+// عتبة "هينتهي قريب" (Phase 4) — للعرض بس في ليستة الأكواد، مش قاعدة
+// حماية. نص يوم كافي إنه يبقى تنبيه مفيد من غير ما يبقى مزعج على أكواد
+// مدتها أسابيع.
+const EXPIRING_SOON_MS = 24 * 60 * 60 * 1000;
+const isExpiringSoon = (access, status) => {
+  if (status !== "active") return false;
+  const until = access.validUntil?.toMillis?.() ?? new Date(access.validUntil).getTime();
+  return until - Date.now() <= EXPIRING_SOON_MS;
+};
 
 const pad = (n) => String(n).padStart(2, "0");
 const toDatetimeLocal = (date) =>
@@ -85,6 +108,8 @@ const GuestAccessSection = () => {
   const [createdLink, setCreatedLink] = useState(null);
   const [extendTarget, setExtendTarget] = useState(null); // { id, validUntil }
   const [form, setForm]           = useState(emptyForm);
+  const [qrLink, setQrLink]       = useState(null); // الرابط المعروض في مودال الـQR، أو null لو مقفول
+  const [qrDataUrl, setQrDataUrl] = useState(null);
 
   useEffect(() => {
     setLoading(true);
@@ -96,8 +121,32 @@ const GuestAccessSection = () => {
     return unsub;
   }, [ownerUid]);
 
+  // توليد QR للرابط المفتوح حاليًا في المودال — best-effort، لو فشل
+  // (نادر جدًا لمكتبة بتشتغل local بالكامل) بنسيب المودال يعرض الرابط
+  // نفسه كـfallback (شوف الـJSX تحت) بدل ما يبقى فاضي.
+  useEffect(() => {
+    if (!qrLink) { setQrDataUrl(null); return; }
+    let cancelled = false;
+    QRCode.toDataURL(qrLink, { margin: 1, width: 240 })
+      .then((url) => { if (!cancelled) setQrDataUrl(url); })
+      .catch(() => { if (!cancelled) toast.error("تعذر توليد QR — استخدم الرابط بدل كده"); });
+    return () => { cancelled = true; };
+  }, [qrLink]);
+
   const jobsSelected = form.sections.jobs;
   const buildLink = (code) => `${window.location.origin}/guest?token=${ownerUid}:${code}`;
+  const buildWhatsAppLink = (link) => {
+    const company = user.displayName || "الحساب";
+    const message = `مرحبًا، ده رابط دخولك كضيف على ${company} في زراعي برو (قراءة فقط):\n${link}`;
+    return `https://wa.me/?text=${encodeURIComponent(message)}`;
+  };
+
+  const applyTemplate = (template) =>
+    setForm((f) => {
+      const sections = emptySections();
+      template.sections.forEach((s) => { sections[s] = true; });
+      return { ...f, sections, clientMode: "all", selectedClients: [] };
+    });
 
   const toggleSection = (section) =>
     setForm((f) => ({ ...f, sections: { ...f.sections, [section]: !f.sections[section] } }));
@@ -204,6 +253,20 @@ const GuestAccessSection = () => {
     <div className="space-y-5" dir="rtl">
       <Section icon={<UsersGroupIcon size={16} />} title="إنشاء كود وصول جديد">
         <form onSubmit={handleCreate} className="space-y-4">
+          <div>
+            <label className="text-xs font-semibold text-gray-400 tracking-wide mb-1.5 block">
+              قوالب جاهزة (اختياري — بس بتملى الأقسام، تقدر تعدّل بعدها)
+            </label>
+            <div className="flex flex-wrap gap-2">
+              {TEMPLATES.map((t) => (
+                <button type="button" key={t.id} onClick={() => applyTemplate(t)}
+                  className="px-3 py-1.5 rounded-lg text-xs font-bold bg-surface-3 text-gray-300 hover:bg-brand-900/40 hover:text-brand-300 transition-colors">
+                  {t.label}
+                </button>
+              ))}
+            </div>
+          </div>
+
           <Input
             label="اسم الكود (يساعدك تتعرف عليه بعدين)"
             placeholder="مثال: المحاسب أحمد"
@@ -291,10 +354,15 @@ const GuestAccessSection = () => {
         </form>
 
         {createdLink && (
-          <div className="mt-4 bg-green-900/20 border border-green-800/40 rounded-xl p-3 flex items-center gap-2">
+          <div className="mt-4 bg-green-900/20 border border-green-800/40 rounded-xl p-3 flex flex-wrap items-center gap-2">
             <LinkIcon size={16} className="text-green-400 shrink-0" />
-            <span className="text-xs text-green-300 truncate flex-1" dir="ltr">{createdLink}</span>
+            <span className="text-xs text-green-300 truncate flex-1 min-w-[140px]" dir="ltr">{createdLink}</span>
             <Button type="button" size="xs" variant="secondary" onClick={() => copyLink(createdLink)}>نسخ</Button>
+            <a href={buildWhatsAppLink(createdLink)} target="_blank" rel="noopener noreferrer"
+              className="inline-flex items-center gap-1.5 px-3 py-2 text-xs font-semibold rounded-xl bg-green-700/80 hover:bg-green-600 text-white transition-colors">
+              <SendIcon size={12} /> واتساب
+            </a>
+            <Button type="button" size="xs" variant="secondary" onClick={() => setQrLink(createdLink)}>QR</Button>
           </div>
         )}
       </Section>
@@ -306,21 +374,35 @@ const GuestAccessSection = () => {
           {codes.map((c) => {
             const status = computeStatus(c);
             const badge = STATUS_LABELS[status] || STATUS_LABELS.expired;
+            const expiringSoon = isExpiringSoon(c, status);
+            const link = buildLink(c.id);
             return (
               <div key={c.id} className="bg-surface-2 border border-white/8 rounded-xl p-3 flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-3">
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center gap-2 flex-wrap">
                     <span className="text-sm font-bold text-gray-200 truncate">{c.name}</span>
                     <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full border ${badge.cls}`}>{badge.label}</span>
-                    {c.redeemedByUid && <span className="text-[10px] text-gray-500">• تم الدخول بيه</span>}
+                    {expiringSoon && (
+                      <span className="inline-flex items-center gap-1 text-[10px] font-bold px-2 py-0.5 rounded-full border bg-amber-900/40 text-amber-400 border-amber-800/50">
+                        <AlertIcon size={10} /> هينتهي خلال يوم
+                      </span>
+                    )}
+                    {c.redeemedByUid && (
+                      <span className="text-[10px] text-gray-500">• أول دخول: {formatDateTime(c.redeemedAt)}</span>
+                    )}
                   </div>
                   <p className="text-[11px] text-gray-500 mt-0.5">
                     من {formatDateTime(c.validFrom)} لحد {formatDateTime(c.validUntil)}
                   </p>
                 </div>
-                <div className="flex items-center gap-1.5 shrink-0">
+                <div className="flex items-center gap-1.5 shrink-0 flex-wrap">
                   <Button type="button" size="xs" variant="secondary" icon={<LinkIcon size={12} />}
-                    onClick={() => copyLink(buildLink(c.id))}>نسخ الرابط</Button>
+                    onClick={() => copyLink(link)}>نسخ الرابط</Button>
+                  <a href={buildWhatsAppLink(link)} target="_blank" rel="noopener noreferrer"
+                    className="inline-flex items-center gap-1.5 px-2.5 py-1.5 text-xs font-semibold rounded-lg bg-green-700/80 hover:bg-green-600 text-white transition-colors">
+                    <SendIcon size={12} />
+                  </a>
+                  <Button type="button" size="xs" variant="secondary" onClick={() => setQrLink(link)}>QR</Button>
                   {!c.cancelled && (
                     <Button type="button" size="xs" variant="secondary" onClick={() => setExtendTarget({
                       id: c.id,
@@ -346,6 +428,20 @@ const GuestAccessSection = () => {
             <Input type="datetime-local" label="صالح لغاية" value={extendTarget.validUntil}
               onChange={(e) => setExtendTarget((t) => ({ ...t, validUntil: e.target.value }))} />
             <Button type="button" size="sm" className="w-full" onClick={handleExtend}>حفظ</Button>
+          </div>
+        )}
+      </Modal>
+
+      <Modal open={!!qrLink} onClose={() => setQrLink(null)} title="QR كود الدخول" size="sm">
+        {qrLink && (
+          <div className="flex flex-col items-center gap-3">
+            {qrDataUrl ? (
+              <img src={qrDataUrl} alt="QR كود لرابط دخول الضيف" width={240} height={240}
+                className="rounded-xl bg-white p-2" />
+            ) : (
+              <p className="text-xs text-gray-500 py-10">جاري توليد الـQR...</p>
+            )}
+            <p className="text-[11px] text-gray-500 text-center break-all" dir="ltr">{qrLink}</p>
           </div>
         )}
       </Modal>

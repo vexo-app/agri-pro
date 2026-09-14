@@ -6,7 +6,7 @@
 // المشروع لشرح ليه شكل الكود "OWNER:CODE" — قرار مؤقت لحد Phase 3.
 import React, { useState, useEffect, useCallback } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
-import { signInAnonymously, signOut } from "firebase/auth";
+import { signInAnonymously } from "firebase/auth";
 import { auth } from "../config/firebase";
 import { useAuth } from "../contexts/AuthContext";
 import { guestAccessService } from "../services/guestAccessService";
