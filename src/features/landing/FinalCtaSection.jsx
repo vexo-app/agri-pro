@@ -5,7 +5,7 @@ import { motion } from "framer-motion";
 import Button from "../../components/ui/Button";
 import { ChevronLeftIcon } from "../../components/ui/Icons";
 import { fadeUp, viewportOnce } from "./motion";
-import heroImage from "../../assets/landing/hero-tractor.webp";
+import ctaTractor from "../../assets/landing/cta-tractor.webp";
 
 const FinalCtaSection = () => (
   <section className="py-16 sm:py-20 border-t border-white/8">
@@ -15,19 +15,21 @@ const FinalCtaSection = () => (
         whileInView="visible"
         viewport={viewportOnce}
         variants={fadeUp}
-        className="relative overflow-hidden rounded-3xl border border-brand-800/40 px-6 py-12 sm:px-14 sm:py-16 text-center"
+        className="relative overflow-hidden rounded-3xl border border-brand-800/40 min-h-[320px] sm:min-h-[380px] flex items-center justify-center px-6 py-12 sm:px-14 sm:py-16 text-center"
       >
-        {/* Same hero photo, mirrored — a quiet visual "bookend" for the page,
-            heavily darkened so it reads as texture, not a second hero. */}
+        {/* Same tractor, mirrored — a quiet visual "bookend" for the page.
+            A dedicated wide crop (full vehicle + margin) is used here, and
+            the section is tall enough that object-cover never has to slice
+            through the tractor the way the plain Hero crop did. */}
         <img
-          src={heroImage}
+          src={ctaTractor}
           alt=""
           aria-hidden="true"
           loading="lazy"
-          className="absolute inset-0 w-full h-full object-cover scale-x-[-1] opacity-55"
+          className="absolute inset-0 w-full h-full object-cover scale-x-[-1] opacity-65"
         />
-        <div className="absolute inset-0 bg-dark/55" />
-        <div className="absolute inset-0 bg-gradient-to-t from-dark/70 via-transparent to-transparent" />
+        <div className="absolute inset-0 bg-dark/45" />
+        <div className="absolute inset-0 bg-gradient-to-t from-dark/75 via-transparent to-transparent" />
 
         <div className="relative">
           <h2 className="text-2xl sm:text-3xl font-extrabold text-gray-50 max-w-xl mx-auto leading-snug">
