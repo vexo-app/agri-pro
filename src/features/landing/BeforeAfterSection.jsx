@@ -46,7 +46,7 @@ const BeforeAfterSection = () => (
         {/* Before — busy, dusty, scattered mood */}
         <motion.div variants={slideFrom("right", 32)}>
           <Card className="overflow-hidden h-full">
-            <div className="relative h-36 sm:h-40">
+            <div className="relative h-48 sm:h-56">
               <img
                 src={beforeImage}
                 alt=""
@@ -73,7 +73,7 @@ const BeforeAfterSection = () => (
         {/* After — calm, clear, organized mood */}
         <motion.div variants={slideFrom("left", 32)}>
           <Card className="overflow-hidden h-full border-brand-800/40">
-            <div className="relative h-36 sm:h-40">
+            <div className="relative h-48 sm:h-56">
               <img
                 src={afterImage}
                 alt=""

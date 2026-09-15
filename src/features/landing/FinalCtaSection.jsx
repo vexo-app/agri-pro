@@ -24,9 +24,10 @@ const FinalCtaSection = () => (
           alt=""
           aria-hidden="true"
           loading="lazy"
-          className="absolute inset-0 w-full h-full object-cover scale-x-[-1] opacity-25"
+          className="absolute inset-0 w-full h-full object-cover scale-x-[-1] opacity-55"
         />
-        <div className="absolute inset-0 bg-gradient-to-l from-brand-900/40 to-dark/85" />
+        <div className="absolute inset-0 bg-dark/55" />
+        <div className="absolute inset-0 bg-gradient-to-t from-dark/70 via-transparent to-transparent" />
 
         <div className="relative">
           <h2 className="text-2xl sm:text-3xl font-extrabold text-gray-50 max-w-xl mx-auto leading-snug">
