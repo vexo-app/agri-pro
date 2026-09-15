@@ -1,12 +1,17 @@
 // src/components/layout/ProtectedRoute.jsx
-import React from "react";
+import React, { lazy, Suspense } from "react";
 import { Navigate, useLocation } from "react-router-dom";
 import { useAuth } from "../../contexts/AuthContext";
 import LoadingScreen from "../ui/LoadingScreen";
 import { DataProvider } from "../../contexts/DataContext";
 import OnboardingGate from "./OnboardingGate";
 import EmailVerificationGate from "./EmailVerificationGate";
-import LandingPage from "../../pages/LandingPage";
+
+// Lazy-loaded on purpose: LandingPage now pulls in framer-motion + gsap for
+// its scroll/hover effects. Those libraries must NOT be in the bundle every
+// logged-in user downloads — only an anonymous visitor hitting "/" needs
+// them, so this import is code-split into its own chunk fetched on demand.
+const LandingPage = lazy(() => import("../../pages/LandingPage"));
 
 /**
  * Wraps routes that require authentication.
@@ -30,7 +35,13 @@ const ProtectedRoute = ({ children }) => {
   // الضيف الحقيقي منفصل تمامًا: /guest (GuestLoginPage) و/guest/app/*
   // (GuestRoute) في App.jsx.
   if (!user || user.isAnonymous) {
-    if (location.pathname === "/") return <LandingPage />;
+    if (location.pathname === "/") {
+      return (
+        <Suspense fallback={<LoadingScreen message="جاري التحميل..." />}>
+          <LandingPage />
+        </Suspense>
+      );
+    }
     return <Navigate to="/auth" replace />;
   }
 
