@@ -9,8 +9,22 @@ import SubscriptionStatusBanner from "./SubscriptionStatusBanner";
 import { FOCUS_FUEL_PRICE_EVENT } from "../../utils/uiEvents";
 import { trackPageview } from "../../config/posthog";
 
+const SIDEBAR_COLLAPSED_KEY = "agripro_sidebar_collapsed";
+
 const AppLayout = () => {
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  // وضع "أيقونات بس" على الديسكتوب — اختيار المستخدم، فبيتحفظ محليًا
+  // (localStorage بس، مش Firestore) عشان يفضل زي ما سابه بين الزيارات.
+  // لا علاقة له بـsidebarOpen (درج الموبايل) ولا بأي بيانات مالية/offline.
+  const [sidebarCollapsed, setSidebarCollapsed] = useState(() => {
+    try { return localStorage.getItem(SIDEBAR_COLLAPSED_KEY) === "1"; }
+    catch { return false; }
+  });
+  const toggleSidebarCollapsed = (next) => {
+    setSidebarCollapsed(next);
+    try { localStorage.setItem(SIDEBAR_COLLAPSED_KEY, next ? "1" : "0"); }
+    catch { /* localStorage غير متاح — تفضيل بصري بس، مفيش داعي نوقف حاجة */ }
+  };
   const { pathname } = useLocation();
 
   useEffect(() => { setSidebarOpen(false); }, [pathname]);
@@ -38,7 +52,7 @@ const AppLayout = () => {
 
       {/* Desktop Sidebar */}
       <div className="hidden lg:flex lg:flex-shrink-0">
-        <Sidebar />
+        <Sidebar collapsed={sidebarCollapsed} onToggleCollapse={toggleSidebarCollapsed} />
       </div>
 
       {/* Mobile Drawer Overlay */}
