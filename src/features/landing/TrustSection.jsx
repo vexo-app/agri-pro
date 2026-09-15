@@ -23,17 +23,17 @@ const TrustSection = () => (
         whileInView="visible"
         viewport={viewportOnce}
         variants={fadeUp}
-        className="relative h-44 sm:h-56 rounded-3xl overflow-hidden mb-10 ring-1 ring-white/10"
+        className="relative h-64 sm:h-80 rounded-3xl overflow-hidden mb-10 ring-1 ring-white/10"
       >
         <img
           src={trustBanner}
           alt="أسطول معدات زراعية جاهز للعمل"
-          width={1152}
-          height={460}
+          width={1200}
+          height={516}
           loading="lazy"
-          className="absolute inset-0 w-full h-full object-cover"
+          className="absolute inset-0 w-full h-full object-cover brightness-110 contrast-105"
         />
-        <div className="absolute inset-0 bg-gradient-to-t from-dark via-dark/50 to-dark/10" />
+        <div className="absolute inset-0 bg-gradient-to-t from-dark via-dark/35 to-transparent" />
         <div className="absolute inset-x-0 bottom-0 p-6 sm:p-8">
           <h2 className="text-2xl sm:text-3xl font-extrabold text-gray-50">اتعمل من مشكلة حقيقية</h2>
           <p className="mt-2 max-w-2xl text-gray-300 leading-relaxed text-sm sm:text-base">
