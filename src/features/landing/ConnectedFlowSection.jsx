@@ -85,8 +85,8 @@ const ConnectedFlowSection = () => (
             <img
               src={officeFlowImage}
               alt="متابعة بيانات الشركة من مكان واحد"
-              width={760}
-              height={660}
+              width={1024}
+              height={900}
               loading="lazy"
               className="absolute inset-0 w-full h-full object-cover"
             />

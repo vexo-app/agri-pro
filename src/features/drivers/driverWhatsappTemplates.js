@@ -23,20 +23,24 @@ export const getDriverWhatsappTemplates = ({
   driver, getMonthSummary, currentMonth, getDriverAttendance, companyName,
 }) => {
   const { id, name, unpaidThisMonth } = driver;
-  const summary = getMonthSummary(id, currentMonth);
-  const lastAbsence = getDriverAttendance(id).find((r) => r.status === "absent");
 
+  // مهم: getMonthSummary/getDriverAttendance بتتنادى جوه build() بس — مش هنا
+  // فوق — عشان الليستة دي بتتبني تاني مع أي تغيير في salaryEntries/attendance
+  // في أي حتة بالتطبيق (مش بس للسائق ده)، ولو الحساب كان فوري هنا كان هيتكرر
+  // لكل كارت سائق على الصفحة مع كل Firestore snapshot، وده كان بيعمل تهنيج
+  // ملحوظ في الواجهة. القيمة اللي بترجع في النهاية واحدة بالظبط، بس دلوقتي
+  // بتتحسب مرة واحدة بس وقت الضغط الفعلي على القالب.
   return [
     {
       key: "statement", label: "كشف حساب", icon: <ClipboardIcon size={15} />,
       build: () => buildDriverStatementText({
-        driverName: name, summary, yearMonth: currentMonth, isPaid: !unpaidThisMonth, companyName,
+        driverName: name, summary: getMonthSummary(id, currentMonth), yearMonth: currentMonth, isPaid: !unpaidThisMonth, companyName,
       }),
     },
     {
       key: "reminder", label: "تذكير بالمستحق", icon: <ClockIcon size={15} />,
       build: () => buildDriverReminderText({
-        driverName: name, net: summary.net, yearMonth: currentMonth, companyName,
+        driverName: name, net: getMonthSummary(id, currentMonth).net, yearMonth: currentMonth, companyName,
       }),
     },
     {
@@ -45,7 +49,11 @@ export const getDriverWhatsappTemplates = ({
     },
     {
       key: "absence", label: "تنبيه غياب", icon: <AlertIcon size={15} />,
-      build: () => buildDriverAbsenceText({ driverName: name, absenceDate: lastAbsence?.date, companyName }),
+      build: () => buildDriverAbsenceText({
+        driverName: name,
+        absenceDate: getDriverAttendance(id).find((r) => r.status === "absent")?.date,
+        companyName,
+      }),
     },
   ];
 };
