@@ -176,9 +176,9 @@ const Sidebar = ({ onClose, collapsed = false, onToggleCollapse }) => {
         <button
           onClick={() => onToggleCollapse(!collapsed)}
           title={collapsed ? "توسيع القائمة" : "طي القائمة"}
-          className="absolute top-6 -left-3 z-10 w-6 h-6 rounded-full bg-surface-3 border border-white/10 flex items-center justify-center text-gray-400 hover:text-brand-400 hover:border-brand-700/50 transition-colors shadow-md"
+          className="absolute top-1/2 -translate-y-1/2 -left-3.5 z-20 w-7 h-7 rounded-full bg-surface-3 border border-white/15 flex items-center justify-center text-gray-300 hover:text-brand-400 hover:border-brand-700/50 hover:scale-110 transition-all shadow-lg shadow-black/40"
         >
-          <ChevronLeftIcon size={13} className={clsx("transition-transform duration-200", collapsed && "rotate-180")} />
+          <ChevronLeftIcon size={14} className={clsx("transition-transform duration-200", collapsed && "rotate-180")} />
         </button>
       )}
 
