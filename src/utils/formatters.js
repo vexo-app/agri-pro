@@ -53,6 +53,16 @@ export const formatDateShort = (dateStr) => {
 };
 
 /**
+ * "day month" Arabic label, no year — used in itemized breakdowns (e.g.
+ * WhatsApp message templates) where the surrounding text already states
+ * the month/period, so repeating the year on every line would be noise.
+ */
+export const formatDayMonth = (dateStr) => {
+  if (!dateStr) return "—";
+  return new Date(dateStr).toLocaleDateString("ar-EG", { day: "numeric", month: "long" });
+};
+
+/**
  * Today as YYYY-MM-DD (for input[type=date]).
  */
 export const todayISO = () => new Date().toISOString().split("T")[0];

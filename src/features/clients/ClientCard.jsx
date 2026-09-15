@@ -1,10 +1,19 @@
 // src/features/clients/ClientCard.jsx
-import React from "react";
+import React, { useMemo } from "react";
 import { useNavigate } from "react-router-dom";
 import { Card, ProgressBar } from "../../components/ui/Card";
 import Button from "../../components/ui/Button";
 import { formatCurrency, formatNumber, getInitial } from "../../utils/formatters";
-import { PlusIcon } from "../../components/ui/Icons";
+import { PlusIcon, ClipboardIcon, ClockIcon, CheckCircleIcon } from "../../components/ui/Icons";
+import { CONTACT_TYPE } from "../../config/constants";
+import { useData } from "../../contexts/DataContext";
+import { useClients } from "../../hooks/useClients";
+import { useContacts } from "../../hooks/useContacts";
+import WhatsAppAction from "../messaging/WhatsAppAction";
+import ContactPhoneField from "../messaging/ContactPhoneField";
+import {
+  buildClientStatementText, buildClientReminderText, buildClientThanksText,
+} from "../../utils/messageTemplates";
 
 const ClientCard = ({ client, onQuickPayment }) => {
   const navigate = useNavigate();
@@ -14,6 +23,33 @@ const ClientCard = ({ client, onQuickPayment }) => {
     totalPaid = 0, totalRemaining = 0,
     ops = 0,
   } = client;
+
+  const { settings } = useData();
+  const { getClientSummary } = useClients();
+  const { getPhone } = useContacts();
+  const phone = getPhone(name, CONTACT_TYPE.CLIENT);
+
+  // القوالب بترجع دالة (build) بتتنادى بس لما يتختار القالب فعليًا — عشان
+  // getClientSummary (اللي بتلف على كل jobs العميل) ما تتحسبش إلا وقت
+  // الحاجة الفعلية، مش على كل render.
+  const whatsappTemplates = useMemo(() => {
+    const companyName = settings?.company?.name || "";
+    const totals = { totalRevenue, totalPaid, totalRemaining };
+    return [
+      {
+        key: "statement", label: "كشف حساب", icon: <ClipboardIcon size={15} />,
+        build: () => buildClientStatementText({ clientName: name, jobs: getClientSummary(name).jobs, totals, companyName }),
+      },
+      {
+        key: "reminder", label: "تذكير بالمستحق", icon: <ClockIcon size={15} />,
+        build: () => buildClientReminderText({ clientName: name, totalRemaining, companyName }),
+      },
+      {
+        key: "thanks", label: "شكر على التعامل", icon: <CheckCircleIcon size={15} />,
+        build: () => buildClientThanksText({ clientName: name, companyName }),
+      },
+    ];
+  }, [name, totalRevenue, totalPaid, totalRemaining, settings, getClientSummary]);
 
   const paidPct = totalRevenue > 0 ? (totalPaid / totalRevenue) * 100 : 100;
   const hasDebt = totalRemaining > 0;
@@ -75,9 +111,15 @@ const ClientCard = ({ client, onQuickPayment }) => {
           </Button>
         </div>
 
+        {/* رقم التواصل + واتساب */}
+        <div className="mt-4 pt-3 border-t border-white/8 flex flex-col gap-2">
+          <ContactPhoneField name={name} type={CONTACT_TYPE.CLIENT} phone={phone} />
+          {phone && <WhatsAppAction phone={phone} templates={whatsappTemplates} />}
+        </div>
+
         {/* Quick payment button — only if has debt */}
         {hasDebt && (
-          <div className="mt-4 pt-3 border-t border-white/8">
+          <div className="mt-3 pt-3 border-t border-white/8">
             <button
               onClick={onQuickPayment}
               className="w-full flex items-center justify-center gap-2 py-2 rounded-xl bg-amber-900/20 border border-amber-800/40 text-amber-400 text-xs font-bold hover:bg-amber-900/40 transition-colors"

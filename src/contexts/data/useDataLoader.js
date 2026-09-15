@@ -47,6 +47,7 @@ import { salaryService }       from "../../services/salaryService";
 import { attendanceService }   from "../../services/attendanceService";
 import { custodyService }      from "../../services/custodyService";
 import { taxDeductionService } from "../../services/taxDeductionService";
+import { contactService }      from "../../services/contactService";
 import {
   driverCostsMigratedKey, fuelPriceMigratedKey,
   runDriverCostsMigration, runFuelPriceBackfill,
@@ -70,6 +71,7 @@ const COLLECTIONS = [
   { key: "attendance",        service: attendanceService,       stateKey: "attendance" },
   { key: "custody",           service: custodyService,          stateKey: "custody" },
   { key: "taxDeductions",     service: taxDeductionService,     stateKey: "taxDeductions" },
+  { key: "contacts",          service: contactService,          stateKey: "contacts" },
 ];
 
 // لو الجهاز offline ومفيش نسخة محلية للمجموعة، الـ listener مش هينده خالص

@@ -20,3 +20,4 @@ export * from "./constants/taxDeductions";
 export * from "./constants/custody";
 export * from "./constants/billing";
 export * from "./constants/alerts";
+export * from "./constants/contacts";

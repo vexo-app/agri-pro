@@ -1,10 +1,19 @@
 // src/features/suppliers/SupplierCard.jsx
-import React from "react";
+import React, { useMemo } from "react";
 import { useNavigate } from "react-router-dom";
 import { Card, ProgressBar } from "../../components/ui/Card";
 import Button from "../../components/ui/Button";
 import { formatCurrency, getInitial } from "../../utils/formatters";
-import { PlusIcon } from "../../components/ui/Icons";
+import { PlusIcon, ClipboardIcon, ClockIcon, CheckCircleIcon } from "../../components/ui/Icons";
+import { CONTACT_TYPE } from "../../config/constants";
+import { useData } from "../../contexts/DataContext";
+import { useSuppliers } from "../../hooks/useSuppliers";
+import { useContacts } from "../../hooks/useContacts";
+import WhatsAppAction from "../messaging/WhatsAppAction";
+import ContactPhoneField from "../messaging/ContactPhoneField";
+import {
+  buildSupplierStatementText, buildSupplierReminderText, buildSupplierThanksText,
+} from "../../utils/messageTemplates";
 
 const SupplierCard = ({ supplier, onQuickPayment }) => {
   const navigate = useNavigate();
@@ -13,6 +22,30 @@ const SupplierCard = ({ supplier, onQuickPayment }) => {
     totalInvoiced = 0, totalPaidOut = 0, totalPayable = 0,
     ops = 0,
   } = supplier;
+
+  const { settings } = useData();
+  const { getSupplierSummary } = useSuppliers();
+  const { getPhone } = useContacts();
+  const phone = getPhone(name, CONTACT_TYPE.SUPPLIER);
+
+  const whatsappTemplates = useMemo(() => {
+    const companyName = settings?.company?.name || "";
+    const totals = { totalInvoiced, totalPaidOut, totalPayable };
+    return [
+      {
+        key: "statement", label: "كشف حساب", icon: <ClipboardIcon size={15} />,
+        build: () => buildSupplierStatementText({ supplierName: name, invoices: getSupplierSummary(name).invoices, totals, companyName }),
+      },
+      {
+        key: "reminder", label: "تذكير بالمستحق", icon: <ClockIcon size={15} />,
+        build: () => buildSupplierReminderText({ supplierName: name, totalPayable, companyName }),
+      },
+      {
+        key: "thanks", label: "شكر على التعامل", icon: <CheckCircleIcon size={15} />,
+        build: () => buildSupplierThanksText({ supplierName: name, companyName }),
+      },
+    ];
+  }, [name, totalInvoiced, totalPaidOut, totalPayable, settings, getSupplierSummary]);
 
   const paidPct = totalInvoiced > 0 ? (totalPaidOut / totalInvoiced) * 100 : 100;
   const hasPayable = totalPayable > 0;
@@ -73,9 +106,15 @@ const SupplierCard = ({ supplier, onQuickPayment }) => {
           </Button>
         </div>
 
+        {/* رقم التواصل + واتساب */}
+        <div className="mt-4 pt-3 border-t border-white/8 flex flex-col gap-2">
+          <ContactPhoneField name={name} type={CONTACT_TYPE.SUPPLIER} phone={phone} />
+          {phone && <WhatsAppAction phone={phone} templates={whatsappTemplates} />}
+        </div>
+
         {/* Quick payment button — only if we still owe them */}
         {hasPayable && (
-          <div className="mt-4 pt-3 border-t border-white/8">
+          <div className="mt-3 pt-3 border-t border-white/8">
             <button
               onClick={onQuickPayment}
               className="w-full flex items-center justify-center gap-2 py-2 rounded-xl bg-red-900/20 border border-red-800/40 text-red-400 text-xs font-bold hover:bg-red-900/40 transition-colors"

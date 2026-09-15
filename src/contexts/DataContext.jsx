@@ -30,6 +30,7 @@ import { useSupplierMutations } from "./data/mutations/supplierMutations";
 import { useSalaryMutations } from "./data/mutations/salaryMutations";
 import { useCustodyMutations } from "./data/mutations/custodyMutations";
 import { useSettingsMutations } from "./data/mutations/settingsMutations";
+import { useContactMutations } from "./data/mutations/contactMutations";
 
 const DataContext = createContext(null);
 
@@ -68,6 +69,7 @@ export const DataProvider = ({ children }) => {
   const salaryMutations     = useSalaryMutations(mutationArgs);
   const custodyMutations    = useCustodyMutations(mutationArgs);
   const settingsMutations   = useSettingsMutations(mutationArgs);
+  const contactMutations    = useContactMutations(mutationArgs);
 
   const value = {
     ...state,
@@ -81,6 +83,7 @@ export const DataProvider = ({ children }) => {
     ...salaryMutations,
     ...custodyMutations,
     ...settingsMutations,
+    ...contactMutations,
   };
 
   return <DataContext.Provider value={value}>{children}</DataContext.Provider>;

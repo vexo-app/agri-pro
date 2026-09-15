@@ -1,5 +1,5 @@
 // src/features/drivers/DriverCard.jsx
-import React from "react";
+import React, { useMemo } from "react";
 import { useNavigate } from "react-router-dom";
 import { Card, Badge } from "../../components/ui/Card";
 import Button from "../../components/ui/Button";
@@ -8,6 +8,10 @@ import {
 } from "../../components/ui/Icons";
 import { formatNumber, getInitial } from "../../utils/formatters";
 import { DRIVER_STATUS, TEAM_ROLE, TEAM_ROLE_LABELS, STAFF_POSITION_LABELS } from "../../config/constants";
+import { useData } from "../../contexts/DataContext";
+import { useSalary } from "../../hooks/useSalary";
+import WhatsAppAction from "../messaging/WhatsAppAction";
+import { getDriverWhatsappTemplates } from "./driverWhatsappTemplates";
 
 const StatItem = ({ label, value, color = "text-gray-200" }) => (
   <div className="flex flex-col gap-0.5">
@@ -22,6 +26,17 @@ const DriverCard = ({ driver, onEdit, onDelete, onPaySalary, onCancelPaySalary }
     id, name, phone, totalAcres = 0, ops = 0, salary = 0,
     status, role = TEAM_ROLE.DRIVER, position, unpaidThisMonth, lastPaidBaseEntry, assignedEquipment = [],
   } = driver;
+
+  const { settings } = useData();
+  const { getMonthSummary, currentMonth, getDriverAttendance } = useSalary();
+
+  // قوالب واتساب العامل — منطق البناء نفسه في driverWhatsappTemplates.js
+  // (نفس المصدر اللي بيستخدمه فيتشر الإرسال الجماعي كمان)، صفر حساب موازٍ.
+  const whatsappTemplates = useMemo(() => getDriverWhatsappTemplates({
+    driver: { id, name, unpaidThisMonth },
+    getMonthSummary, currentMonth, getDriverAttendance,
+    companyName: settings?.company?.name || "",
+  }), [id, name, unpaidThisMonth, currentMonth, getMonthSummary, getDriverAttendance, settings]);
 
   const isInactive = status === DRIVER_STATUS.INACTIVE;
   const isStaff    = role !== TEAM_ROLE.DRIVER;
@@ -111,6 +126,11 @@ const DriverCard = ({ driver, onEdit, onDelete, onPaySalary, onCancelPaySalary }
                 className="flex-1" onClick={onDelete} />
             </div>
           </div>
+        </div>
+
+        {/* لسائقين وإداريين على السواء — لو عندهم رقم متسجل */}
+        <div className="mt-4 pt-3 border-t border-white/8">
+          <WhatsAppAction phone={phone} templates={whatsappTemplates} />
         </div>
       </div>
     </Card>

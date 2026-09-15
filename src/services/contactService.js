@@ -1,0 +1,51 @@
+// src/services/contactService.js
+//
+// جهات اتصال العملاء والموردين (اسم + نوع + رقم تليفون بس) — نفس نمط
+// equipmentService.js / driverService.js بالظبط، collection جديدة إضافية
+// من غير أي تأثير على أي collection أو حساب موجود.
+import {
+  collection, doc,
+  setDoc, updateDoc, deleteDoc,
+  getDocs, onSnapshot, query, orderBy,
+  serverTimestamp,
+} from "firebase/firestore";
+import { db } from "../config/firebase";
+
+const col = (uid) => collection(db, "users", uid, "contacts");
+
+export const contactService = {
+  async getAll(userId) {
+    const q = query(col(userId), orderBy("createdAt", "desc"));
+    const snap = await getDocs(q);
+    return snap.docs.map((d) => ({ id: d.id, ...d.data() }));
+  },
+
+  // Live-subscribe — see equipmentService.js for the full contract.
+  subscribe(userId, onData, onError) {
+    const q = query(col(userId), orderBy("createdAt", "desc"));
+    return onSnapshot(
+      q,
+      (snap) => onData(snap.docs.map((d) => ({ id: d.id, ...d.data() }))),
+      onError
+    );
+  },
+
+  // Returns { id, promise } — see equipmentService.js for why.
+  add(userId, data) {
+    const ref = doc(col(userId));
+    const promise = setDoc(ref, {
+      ...data,
+      createdAt: serverTimestamp(),
+      updatedAt: serverTimestamp(),
+    });
+    return { id: ref.id, promise };
+  },
+
+  update(userId, id, data) {
+    return updateDoc(doc(col(userId), id), { ...data, updatedAt: serverTimestamp() });
+  },
+
+  remove(userId, id) {
+    return deleteDoc(doc(col(userId), id));
+  },
+};

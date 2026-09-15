@@ -355,6 +355,17 @@ export const SearchIcon = (p) => (
   </svg>
 );
 
+// أيقونة واتساب — outline بس (فقاعة كلام + 3 نقاط)، من غير أي شعار ملون،
+// نفس روح باقي الأيقونات في الملف ده بالظبط.
+export const WhatsAppIcon = (p) => (
+  <svg width={p.size||20} height={p.size||20} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={p.strokeWidth||1.8} strokeLinecap="round" strokeLinejoin="round" className={p.className}>
+    <path d="M12 3C7.03 3 3 6.86 3 11.62c0 1.94.66 3.73 1.79 5.19L3.5 21l4.36-1.36a9.6 9.6 0 004.14.94c4.97 0 9-3.86 9-8.96S16.97 3 12 3z"/>
+    <circle cx="8.7" cy="11.6" r="1" fill="currentColor" stroke="none"/>
+    <circle cx="12" cy="11.6" r="1" fill="currentColor" stroke="none"/>
+    <circle cx="15.3" cy="11.6" r="1" fill="currentColor" stroke="none"/>
+  </svg>
+);
+
 export const ExternalLinkIcon = (p) => <Icon {...p} d={[
   "M18 13v6a2 2 0 01-2 2H5a2 2 0 01-2-2V8a2 2 0 012-2h6",
   "M15 3h6v6",

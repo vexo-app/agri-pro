@@ -17,6 +17,7 @@ export const initialState = {
   attendance:    [],
   custody:       [],
   taxDeductions: [],
+  contacts:      [],
   settings:      { fuelPrice: DEFAULT_FUEL_PRICE },
   loading:       true,
   error:         null,
@@ -77,6 +78,10 @@ export const reducer = (state, action) => {
     case "ADD_TAX_DEDUCTION":    return { ...state, taxDeductions: [action.payload, ...state.taxDeductions] };
     case "UPDATE_TAX_DEDUCTION": return { ...state, taxDeductions: state.taxDeductions.map(t => t.id === action.payload.id ? action.payload : t) };
     case "DELETE_TAX_DEDUCTION": return { ...state, taxDeductions: state.taxDeductions.filter(t => t.id !== action.payload) };
+
+    case "ADD_CONTACT":    return { ...state, contacts: [action.payload, ...state.contacts] };
+    case "UPDATE_CONTACT": return { ...state, contacts: state.contacts.map(c => c.id === action.payload.id ? action.payload : c) };
+    case "DELETE_CONTACT": return { ...state, contacts: state.contacts.filter(c => c.id !== action.payload) };
 
     case "UPDATE_SETTINGS": return { ...state, settings: { ...state.settings, ...action.payload } };
     // Only overwrite the collections that actually loaded successfully this

@@ -171,6 +171,18 @@ service cloud.firestore {
         (!('position' in data) || isShortStr(data.position));
     }
 
+    // جهات اتصال العملاء والموردين — اسم + نوع + رقم تليفون بس، مفيش أي
+    // حقل مالي هنا خالص. مفيش collection اسمها clients/suppliers أصلاً في
+    // المشروع (شوف الملحوظة تحت "الوصول للضيوف" فوق)، فده مكان منفصل
+    // بيربط رقم التليفون بالاسم + النوع، من غير أي تأثير على jobs أو
+    // supplierInvoices أو أي حساب.
+    function isValidContact(data) {
+      return
+        (!('name' in data)  || isShortStr(data.name)) &&
+        (!('type' in data)  || data.type in ['client', 'supplier']) &&
+        (!('phone' in data) || isShortStr(data.phone));
+    }
+
     function isValidAttendance(data) {
       return
         (!('status' in data)   || data.status in ['present', 'absent', 'late', 'half']) &&
@@ -517,6 +529,14 @@ service cloud.firestore {
       match /attendance/{id} {
         allow read:            if (isSignedIn() && (isOwner(uid) || isAdmin())) || guestCanRead(uid, 'drivers');
         allow create, update: if isSignedIn() && isOwner(uid) && isValidAttendance(request.resource.data);
+        allow delete:          if isSignedIn() && isOwner(uid);
+      }
+
+      // جهات اتصال العملاء والموردين (أرقام تليفونات بس) — القراءة مغطاة
+      // تلقائيًا بالـ match /{document=**} فوق زي أي subcollection جديدة،
+      // فمحتاجين هنا نص الكتابة بس (زي باقي الـcollections بالظبط).
+      match /contacts/{id} {
+        allow create, update: if isSignedIn() && isOwner(uid) && isValidContact(request.resource.data);
         allow delete:          if isSignedIn() && isOwner(uid);
       }
 

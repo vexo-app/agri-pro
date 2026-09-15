@@ -6,8 +6,10 @@ import { useDrivers }     from "../hooks/useDrivers";
 import { useSalary }      from "../hooks/useSalary";
 import { useConfirm }     from "../hooks/useConfirm";
 import { useEntitlement } from "../hooks/useEntitlement";
+import { useData }        from "../contexts/DataContext";
 import DriverForm         from "../features/drivers/DriverForm";
 import DriverCard         from "../features/drivers/DriverCard";
+import BulkSendDialog     from "../features/messaging/BulkSendDialog";
 import Modal              from "../components/ui/Modal";
 import ConfirmDialog      from "../components/ui/ConfirmDialog";
 import Button             from "../components/ui/Button";
@@ -16,7 +18,7 @@ import LoadingScreen      from "../components/ui/LoadingScreen";
 import PrivacyToggle      from "../components/ui/PrivacyToggle";
 import {
   PlusIcon, DriverIcon, UserIcon, RevenueIcon, ClearIcon, CheckCircleIcon, WalletIcon,
-  AlertIcon, EditIcon,
+  AlertIcon, EditIcon, WhatsAppIcon,
 } from "../components/ui/Icons";
 import { formatCurrency, todayISO } from "../utils/formatters";
 import {
@@ -37,12 +39,17 @@ const DriversPage = () => {
     report, loading, addDriver, updateDriver, deleteDriver,
     getDriverDependencyCounts,
   } = useDrivers();
-  const { addSalaryEntry, deleteSalaryEntry, salaryEntries, currentMonth } = useSalary();
+  const {
+    addSalaryEntry, deleteSalaryEntry, salaryEntries, currentMonth,
+    getMonthSummary, getDriverAttendance,
+  } = useSalary();
+  const { settings } = useData();
   const { confirm, confirmState } = useConfirm();
   const { canAddTeamMember, plan: currentPlan } = useEntitlement();
   const navigate = useNavigate();
   const [activeTab, setActiveTab] = useState(TEAM_ROLE.DRIVER);
   const [modal, setModal]         = useState(null);
+  const [bulkSendOpen, setBulkSendOpen] = useState(false);
   const [search, setSearch]       = useState("");
   const [showInactive, setShowInactive] = useState(false);
   const [payTarget, setPayTarget]     = useState(null); // driver currently being paid via quick-pay
@@ -203,9 +210,14 @@ const DriversPage = () => {
           </h1>
           <p className="text-sm text-gray-500 mt-0.5">{report.length} عضو مسجل</p>
         </div>
-        <Button onClick={handleAddClick} icon={<PlusIcon size={16}/>}>
-          {addLabel}
-        </Button>
+        <div className="flex items-center gap-2">
+          <Button variant="secondary" onClick={() => setBulkSendOpen(true)} icon={<WhatsAppIcon size={16}/>}>
+            إرسال جماعي
+          </Button>
+          <Button onClick={handleAddClick} icon={<PlusIcon size={16}/>}>
+            {addLabel}
+          </Button>
+        </div>
       </div>
 
       {/* التبويبان: السائقون / الإداريون والمحاسبون */}
@@ -309,6 +321,18 @@ const DriversPage = () => {
 
       <ConfirmDialog open={confirmState.open} onClose={confirmState.reject}
         onConfirm={confirmState.accept} message={confirmState.message}/>
+
+      {/* إرسال جماعي — على أعضاء التبويب الحالي (السائقين أو الإداريين) بس،
+          نفس النطاق المستخدم في KPIs فوق. */}
+      <BulkSendDialog
+        open={bulkSendOpen}
+        onClose={() => setBulkSendOpen(false)}
+        members={tabReport}
+        companyName={settings?.company?.name || ""}
+        getMonthSummary={getMonthSummary}
+        currentMonth={currentMonth}
+        getDriverAttendance={getDriverAttendance}
+      />
 
       {/* (audit finding B2) Delete blocked — dependent history exists */}
       <Modal open={!!blockedDeleteTarget} onClose={() => setBlockedDeleteTarget(null)}
