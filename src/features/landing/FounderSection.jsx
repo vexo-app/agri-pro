@@ -38,7 +38,7 @@ const FounderSection = () => (
           variants={fadeIn}
           className="lg:col-span-2 order-1 lg:order-2"
         >
-          <div className="relative h-64 lg:h-full min-h-[280px] rounded-2xl overflow-hidden ring-1 ring-white/10">
+          <div className="relative aspect-[4/5] lg:aspect-auto lg:h-full min-h-[280px] rounded-2xl overflow-hidden ring-1 ring-white/10">
             <img
               src={founderBg}
               alt="متابعة شغل الميكنة الزراعية أول بأول"

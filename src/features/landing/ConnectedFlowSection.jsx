@@ -90,7 +90,7 @@ const ConnectedFlowSection = () => (
               loading="lazy"
               className="absolute inset-0 w-full h-full object-cover"
             />
-            <div className="absolute inset-0 bg-gradient-to-t from-dark/85 via-dark/20 to-transparent" />
+            <div className="absolute inset-0 bg-gradient-to-t from-dark/55 via-transparent to-transparent" />
           </div>
         </motion.div>
       </div>
