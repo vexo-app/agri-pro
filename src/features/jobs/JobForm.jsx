@@ -18,7 +18,7 @@ const JobForm = ({ initial, equipment, drivers, fuelPrice, onSave, onClose }) =>
     handleSubmit,
     control,
     setValue,
-    formState: { errors, isSubmitting },
+    formState: { errors, isSubmitting, dirtyFields },
   } = useForm({
     defaultValues: initial ?? {
       equipmentId:    "",
@@ -50,7 +50,9 @@ const JobForm = ({ initial, equipment, drivers, fuelPrice, onSave, onClose }) =>
 
   const handleEquipmentChange = (e) => {
     const eq = equipment.find((x) => x.id === e.target.value);
-    if (eq?.driverId) setValue("driverId", eq.driverId);
+    // shouldDirty: true — عشان لو ده حصل في وضع التعديل، الحقل يُعتبر
+    // "اتغيّر" فعليًا (audit finding O1) وميضيعش من الـpayload الجزئي تحت.
+    if (eq?.driverId) setValue("driverId", eq.driverId, { shouldDirty: true });
   };
 
   const handleWorkTypeChange = (e) => {
@@ -66,6 +68,30 @@ const JobForm = ({ initial, equipment, drivers, fuelPrice, onSave, onClose }) =>
         ? data.customWorkType.trim()
         : data.workType;
 
+    if (isEdit) {
+      // audit finding O1: في التعديل، نبعت بس الحقول اللي اتغيّرت فعليًا
+      // (dirtyFields) بدل الفورم كامل — لو جهاز/تاب تاني عدّل حقل مختلف
+      // لنفس العملية في نفس الوقت (مثلاً fuelUsed هنا، notes هناك)، آخر
+      // حفظ ميمسحش تعديل التاني بصمت (updateDoc بيبقى partial-write فعليًا
+      // لا full-overwrite). fuelPriceAtJob وamountPaid مش قابلين للتعديل
+      // من الفورم ده أصلاً (شوف التعليقات الأصلية تحت) فمابنبعتهمش خالص —
+      // القيمة كانت هتفضل زي ما هي بالظبط لو بعتناها، فحذفها هنا صفر تغيير
+      // في السلوك وأأمن (ميعملش overwrite لقيمة ممكن جهاز تاني غيّرها).
+      const payload = {};
+      if (dirtyFields.equipmentId)  payload.equipmentId  = data.equipmentId;
+      if (dirtyFields.driverId)     payload.driverId     = data.driverId;
+      if (dirtyFields.client)       payload.client       = data.client;
+      if (dirtyFields.workType || dirtyFields.customWorkType) payload.workType = finalWorkType;
+      if (dirtyFields.acres)        payload.acres        = Number(data.acres) || 0;
+      if (dirtyFields.pricePerAcre) payload.pricePerAcre = Number(data.pricePerAcre) || 0;
+      if (dirtyFields.fuelUsed)     payload.fuelUsed     = Number(data.fuelUsed) || 0;
+      if (dirtyFields.date)         payload.date         = data.date;
+      if (dirtyFields.notes)        payload.notes        = data.notes;
+      await onSave(payload);
+      onClose();
+      return;
+    }
+
     await onSave({
       equipmentId:  data.equipmentId,
       driverId:     data.driverId,
@@ -75,21 +101,18 @@ const JobForm = ({ initial, equipment, drivers, fuelPrice, onSave, onClose }) =>
       pricePerAcre: Number(data.pricePerAcre) || 0,
       fuelUsed:     Number(data.fuelUsed)     || 0,
       // سعر اللتر بيتثبّت وقت إنشاء الشغلانة (زي pricePerAcre بالظبط) وميتغيّرش
-      // بعد كده حتى لو سعر الوقود في الإعدادات اتغيّر لاحقًا. عند التعديل،
-      // بنحافظ على السعر الأصلي المخزَّن (أو الحالي لو شغلانة قديمة من قبل الإصلاح).
+      // بعد كده حتى لو سعر الوقود في الإعدادات اتغيّر لاحقًا.
       //
       // `?? DEFAULT_FUEL_PRICE` الأخيرة دي شبكة أمان إضافية بس (الإصلاح
       // الحقيقي في settingsService.js) — بتمنع setDoc() يفشل بالكامل
       // بـ "Unsupported field value: undefined" لو fuelPrice وصل هنا
       // undefined لأي سبب غير متوقع، بدل ما تفشل العملية كلها وميتسجّلش
       // أي حاجة (زي ما كان بيحصل فعلياً قبل الإصلاح ده).
-      fuelPriceAtJob: (isEdit ? (initial.fuelPriceAtJob ?? fuelPrice) : fuelPrice) ?? DEFAULT_FUEL_PRICE,
+      fuelPriceAtJob: fuelPrice ?? DEFAULT_FUEL_PRICE,
       date:         data.date,
       notes:        data.notes,
-      // على الإنشاء: قيمة أولية تُستخدم لعمل دفعة أولى تلقائياً (شوف JobsPage).
-      // على التعديل: بيانات الدفع بقت مصدرها payments collection مش الحقل ده،
-      // فبنحافظ على القيمة القديمة زي ما هي وما بنغيّرهاش من هنا.
-      amountPaid:   isEdit ? (initial.amountPaid || 0) : (Number(data.amountPaid) || 0),
+      // قيمة أولية تُستخدم لعمل دفعة أولى تلقائياً عند الإنشاء (شوف JobsPage).
+      amountPaid:   Number(data.amountPaid) || 0,
     });
     onClose();
   };

@@ -42,6 +42,7 @@ const buildDefaultValues = (initial) => {
 };
 
 const EquipmentForm = ({ initial, drivers, baseEquipment = [], onSave, onClose }) => {
+  const isEdit = !!initial;
   const initialCategory = initial?.category || EQUIPMENT_CATEGORY.BASE;
   const typeListInitial = initialCategory === EQUIPMENT_CATEGORY.ATTACHMENT ? ATTACHMENT_TYPES : BASE_EQUIPMENT_TYPES;
   const isOtherTypeInitially   = initial ? !typeListInitial.includes(initial?.type) : false;
@@ -57,7 +58,7 @@ const EquipmentForm = ({ initial, drivers, baseEquipment = [], onSave, onClose }
     handleSubmit,
     control,
     setValue,
-    formState: { errors, isSubmitting },
+    formState: { errors, isSubmitting, dirtyFields },
   } = useForm({
     defaultValues: buildDefaultValues(initial),
   });
@@ -98,7 +99,49 @@ const EquipmentForm = ({ initial, drivers, baseEquipment = [], onSave, onClose }
       : data.type;
 
     const driverIsOther = data.driverId === OTHER_VALUE;
+    const categoryChanged = dirtyFields.category;
 
+    if (isEdit && !categoryChanged) {
+      // audit finding O1: التصنيف نفسه ما اتغيّرش، فمنبعتش كتلة التصفير
+      // بتاعته (oilChangeHistory/greaseHistory/lastOilChangeMeter/...) —
+      // دي بتتعدّل من صفحة تفاصيل المعدة مباشرة (EquipmentDetailPage.jsx)،
+      // وإعادة إرسالها هنا بقيمة قديمة (كانت محمّلة وقت فتح الفورم) كانت
+      // بتمسح أي تعديل حصل هناك من جهاز/تاب تاني في نفس الوقت. نبعت بس
+      // الحقول الأساسية اللي فعليًا اتغيّرت. لو التصنيف نفسه اتغيّر
+      // (base↔attachment) فده تعديل بنائي حقيقي محتاج الكتلة الكاملة —
+      // شوف الفرع تحت.
+      const payload = {};
+      if (dirtyFields.name) payload.name = data.name;
+      if (dirtyFields.type || dirtyFields.customType) payload.type = finalType;
+      if (dirtyFields.driverId || dirtyFields.customDriverName) {
+        payload.driverId         = driverIsOther ? "" : data.driverId;
+        payload.customDriverName = driverIsOther ? (data.customDriverName?.trim() || "") : "";
+      }
+      if (dirtyFields.status) payload.status = data.status;
+
+      if (!isAttachment) {
+        if (dirtyFields.fuelRate) payload.fuelRate = Number(data.fuelRate) || 0;
+        if (dirtyFields.oilChangeIntervalMeter) {
+          payload.oilChangeIntervalMeter = data.oilChangeIntervalMeter === "" ? "" : Number(data.oilChangeIntervalMeter) || "";
+        }
+      } else {
+        if (dirtyFields.greaseIntervalDays) {
+          payload.greaseIntervalDays = data.greaseIntervalDays === "" ? "" : Number(data.greaseIntervalDays) || "";
+        }
+        if (dirtyFields.parentEquipmentId || dirtyFields.customParentName) {
+          const parentIsOther = data.parentEquipmentId === OTHER_VALUE;
+          payload.parentEquipmentId = parentIsOther ? "" : (data.parentEquipmentId || "");
+          payload.customParentName  = parentIsOther ? (data.customParentName?.trim() || "") : "";
+        }
+      }
+
+      await onSave(payload);
+      onClose();
+      return;
+    }
+
+    // إنشاء جديد، أو تعديل شمل تغيير التصنيف نفسه (base↔attachment) — الحالة
+    // دي فعليًا محتاجة الكتلة الكاملة زي الأصل (تصفير حقول النوع التاني).
     const payload = {
       category:         data.category,
       name:             data.name,

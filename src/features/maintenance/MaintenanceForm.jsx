@@ -7,6 +7,7 @@ import { MAINTENANCE_TYPES, MAX_MONEY_VALUE } from "../../config/constants";
 import { todayISO } from "../../utils/formatters";
 
 const MaintenanceForm = ({ initial, equipment, onSave, onClose }) => {
+  const isEdit = !!initial;
   const isOtherInitially = initial?.type === "أخرى";
   const [showCustomType, setShowCustomType] = useState(isOtherInitially);
 
@@ -15,7 +16,7 @@ const MaintenanceForm = ({ initial, equipment, onSave, onClose }) => {
     handleSubmit,
     control,
     setValue,
-    formState: { errors, isSubmitting },
+    formState: { errors, isSubmitting, dirtyFields },
   } = useForm({
     defaultValues: initial ?? {
       equipmentId: "",
@@ -37,6 +38,20 @@ const MaintenanceForm = ({ initial, equipment, onSave, onClose }) => {
     const finalType = data.type === "أخرى" && data.customType?.trim()
       ? data.customType.trim()
       : data.type;
+
+    if (isEdit) {
+      // audit finding O1: نبعت بس الحقول اللي اتغيّرت فعليًا بدل الفورم
+      // كامل (شوف نفس التعليق في JobForm.jsx للتفصيل الكامل).
+      const payload = {};
+      if (dirtyFields.equipmentId) payload.equipmentId = data.equipmentId;
+      if (dirtyFields.type || dirtyFields.customType) payload.type = finalType;
+      if (dirtyFields.cost)  payload.cost  = Number(data.cost) || 0;
+      if (dirtyFields.date)  payload.date  = data.date;
+      if (dirtyFields.notes) payload.notes = data.notes;
+      await onSave(payload);
+      onClose();
+      return;
+    }
 
     await onSave({
       equipmentId: data.equipmentId,

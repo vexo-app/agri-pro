@@ -42,19 +42,26 @@ const ClientDetailPage = () => {
   // `jobs` in this page comes from useClients()'s getClientSummary, which
   // ENRICHES each job with computed-only fields (amountPaid, remainingAmount,
   // paymentStatus) that must never be written back to Firestore as if they
-  // were real job fields. updateJob's local cache replaces the whole record
-  // (see jobsMutations.js), so we always spread the RAW job doc from
-  // useData() — same pattern already used for updateEquipment elsewhere.
+  // were real job fields — that's why we look up the RAW job doc from
+  // useData() by id first rather than using the enriched one directly.
+  //
+  // audit finding O1: كنا لازم قبل كده نبعت الـjob doc الخام كامل هنا،
+  // لأن الـreducer المحلي كان بيستبدل السجل كامل بأي payload جزئي (بدل
+  // merge)، فأي حقل ميتبعتش كان يختفي من الشاشة فورًا. الـreducer بقى
+  // بيعمل merge دلوقتي (src/contexts/data/reducer.js)، فمبقى فيه داعي
+  // نبعت غير reminderDate بس — وده كمان بيقفل نفس مشكلة O1 نفسها من
+  // الاتجاه التاني: لو جهاز/تاب تاني بيعدّل نفس العملية في نفس الوقت من
+  // صفحة سجل الشغل، مانمسحش تعديله بإعادة كتابة نسخة قديمة من باقي الحقول.
   const handleSaveReminder = async () => {
     const raw = rawJobs.find((j) => j.id === reminderModal.id);
     if (!raw) return;
-    await updateJob(raw.id, { ...raw, reminderDate: reminderDraft || "" });
+    await updateJob(raw.id, { reminderDate: reminderDraft || "" });
     setReminderModal(null);
   };
   const handleClearReminder = async (job) => {
     const raw = rawJobs.find((j) => j.id === job.id);
     if (!raw) return;
-    await updateJob(raw.id, { ...raw, reminderDate: "" });
+    await updateJob(raw.id, { reminderDate: "" });
   };
 
   return (

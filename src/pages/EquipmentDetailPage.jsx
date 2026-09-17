@@ -55,43 +55,48 @@ const EquipmentDetailPage = () => {
   const lastGreaseDate = isAttachment ? getLastGreaseDate(equipment) : null;
 
   // Append/remove an entry to the equipment's oil-change or grease log.
-  // Always spread the full raw equipment doc — the local reducer replaces
-  // the whole cached record with whatever's passed here, so a partial
-  // object would silently drop every other field until the next refetch.
+  //
+  // audit finding O1: كنا لازم قبل كده نبعت الـequipment doc كامل هنا،
+  // لأن الـreducer المحلي كان بيستبدل السجل كامل بأي payload جزئي (بدل
+  // merge)، فأي حقل ميتبعتش كان يختفي من الشاشة فورًا. الـreducer بقى
+  // بيعمل merge دلوقتي (src/contexts/data/reducer.js)، فمبقى فيه داعي
+  // نبعت غير الحقول اللي فعليًا اتغيّرت هنا — وده كمان بيقفل نفس مشكلة
+  // O1 نفسها من الاتجاه التاني: لو جهاز/تاب تاني بيعدّل اسم/حالة المعدة
+  // في نفس الوقت من صفحة المعدات، مانمسحش تعديله بإعادة كتابة نسخة قديمة
+  // من باقي الحقول.
   const handleAddOilChange = async (entry) => {
     const oilChangeHistory = [...(equipment.oilChangeHistory || []), entry];
     const last = getLastOilChange({ oilChangeHistory });
     await updateEquipment(equipment.id, {
-      ...equipment, oilChangeHistory, lastOilChangeMeter: last?.meter ?? "",
+      oilChangeHistory, lastOilChangeMeter: last?.meter ?? "",
     });
   };
   const handleRemoveOilChange = async (entryId) => {
     const oilChangeHistory = (equipment.oilChangeHistory || []).filter((e) => e.id !== entryId);
     const last = getLastOilChange({ oilChangeHistory });
     await updateEquipment(equipment.id, {
-      ...equipment, oilChangeHistory, lastOilChangeMeter: last?.meter ?? "",
+      oilChangeHistory, lastOilChangeMeter: last?.meter ?? "",
     });
   };
   // Smart-alerts (Phase 1) — manual reminder date the owner sets themselves.
   // Works the same way for both base-equipment oil changes and attachment
   // grease reminders (see utils/maintenanceAlerts.js): a plain date, no
-  // usage/interval math. Always spread the full equipment doc — see the
-  // pattern note on handleAddOilChange above.
+  // usage/interval math.
   const handleUpdateReminderDate = async (newValue) => {
-    await updateEquipment(equipment.id, { ...equipment, reminderDate: newValue });
+    await updateEquipment(equipment.id, { reminderDate: newValue });
   };
   const handleAddGrease = async (entry) => {
     const greaseHistory = [...(equipment.greaseHistory || []), entry];
     const last = getLastGreaseDate({ greaseHistory });
     await updateEquipment(equipment.id, {
-      ...equipment, greaseHistory, lastGreaseDate: last || "",
+      greaseHistory, lastGreaseDate: last || "",
     });
   };
   const handleRemoveGrease = async (entryId) => {
     const greaseHistory = (equipment.greaseHistory || []).filter((e) => e.id !== entryId);
     const last = getLastGreaseDate({ greaseHistory });
     await updateEquipment(equipment.id, {
-      ...equipment, greaseHistory, lastGreaseDate: last || "",
+      greaseHistory, lastGreaseDate: last || "",
     });
   };
   const EquipIcon = EQUIP_TYPE_ICON_MAP[equipment.type] ?? TractorIcon;

@@ -35,7 +35,7 @@ const DriverForm = ({ initial, defaultRole, onSave, onClose }) => {
     register,
     handleSubmit,
     control,
-    formState: { errors, isSubmitting },
+    formState: { errors, isSubmitting, dirtyFields },
   } = useForm({
     defaultValues: initial ?? {
       name: "", phone: "", salary: "",
@@ -47,6 +47,26 @@ const DriverForm = ({ initial, defaultRole, onSave, onClose }) => {
     const finalPosition = isDriverRole
       ? (position === CUSTOM_POSITION ? (customPosition.trim() || "أخرى") : "driver")
       : position;
+
+    if (initial) {
+      // audit finding O1: نبعت بس الحقول اللي اتغيّرت فعليًا بدل العضو
+      // كامل (شوف نفس التعليق في JobForm.jsx للتفصيل الكامل). position/
+      // role هنا مش متتبّعين بـreact-hook-form (state محلي منفصل فوق)،
+      // فبنقارن القيمة النهائية المحسوبة بالقيمة الأصلية المخزَّنة مباشرة
+      // بدل dirtyFields.
+      const payload = {};
+      if (dirtyFields.name)   payload.name   = data.name;
+      if (dirtyFields.phone)  payload.phone  = data.phone;
+      if (dirtyFields.salary) payload.salary = Number(data.salary) || 0;
+      if (dirtyFields.status) payload.status = data.status || DRIVER_STATUS.ACTIVE;
+      if (finalPosition !== savedPosition) {
+        payload.role     = role;
+        payload.position = finalPosition;
+      }
+      await onSave(payload);
+      onClose();
+      return;
+    }
 
     await onSave({
       ...data,

@@ -10,12 +10,13 @@ import {
 import { todayISO } from "../../utils/formatters";
 
 const TaxDeductionForm = ({ initial, onSave, onClose }) => {
+  const isEdit = !!initial;
   const {
     register,
     handleSubmit,
     control,
     watch,
-    formState: { errors, isSubmitting },
+    formState: { errors, isSubmitting, dirtyFields },
   } = useForm({
     defaultValues: initial ?? {
       type:   TAX_DEDUCTION_TYPES.TAX,
@@ -30,6 +31,23 @@ const TaxDeductionForm = ({ initial, onSave, onClose }) => {
   const isOther = type === TAX_DEDUCTION_TYPES.OTHER;
 
   const onSubmit = async (data) => {
+    if (isEdit) {
+      // audit finding O1: نبعت بس الحقول اللي اتغيّرت فعليًا بدل الحركة
+      // كاملة (شوف نفس التعليق في JobForm.jsx للتفصيل الكامل).
+      const typeChanged = dirtyFields.type;
+      const payload = {};
+      if (typeChanged)        payload.type   = data.type;
+      if (dirtyFields.amount) payload.amount = Number(data.amount) || 0;
+      if (dirtyFields.date)   payload.date   = data.date;
+      if (dirtyFields.notes)  payload.notes  = data.notes || "";
+      if (data.type === TAX_DEDUCTION_TYPES.OTHER && (typeChanged || dirtyFields.otherLabel)) {
+        payload.otherLabel = data.otherLabel || "";
+      }
+      await onSave(payload);
+      onClose();
+      return;
+    }
+
     const payload = {
       type:   data.type,
       amount: Number(data.amount) || 0,

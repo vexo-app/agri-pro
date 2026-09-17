@@ -11,12 +11,13 @@ import {
 import { todayISO } from "../../utils/formatters";
 
 const CustodyTransactionForm = ({ initial, drivers, equipment, onSave, onClose }) => {
+  const isEdit = !!initial;
   const {
     register,
     handleSubmit,
     control,
     watch,
-    formState: { errors, isSubmitting },
+    formState: { errors, isSubmitting, dirtyFields },
   } = useForm({
     defaultValues: initial ?? {
       type:         CUSTODY_TYPES.EXPENSE,
@@ -36,6 +37,38 @@ const CustodyTransactionForm = ({ initial, drivers, equipment, onSave, onClose }
   const isExpense = type === CUSTODY_TYPES.EXPENSE;
 
   const onSubmit = async (data) => {
+    if (isEdit) {
+      // audit finding O1: نبعت بس الحقول اللي اتغيّرت فعليًا بدل الحركة
+      // كاملة (شوف نفس التعليق في JobForm.jsx للتفصيل الكامل). لو النوع
+      // (category) نفسه اتغيّر، نبعت الحقل المرتبط بالفرع الجديد زي
+      // السلوك الأصلي بالظبط (حتى لو قيمته الافتراضية ما اتلمستش يدويًا).
+      const categoryChanged = dirtyFields.category;
+      const payload = {};
+      if (dirtyFields.type)   payload.type   = data.type;
+      if (dirtyFields.amount) payload.amount = Number(data.amount) || 0;
+      if (dirtyFields.date)   payload.date   = data.date;
+      if (dirtyFields.notes)  payload.notes  = data.notes || "";
+
+      if (data.type === CUSTODY_TYPES.EXPENSE) {
+        if (categoryChanged) payload.category = data.category;
+        if (data.category === CUSTODY_EXPENSE_CATEGORIES.EQUIPMENT && (categoryChanged || dirtyFields.equipmentId)) {
+          payload.equipmentId = data.equipmentId || "";
+        }
+        if (data.category === CUSTODY_EXPENSE_CATEGORIES.DRIVER && (categoryChanged || dirtyFields.driverId)) {
+          payload.driverId = data.driverId || "";
+        }
+        if (data.category === CUSTODY_EXPENSE_CATEGORIES.OTHER && (categoryChanged || dirtyFields.otherLabel)) {
+          payload.otherLabel = data.otherLabel || "";
+        }
+      } else if (dirtyFields.source) {
+        payload.source = data.source || "";
+      }
+
+      await onSave(payload);
+      onClose();
+      return;
+    }
+
     const payload = {
       type:   data.type,
       amount: Number(data.amount) || 0,

@@ -18,11 +18,12 @@ import { todayISO } from "../../utils/formatters";
 // (<datalist>) so re-typing an existing supplier's name suggests the exact
 // spelling already on file instead of inviting a near-duplicate.
 const SupplierInvoiceForm = ({ initial, existingSupplierNames = [], onSave, onClose }) => {
+  const isEdit = !!initial;
   const {
     register,
     handleSubmit,
     control,
-    formState: { errors, isSubmitting },
+    formState: { errors, isSubmitting, dirtyFields },
   } = useForm({
     defaultValues: initial ?? {
       supplierName: "",
@@ -34,6 +35,20 @@ const SupplierInvoiceForm = ({ initial, existingSupplierNames = [], onSave, onCl
   });
 
   const onSubmit = async (data) => {
+    if (isEdit) {
+      // audit finding O1: نبعت بس الحقول اللي اتغيّرت فعليًا بدل الفاتورة
+      // كاملة (شوف نفس التعليق في JobForm.jsx للتفصيل الكامل).
+      const payload = {};
+      if (dirtyFields.supplierName) payload.supplierName = data.supplierName.trim();
+      if (dirtyFields.description)  payload.description  = data.description.trim();
+      if (dirtyFields.amount)       payload.amount        = Number(data.amount) || 0;
+      if (dirtyFields.date)         payload.date          = data.date;
+      if (dirtyFields.notes)        payload.notes         = data.notes;
+      await onSave(payload);
+      onClose();
+      return;
+    }
+
     await onSave({
       supplierName: data.supplierName.trim(),
       description:  data.description.trim(),
