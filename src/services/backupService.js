@@ -35,6 +35,18 @@ const BACKUP_COLLECTIONS = [
   ["taxDeductions",       "taxDeductions"],
 ];
 
+// audit finding D1: `contacts` و `driverCosts` (users/{uid}/contacts,
+// users/{uid}/driverCosts) لسه ما اتضافوش لـ BACKUP_COLLECTIONS، لأن
+// إضافتهم هناك كانت هتأثر كمان على createBackup/restoreSnapshot (كل
+// أماكن بناء payload الباك أب الأربعة: BackupSection/RestoreModal/
+// ImportModal/useAutoBackup محتاجة تتعدّل كلها، وكل نسخة احتياطية قديمة
+// موجودة فعليًا دلوقتي هتفشل في الاستعادة لأنها ناقصة الحقلين الجدد —
+// ده تعديل أكبر وله مخاطرة على النسخ الموجودة، يحتاج قرارك بشكل مستقل).
+// هنا بس بنقفل فجوة wipeAllData (حذف الحساب نهائيًا) لأنها الجزء الآمن
+// والمحدود من الـfinding: لازم تُمسح فعليًا زي باقي الـsubcollections،
+// حتى من غير ما نلمس منطق الباك أب/الاستعادة أصلًا.
+const WIPE_ONLY_COLLECTIONS = ["contacts", "driverCosts"];
+
 const countsFor = (data) =>
   BACKUP_COLLECTIONS.reduce((acc, [key]) => {
     acc[key] = Array.isArray(data[key]) ? data[key].length : 0;
@@ -330,11 +342,20 @@ export const backupService = {
    * للقراءة من التطبيق بعد كده (لا للمستخدم ولا للأدمن).
    */
   async wipeAllData(userId, { onProgress } = {}) {
-    const totalSteps = BACKUP_COLLECTIONS.length + 3; // + settings + backups + account doc
+    const totalSteps = BACKUP_COLLECTIONS.length + WIPE_ONLY_COLLECTIONS.length + 3; // + settings + backups + account doc
 
     let done = 0;
 
     for (const [, subName] of BACKUP_COLLECTIONS) {
+      await restoreCollection(subName, userId, []);
+      done++;
+      onProgress?.({ done, total: totalSteps, step: subName });
+    }
+
+    // audit finding D1 — نفس المنطق (restoreCollection بمصفوفة فاضية
+    // بتمسح كل مستند موجود فعليًا) لكن على subcollections مش جزء من
+    // الباك أب/الاستعادة أصلًا.
+    for (const subName of WIPE_ONLY_COLLECTIONS) {
       await restoreCollection(subName, userId, []);
       done++;
       onProgress?.({ done, total: totalSteps, step: subName });
