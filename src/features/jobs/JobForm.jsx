@@ -8,10 +8,27 @@ import { WORK_TYPES, MAX_MONEY_VALUE, DEFAULT_FUEL_PRICE } from "../../config/co
 import { calcRevenue, calcFuelCost, calcRemainingAmount } from "../../utils/calculations";
 import { formatCurrency, todayISO } from "../../utils/formatters";
 
-const JobForm = ({ initial, equipment, drivers, fuelPrice, onSave, onClose }) => {
-  const isEdit = !!initial;
+const JobForm = ({ mode = "add", initial, equipment, drivers, fuelPrice, onSave, onClose }) => {
+  // `initial` may only pre-fill equipment/driver for a new quick job. The
+  // caller must state the mode explicitly so pre-filled data is not mistaken
+  // for an existing job and reduced to a partial update payload.
+  const isEdit = mode === "edit";
   const isOtherInitially = initial?.workType === "أخرى";
   const [showCustomWorkType, setShowCustomWorkType] = useState(isOtherInitially);
+  const defaultValues = {
+    equipmentId:    "",
+    driverId:       "",
+    client:         "",
+    workType:       "المحراث",
+    customWorkType: "",
+    acres:          "",
+    pricePerAcre:   "",
+    fuelUsed:       "",
+    date:           todayISO(),
+    notes:          "",
+    amountPaid:     "",
+    ...initial,
+  };
 
   const {
     register,
@@ -20,19 +37,10 @@ const JobForm = ({ initial, equipment, drivers, fuelPrice, onSave, onClose }) =>
     setValue,
     formState: { errors, isSubmitting, dirtyFields },
   } = useForm({
-    defaultValues: initial ?? {
-      equipmentId:    "",
-      driverId:       "",
-      client:         "",
-      workType:       "المحراث",
-      customWorkType: "",
-      acres:          "",
-      pricePerAcre:   "",
-      fuelUsed:       "",
-      date:           todayISO(),
-      notes:          "",
-      amountPaid:     "",
-    },
+    // Quick-job only pre-fills equipment/driver. Merge it over the complete
+    // defaults so date, work type and payment fields still initialize as a
+    // normal new job.
+    defaultValues,
   });
 
   // Live calculation

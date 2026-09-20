@@ -6,6 +6,8 @@ import toast from "react-hot-toast";
 import { useEquipment } from "../hooks/useEquipment";
 import { useDrivers }   from "../hooks/useDrivers";
 import { useJobs }      from "../hooks/useJobs";
+import { useData }      from "../contexts/DataContext";
+import { useAuth }      from "../contexts/AuthContext";
 import { useConfirm }   from "../hooks/useConfirm";
 import { useEntitlement } from "../hooks/useEntitlement";
 import EquipmentCard    from "../features/equipment/EquipmentCard";
@@ -19,6 +21,7 @@ import LoadingScreen    from "../components/ui/LoadingScreen";
 import { PlusIcon, TractorIcon, LinkIcon, AlertIcon, EditIcon } from "../components/ui/Icons";
 import { EQUIPMENT_CATEGORY, TEAM_ROLE } from "../config/constants";
 import { trackEvent } from "../config/posthog";
+import { createJobWithInitialPayment } from "../utils/jobCreation";
 
 const EquipmentPage = () => {
   const {
@@ -30,6 +33,8 @@ const EquipmentPage = () => {
   // getDriver() فاضلة بتدوّر في كل الفريق عشان لو فيه بيانات قديمة تفضل بتتعرض صح.
   const assignableDrivers = driverReport.filter((d) => (d.role || TEAM_ROLE.DRIVER) === TEAM_ROLE.DRIVER);
   const { addJob, fuelPrice }    = useJobs();
+  const { addPayment, deletePayment } = useData();
+  const { user } = useAuth();
   const { confirm, confirmState } = useConfirm();
   const { canAddEquipment, plan: currentPlan } = useEntitlement();
   const navigate = useNavigate();
@@ -74,7 +79,13 @@ const EquipmentPage = () => {
   };
 
   const handleSaveJob = async (formData) => {
-    await addJob(formData);
+    const { hasInitialPayment } = await createJobWithInitialPayment({
+      formData, userId: user.uid, addJob, addPayment, deletePayment,
+    });
+    trackEvent("job_created", {
+      source: "equipment_quick_job",
+      has_initial_payment: hasInitialPayment,
+    });
     setModal(null);
   };
 
@@ -196,6 +207,7 @@ const EquipmentPage = () => {
       <Modal open={modal?.mode==="quickJob"} onClose={() => setModal(null)} title="تسجيل شغل جديد">
         {modal?.mode==="quickJob" && (
           <JobForm
+            mode="add"
             equipment={report}
             drivers={assignableDrivers}
             fuelPrice={fuelPrice}

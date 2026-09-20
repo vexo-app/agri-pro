@@ -3,8 +3,7 @@ import React, { useState } from "react";
 import { useJobs }      from "../hooks/useJobs";
 import { useData }      from "../contexts/DataContext";
 import { useAuth }      from "../contexts/AuthContext";
-import { paymentService } from "../services/paymentService";
-import { savePendingJobPayment, clearPendingJobPayment } from "../utils/pendingJobPayments";
+import { createJobWithInitialPayment } from "../utils/jobCreation";
 import JobCard          from "../features/jobs/JobCard";
 import JobForm          from "../features/jobs/JobForm";
 import JobFilters       from "../features/jobs/JobFilters";
@@ -44,38 +43,10 @@ const JobsPage = () => {
 
   const handleSave = async (formData) => {
     if (modal.mode === "add") {
-      const { amountPaid, ...jobData } = formData;
-      const { id: newJobId, promise: jobWritePromise } = await addJob(jobData);
-      // زي أي عملية إضافة تانية في التطبيق بالظبط: مفيش استنى لتأكيد
-      // السيرفر قبل ما نكمل — العملية والدفعة المرتبطة بيها بيتسجلوا
-      // فورًا (أونلاين وأوفلاين بنفس السرعة)، والنافذة بتقفل على طول.
-      // لو تأكيد العملية فشل فعلاً بعدين في الخلفية (حالة نادرة جدًا —
-      // مش مجرد "لسه أوفلاين"، ده فشل حقيقي زي رفض من السيرفر)، بنسحب
-      // الدفعة المرتبطة بيها تلقائيًا (نفس فكرة الـ rollback المستخدمة
-      // في كل التطبيق، بس هنا بتتفعّل بسبب فشل عملية تانية مرتبطة).
-      if (Number(amountPaid) > 0) {
-        // audit finding F-003 (Phase 5): بنحجز id الدفعة مقدّماً ونسجّل
-        // "نية دفعة معلّقة" في localStorage قبل ما نستدعي addPayment
-        // أصلاً — لو الجلسة اتقفلت فجأة (تاب اتقفل / اتطبيق اتقفل
-        // أوفلاين) في اللحظة دي بالظبط، usePendingPaymentsRecovery.js
-        // هيكمّل تسجيل نفس الدفعة بنفس الـ id ده أول ما التطبيق يفتح
-        // تاني، من غير أي احتمال تكرار. راجع تعليق usePendingPaymentsRecovery.js
-        // للخلفية الكاملة.
-        const paymentId = paymentService.generateId(user.uid);
-        const paymentData = {
-          jobId: newJobId,
-          amount: Number(amountPaid),
-          date: jobData.date,
-          notes: "دفعة مقدّمة عند تسجيل العملية",
-        };
-        savePendingJobPayment(user.uid, { paymentId, ...paymentData });
-        await addPayment(paymentData, paymentId);
-        clearPendingJobPayment(user.uid, paymentId);
-        jobWritePromise.catch(() => {
-          deletePayment(paymentId);
-        });
-      }
-      trackEvent("job_created", { has_initial_payment: Number(amountPaid) > 0 });
+      const { hasInitialPayment } = await createJobWithInitialPayment({
+        formData, userId: user.uid, addJob, addPayment, deletePayment,
+      });
+      trackEvent("job_created", { has_initial_payment: hasInitialPayment });
     } else {
       await updateJob(modal.data.id, formData);
       trackEvent("job_updated");
@@ -148,7 +119,7 @@ const JobsPage = () => {
 
       <Modal open={!!modal} onClose={closeModal}
         title={modal?.mode === "add" ? "تسجيل عملية جديدة" : "تعديل العملية"} size="lg">
-        {modal && <JobForm initial={modal.data} equipment={equipment} drivers={drivers}
+        {modal && <JobForm mode={modal.mode} initial={modal.data} equipment={equipment} drivers={drivers}
           fuelPrice={fuelPrice} onSave={handleSave} onClose={closeModal} />}
       </Modal>
 
