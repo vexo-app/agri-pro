@@ -50,11 +50,23 @@ const CustodyTransactionForm = ({ initial, isEdit: isEditProp, drivers, equipmen
       // كاملة (شوف نفس التعليق في JobForm.jsx للتفصيل الكامل). لو النوع
       // (category) نفسه اتغيّر، نبعت الحقل المرتبط بالفرع الجديد زي
       // السلوك الأصلي بالظبط (حتى لو قيمته الافتراضية ما اتلمستش يدويًا).
-      const categoryChanged = dirtyFields.category;
+      //
+      // إصلاح إضافي: سجلات قديمة اتسجلت ناقصة بسبب الـbug القديم (شوف
+      // CustodyPage.jsx) ممكن يكون فيها type/date/category مش موجودين
+      // أصلاً في المستند. لو اعتمدنا على dirtyFields بس، وقتها فتح سجل
+      // زي ده وحفظه من غير ما "تلمس" الحقل الناقص (لأنه أصلاً ظاهر بقيمة
+      // افتراضية معقولة) هيسيبه ناقص زي ما هو. فأي حقل من التلاتة دي كان
+      // غير موجود في السجل الأصلي بيتبعت دايمًا مع الحفظ، حتى لو مالمسوش،
+      // عشان أول ضغطة "حفظ" على سجل قديم ناقص تصلّحه تلقائيًا.
+      const typeWasMissing     = initial?.type     === undefined;
+      const dateWasMissing     = initial?.date     === undefined;
+      const categoryWasMissing = initial?.category === undefined;
+
+      const categoryChanged = dirtyFields.category || categoryWasMissing;
       const payload = {};
-      if (dirtyFields.type)   payload.type   = data.type;
+      if (dirtyFields.type   || typeWasMissing) payload.type   = data.type;
       if (dirtyFields.amount) payload.amount = Number(data.amount) || 0;
-      if (dirtyFields.date)   payload.date   = data.date;
+      if (dirtyFields.date   || dateWasMissing) payload.date   = data.date;
       if (dirtyFields.notes)  payload.notes  = data.notes || "";
 
       if (data.type === CUSTODY_TYPES.EXPENSE) {
