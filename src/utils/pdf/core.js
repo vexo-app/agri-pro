@@ -59,11 +59,26 @@ export const BASE_CSS = `
     body { print-color-adjust: exact; -webkit-print-color-adjust: exact; }
     .no-print { display:none; }
   }
-  /* لا قيود على تقسيم الجداول أو الأقسام بين الصفحات — الجدول/القسم
-     الطويل بيتقسم بشكل طبيعي بين صفحتين زي أي طباعة عادية. الحاجة
-     الوحيدة اللي فضلت هي تكرار رأس الجدول (thead) في كل صفحة جديدة،
-     عشان لو الجدول اتقسم، يفضل واضح كل عمود بيمثل إيه. */
+  /* رأس الجدول (thead) بيتكرر في كل صفحة جديدة لو الجدول اتقسم، عشان
+     يفضل واضح كل عمود بيمثل إيه. */
   thead { display: table-header-group; }
+  /* أي صف (حركة صرف/إضافة واحدة، أو صف تاني في أي جدول تقرير) ميتقطعش
+     نصين بين صفحتين — لو مش هيكمل كامل في الصفحة الحالية، بينزل كامل في
+     اللي بعدها. الاثنين (tr وtd) مطبّقين مع بعض لأن html2pdf أحيانًا
+     بيقيس نقطة القطع من الخلية (td) نفسها مش الصف كله، فلو الاعتماد بقى
+     على tr بس ممكن الخلية لسه تتقطع. !important عشان يغلب أي تنسيق تاني
+     جاي من مكتبة الطباعة نفسها. بتشتغل مع نافذة الطباعة (window.print)
+     على طول عن طريق CSS العادي، وبتتفعّل برضه في التحميل كـ PDF
+     (html2pdf) عن طريق pagebreak.avoid في downloadReportPdf تحت. */
+  tr, td {
+    page-break-inside: avoid !important;
+    break-inside: avoid !important;
+  }
+  /* هامش صغير فاضل فوق وتحت كل صفحة مطبوعة (نافذة الطباعة) عشان النص
+     ميوصلش لحرف الورقة بالظبط. الملف اللي بيتحمّل كـ PDF بياخد نفس
+     الهامش من margin في downloadReportPdf مش من هنا، لأن html2pdf
+     بيرندر الصفحة في صورة واحدة طويلة ويقطّعها بنفسه. */
+  @page { margin: 14mm 10mm; }
 `;
 
 // ── Letterhead styles (client invoice / custody report) ──────────────────────
@@ -251,10 +266,22 @@ export const downloadReportPdf = async (htmlContent, filename) => {
     await waitForReportFonts();
     await html2pdf()
       .set({
-        margin: 0,
+        // هامش فاضل فوق/تحت كل صفحة (وشوية على الجانبين) — بيتطبق على
+        // كل صفحة في الملف (مش بس أول/آخر صفحة)، لأن html2pdf بيحسب
+        // ارتفاع الصفحة المتاح كـ (ارتفاع الورقة - الهامش) وبيكرر نفس
+        // الهامش مع كل قطع جديدة. [top, left, bottom, right] بوحدة jsPDF
+        // (pt) المحددة تحت.
+        margin: [28, 14, 28, 14],
         filename: `${filename}.pdf`,
         html2canvas: { scale: 2, useCORS: true },
         jsPDF: { unit: "pt", format: "a4", orientation: "portrait" },
+        // 'legacy' متعمّد مش موجود هنا: ده وضع بيحسب نقطة القطع بمسافة
+        // بكسلات بس من غير ما يشوف page-break-inside:avoid خالص، فلو
+        // اتحط مع 'css' ممكن يفرض قطع في نص صف حركة رغم إن الـCSS
+        // (شوف tr/td في BASE_CSS) طالب صراحةً إنه ميتقطعش. 'css' لوحده
+        // هو اللي فعليًا بيحترم القاعدة دي، وavoid هنا بيفرض نفس الحاجة
+        // صراحةً على كل <tr> وكل <td> كمان كـ شبكة أمان.
+        pagebreak: { mode: ["css"], avoid: ["tr", "td"] },
       })
       .from(container)
       .save();
