@@ -252,6 +252,10 @@ const CustodyPage = () => {
           : "تعديل الحركة"}>
         {modal && (
           <CustodyTransactionForm
+            // إصلاح: الوضع بيتحدد صراحةً من modal.mode، مش من وجود initial —
+            // initial بيتبعت في الحالتين (إضافة وتعديل) عشان يعبّي القيم
+            // الافتراضية، فمكانش يصح نستنتج منه وحده إن إحنا في وضع تعديل.
+            isEdit={modal.mode === "edit"}
             initial={modal.data || (modal.type
               ? { type: modal.type, category: "equipment", equipmentId: "", driverId: "", otherLabel: "", amount: "", date: todayISO(), source: "", notes: "" }
               : undefined)}

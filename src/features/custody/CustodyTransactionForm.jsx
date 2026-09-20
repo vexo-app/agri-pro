@@ -10,8 +10,16 @@ import {
 } from "../../config/constants";
 import { todayISO } from "../../utils/formatters";
 
-const CustodyTransactionForm = ({ initial, drivers, equipment, onSave, onClose }) => {
-  const isEdit = !!initial;
+const CustodyTransactionForm = ({ initial, isEdit: isEditProp, drivers, equipment, onSave, onClose }) => {
+  // ملحوظة إصلاح: الوضع (إضافة/تعديل) لازم ييجي صراحةً من الصفحة اللي
+  // بتفتح الفورم، مش يتحدد بمجرد وجود initial. الصفحة كانت بتبعت كائن
+  // initial جاهز حتى في حالة "إضافة حركة جديدة" (عشان يعبّي التاريخ والنوع
+  // الافتراضي)، فلو حكمنا هنا بـ !!initial كنا بنعتبرها "تعديل" غلط —
+  // ونتيجة كده الفورم كان بيبعت بس الحقول اللي المستخدم لمسها يدويًا
+  // (dirtyFields)، فلو محدش لمس حقل التاريخ أو النوع (الحالة الشائعة عند
+  // الإضافة، لأنهم أصلاً معبّيين صح) كانت الحركة بتتسجل من غير type ومن
+  // غير date — فمكانتش بتتحسب في الرصيد ولا بتظهر بتاريخ صحيح.
+  const isEdit = !!isEditProp;
   const {
     register,
     handleSubmit,
