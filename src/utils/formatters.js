@@ -63,9 +63,18 @@ export const formatDayMonth = (dateStr) => {
 };
 
 /**
- * Today as YYYY-MM-DD (for input[type=date]).
+ * Today as YYYY-MM-DD (for input[type=date]), in the device's LOCAL
+ * timezone. toISOString() converts to UTC first, which silently rolls the
+ * date back by one day during the first couple of local hours in
+ * timezones ahead of UTC (e.g. Egypt, UTC+2) — that's what was causing
+ * custody entries logged just after midnight to be saved under yesterday's
+ * date and drop out of "this month"'s report.
  */
-export const todayISO = () => new Date().toISOString().split("T")[0];
+export const todayISO = () => {
+  const d = new Date();
+  const pad = (n) => String(n).padStart(2, "0");
+  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
+};
 
 /**
  * First letter of a name for avatar display.
