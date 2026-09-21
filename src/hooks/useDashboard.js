@@ -3,6 +3,7 @@ import { useMemo } from "react";
 import { useData } from "../contexts/DataContext";
 import {
   aggregateJobs,
+  aggregateEquipmentFuelEntries,
   buildDailyRevenue,
   groupByWorkType,
   buildEquipmentReport,
@@ -32,10 +33,16 @@ const monthPrefixOf = (date) =>
 const buildMonthFinancials = (monthPrefix, {
   jobs, maintenance, salaryEntries, taxDeductions,
   supplierInvoices, supplierPayments, drivers, fuelPrice, payments,
+  equipmentFuelEntries, equipment,
 }, { assumeSalaryDue = false } = {}) => {
   const inMonth = (d) => (d?.date || "").startsWith(monthPrefix);
 
-  const { totalRevenue, totalFuelCost, totalAcres, totalFuel } = aggregateJobs(jobs.filter(inMonth), fuelPrice, payments);
+  const jobTotals = aggregateJobs(jobs.filter(inMonth), fuelPrice, payments);
+  const manualFuel = aggregateEquipmentFuelEntries(equipmentFuelEntries.filter(inMonth), equipment);
+  const totalRevenue = jobTotals.totalRevenue;
+  const totalAcres = jobTotals.totalAcres;
+  const totalFuel = jobTotals.totalFuel + manualFuel.totalFuel;
+  const totalFuelCost = jobTotals.totalFuelCost + manualFuel.totalFuelCost;
   const totalMaintCost = maintenance
     .filter(inMonth)
     .reduce((s, m) => s + (Number(m.cost) || 0), 0);
@@ -72,10 +79,16 @@ export const useDashboard = () => {
 
   const fuelPrice = settings.fuelPrice;
 
-  const totals = useMemo(
-    () => aggregateJobs(jobs, fuelPrice, payments),
-    [jobs, fuelPrice, payments]
-  );
+  const totals = useMemo(() => {
+    const jobTotals = aggregateJobs(jobs, fuelPrice, payments);
+    const manualFuel = aggregateEquipmentFuelEntries(equipmentFuelEntries, equipment);
+    return {
+      ...jobTotals,
+      totalFuel: jobTotals.totalFuel + manualFuel.totalFuel,
+      totalFuelCost: jobTotals.totalFuelCost + manualFuel.totalFuelCost,
+      netProfit: jobTotals.netProfit - manualFuel.totalFuelCost,
+    };
+  }, [jobs, fuelPrice, payments, equipmentFuelEntries, equipment]);
 
   const totalMaintCost = useMemo(
     () => maintenance.reduce((s, m) => s + (Number(m.cost) || 0), 0),
@@ -145,7 +158,7 @@ export const useDashboard = () => {
   const monthlyComparison = useMemo(() => {
     const now = new Date();
     const prevMonthDate = new Date(now.getFullYear(), now.getMonth() - 1, 1);
-    const ctx = { jobs, maintenance, salaryEntries, taxDeductions, supplierInvoices, supplierPayments, drivers, fuelPrice, payments };
+    const ctx = { jobs, maintenance, salaryEntries, taxDeductions, supplierInvoices, supplierPayments, drivers, fuelPrice, payments, equipmentFuelEntries, equipment };
     const current  = buildMonthFinancials(monthPrefixOf(now), ctx, { assumeSalaryDue: true });
     const previous = buildMonthFinancials(monthPrefixOf(prevMonthDate), ctx);
     const pair = (curr, prev) => ({ current: curr, change: calcPercentChange(curr, prev) });
@@ -160,7 +173,7 @@ export const useDashboard = () => {
       acres:         pair(current.totalAcres, previous.totalAcres),
       fuel:          pair(current.totalFuel, previous.totalFuel),
     };
-  }, [jobs, maintenance, salaryEntries, taxDeductions, supplierInvoices, supplierPayments, drivers, fuelPrice, payments]);
+  }, [jobs, maintenance, salaryEntries, taxDeductions, supplierInvoices, supplierPayments, drivers, fuelPrice, payments, equipmentFuelEntries, equipment]);
 
   return {
     totals,

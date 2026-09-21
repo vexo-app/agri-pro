@@ -28,7 +28,7 @@
 // assumeDueForMonth behavior itself is covered directly in
 // salaryCalculations.test.js and is intentionally NOT re-exercised here.
 
-import { aggregateJobs, aggregateSupplierInvoices } from "../utils/calculations";
+import { aggregateJobs, aggregateSupplierInvoices, aggregateEquipmentFuelEntries } from "../utils/calculations";
 import { calcTotalSalariesPaid } from "../utils/salaryCalculations";
 import { calcTotalTaxDeductions } from "../utils/taxCalculations";
 import { SALARY_ENTRY_TYPES } from "../config/constants";
@@ -54,8 +54,12 @@ import { SALARY_ENTRY_TYPES } from "../config/constants";
  * pass no drivers still work identically; the new test further down is what
  * actually exercises the fallback.
  */
-function computeDashboardTotals({ jobs, payments, maintenance, salaryEntries, drivers = [], taxDeductions, supplierInvoices, supplierPayments, fuelPrice }) {
+function computeDashboardTotals({ jobs, payments, maintenance, salaryEntries, drivers = [], taxDeductions, supplierInvoices, supplierPayments, fuelPrice, equipmentFuelEntries = [], equipment = [] }) {
   const totals = aggregateJobs(jobs, fuelPrice, payments);
+  const manualFuel = aggregateEquipmentFuelEntries(equipmentFuelEntries, equipment);
+  totals.totalFuel += manualFuel.totalFuel;
+  totals.totalFuelCost += manualFuel.totalFuelCost;
+  totals.netProfit -= manualFuel.totalFuelCost;
   const totalMaintCost = maintenance.reduce((s, m) => s + (Number(m.cost) || 0), 0);
   const totalSalaries = calcTotalSalariesPaid(salaryEntries, drivers);
   const totalTaxDeductions = calcTotalTaxDeductions(taxDeductions);
@@ -111,6 +115,19 @@ describe("dashboard pipeline: job creation -> payment -> debt/profit", () => {
 
     expect(result.totals.totalPaid).toBe(2000);
     expect(result.totals.totalRemaining).toBe(0);
+  });
+
+  test("manual equipment fuel increases dashboard fuel and reduces profit", () => {
+    const result = computeDashboardTotals({
+      jobs: [{ id: "job1", acres: 10, pricePerAcre: 100, fuelUsed: 50, fuelPriceAtJob: 10 }],
+      payments: [], maintenance: [], salaryEntries: [], taxDeductions: [],
+      supplierInvoices: [], supplierPayments: [], fuelPrice: 10,
+      equipment: [{ id: "eq1", category: "base" }],
+      equipmentFuelEntries: [{ equipmentId: "eq1", liters: 20, pricePerLiter: 12 }],
+    });
+    expect(result.totals.totalFuel).toBe(70);
+    expect(result.totals.totalFuelCost).toBe(740);
+    expect(result.netProfit).toBe(260);
   });
 
   test("maintenance, salaries, tax and cash paid to suppliers all reduce net profit together", () => {

@@ -343,6 +343,17 @@ service cloud.firestore {
         );
     }
 
+    function guestCanReadPayment(ownerUid, paymentData) {
+      return
+        'jobId' in paymentData &&
+        paymentData.jobId is string &&
+        exists(/databases/$(database)/documents/users/$(ownerUid)/jobs/$(paymentData.jobId)) &&
+        guestCanReadJob(
+          ownerUid,
+          get(/databases/$(database)/documents/users/$(ownerUid)/jobs/$(paymentData.jobId)).data
+        );
+    }
+
     // فحص كتابة guestAccess وقت الإنشاء — المالك بس، ومستند نظيف من الأول
     // (مفيش استخدام مسبق).
     function isValidNewGuestAccess(data) {
@@ -505,7 +516,7 @@ service cloud.firestore {
       }
 
       match /payments/{id} {
-        allow read:   if (isSignedIn() && (isOwner(uid) || isAdmin())) || guestCanRead(uid, 'jobs');
+        allow read:   if (isSignedIn() && (isOwner(uid) || isAdmin())) || guestCanReadPayment(uid, resource.data);
         allow create: if isSignedIn() && isOwner(uid) && 'amount' in request.resource.data && isValidPayment(request.resource.data);
         allow update: if isSignedIn() && isOwner(uid) && isValidPayment(request.resource.data);
         allow delete: if isSignedIn() && isOwner(uid);

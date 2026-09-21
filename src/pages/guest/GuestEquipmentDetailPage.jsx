@@ -8,7 +8,7 @@
 // صفر تعديل قواعد لعمل الصفحة دي):
 //   - equipment  → guestCanRead(uid,'equipment')
 //   - jobs       → guestCanReadJob (قسم 'jobs' + allowedClients)
-//   - payments   → guestCanRead(uid,'jobs') (نفس صلاحية jobs)
+//   - payments   → نفس صلاحية كل job مرتبطة بها، بما فيها allowedClients
 //   - maintenance→ guestCanRead(uid,'maintenance')
 //   - drivers    → guestCanRead(uid,'drivers') (لعرض اسم السائق بس)
 // لو قسم من دول مقفول للضيف، بيتم تجاهل الجزء المرتبط بيه تمامًا (مفيش
@@ -22,6 +22,7 @@ import { equipmentService } from "../../services/equipmentService";
 import { driverService } from "../../services/driverService";
 import { maintenanceService } from "../../services/maintenanceService";
 import { paymentService } from "../../services/paymentService";
+import { equipmentFuelEntryService } from "../../services/equipmentFuelEntryService";
 import {
   calcRevenue, calcFuelCost, calcRemainingAmount, derivePaymentStatus, getJobPaidAmount,
 } from "../../utils/calculations";
@@ -49,20 +50,33 @@ const GuestEquipmentDetailPage = () => {
   const [jobs, setJobs] = useState([]);
   const [payments, setPayments] = useState([]);
   const [maintenance, setMaintenance] = useState([]);
+  const [fuelEntries, setFuelEntries] = useState([]);
   const [drivers, setDrivers] = useState([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     if (!equipmentOpen || !ownerUid) { setLoading(false); return; }
-    let equipLoaded = false, jobsLoaded = !jobsOpen, paysLoaded = !jobsOpen;
-    const maybeDone = () => { if (equipLoaded && jobsLoaded && paysLoaded) setLoading(false); };
+    let equipLoaded = false, fuelLoaded = false, jobsLoaded = !jobsOpen, paysLoaded = !jobsOpen;
+    const maybeDone = () => { if (equipLoaded && fuelLoaded && jobsLoaded && paysLoaded) setLoading(false); };
 
     const unsubEquip = equipmentService.subscribe(ownerUid, (list) => { setEquipmentList(list); equipLoaded = true; maybeDone(); }, () => { equipLoaded = true; maybeDone(); });
+    const unsubFuel = equipmentFuelEntryService.subscribe(ownerUid, (list) => { setFuelEntries(list); fuelLoaded = true; maybeDone(); }, () => { fuelLoaded = true; maybeDone(); });
 
     let unsubJobs = () => {}, unsubPay = () => {};
     if (jobsOpen) {
-      unsubJobs = guestAccessService.subscribeGuestJobs(ownerUid, access?.allowedClients, (list) => { setJobs(list); jobsLoaded = true; maybeDone(); }, () => { jobsLoaded = true; maybeDone(); });
-      unsubPay  = paymentService.subscribe(ownerUid, (list) => { setPayments(list); paysLoaded = true; maybeDone(); }, () => { paysLoaded = true; maybeDone(); });
+      unsubJobs = guestAccessService.subscribeGuestJobs(ownerUid, access?.allowedClients, (list) => {
+        setJobs(list);
+        jobsLoaded = true;
+        paysLoaded = false;
+        unsubPay();
+        unsubPay = paymentService.subscribeByJobIds(
+          ownerUid,
+          list.map((job) => job.id),
+          (paymentList) => { setPayments(paymentList); paysLoaded = true; maybeDone(); },
+          () => { paysLoaded = true; maybeDone(); }
+        );
+        maybeDone();
+      }, () => { jobsLoaded = true; paysLoaded = true; maybeDone(); });
     }
 
     let unsubMaint = () => {};
@@ -75,7 +89,7 @@ const GuestEquipmentDetailPage = () => {
       unsubDrv = driverService.subscribe(ownerUid, setDrivers, () => {});
     }
 
-    return () => { unsubEquip(); unsubJobs(); unsubPay(); unsubMaint(); unsubDrv(); };
+    return () => { unsubEquip(); unsubFuel(); unsubJobs(); unsubPay(); unsubMaint(); unsubDrv(); };
   }, [equipmentOpen, jobsOpen, maintenanceOpen, driversOpen, ownerUid, access]);
 
   const equipment = equipmentList.find((e) => e.id === equipmentId);
@@ -104,16 +118,23 @@ const GuestEquipmentDetailPage = () => {
       .sort((a, b) => (b.date || "").localeCompare(a.date || ""));
   }, [maintenanceOpen, maintenance, equipmentId]);
 
+  const eqFuelEntries = useMemo(() => {
+    if (equipment?.category === EQUIPMENT_CATEGORY.ATTACHMENT) return [];
+    return fuelEntries.filter((entry) => entry.equipmentId === equipmentId);
+  }, [fuelEntries, equipmentId, equipment?.category]);
+
   const stats = useMemo(() => {
     const totalRevenue   = eqJobs.reduce((s, j) => s + j.revenue, 0);
     const totalAcres     = eqJobs.reduce((s, j) => s + (Number(j.acres) || 0), 0);
-    const totalFuel      = eqJobs.reduce((s, j) => s + (Number(j.fuelUsed) || 0), 0);
-    const totalFuelCost  = eqJobs.reduce((s, j) => s + j.fuelCost, 0);
+    const totalFuel      = eqJobs.reduce((s, j) => s + (Number(j.fuelUsed) || 0), 0)
+      + eqFuelEntries.reduce((s, entry) => s + (Number(entry.liters) || 0), 0);
+    const totalFuelCost  = eqJobs.reduce((s, j) => s + j.fuelCost, 0)
+      + eqFuelEntries.reduce((s, entry) => s + (Number(entry.liters) || 0) * (Number(entry.pricePerLiter) || 0), 0);
     const totalPaid      = eqJobs.reduce((s, j) => s + j.amountPaid, 0);
     const totalRemaining = eqJobs.reduce((s, j) => s + j.remainingAmount, 0);
     const anyFuelMissing = eqJobs.some((j) => j.fuelPriceMissing);
     return { totalRevenue, totalAcres, totalFuel, totalFuelCost, totalPaid, totalRemaining, anyFuelMissing };
-  }, [eqJobs]);
+  }, [eqJobs, eqFuelEntries]);
 
   const maintCost = useMemo(() => eqMaint.reduce((s, m) => s + (Number(m.cost) || 0), 0), [eqMaint]);
   // لو قسم الصيانة مقفول للضيف، الربح المعروض هنا "قبل خصم الصيانة" —

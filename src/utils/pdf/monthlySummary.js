@@ -4,10 +4,10 @@
 // downloadable PDF (current month / previous month / all time).
 
 import { formatCurrency, formatNumber } from "../formatters";
-import { calcRevenue, calcFuelCost, getJobFuelPrice, calcNetProfit } from "../calculations";
+import { calcRevenue, calcFuelCost, getJobFuelPrice, calcNetProfit, aggregateEquipmentFuelEntries } from "../calculations";
 import { escapeHtml, downloadReportPdf } from "./core";
 
-const buildMonthlySummaryHtml = ({ jobs, equipment, maintenance, drivers, fuelPrice, month, year, allTime = false, totalSalariesPaid = 0, totalTaxDeductions = 0, totalSupplierPaidOut = 0 }) => {
+const buildMonthlySummaryHtml = ({ jobs, equipment, maintenance, equipmentFuelEntries = [], drivers, fuelPrice, month, year, allTime = false, totalSalariesPaid = 0, totalTaxDeductions = 0, totalSupplierPaidOut = 0 }) => {
   const today = new Date().toLocaleDateString("ar-EG");
   // allTime reuses the exact same report layout/calculations below, just
   // without the date filters on jobs/maintenance — so it lines up with the
@@ -25,10 +25,13 @@ const buildMonthlySummaryHtml = ({ jobs, equipment, maintenance, drivers, fuelPr
   const prefix = `${year}-${String(month).padStart(2,"0")}`;
   const monthJobs = allTime ? jobs : jobs.filter((j) => j.date?.startsWith(prefix));
   const monthMaintenance = allTime ? maintenance : maintenance.filter((m) => m.date?.startsWith(prefix));
+  const monthFuelEntries = allTime ? equipmentFuelEntries : equipmentFuelEntries.filter((entry) => entry.date?.startsWith(prefix));
 
   const totalRevenue  = monthJobs.reduce((s, j) => s + calcRevenue(j.acres, j.pricePerAcre), 0);
   const totalAcres    = monthJobs.reduce((s, j) => s + (j.acres || 0), 0);
-  const totalFuelCost = monthJobs.reduce((s, j) => s + calcFuelCost(j.fuelUsed, getJobFuelPrice(j, fuelPrice)), 0);
+  const manualFuel = aggregateEquipmentFuelEntries(monthFuelEntries, equipment);
+  const totalFuelCost = monthJobs.reduce((s, j) => s + calcFuelCost(j.fuelUsed, getJobFuelPrice(j, fuelPrice)), 0)
+    + manualFuel.totalFuelCost;
   const maintCost     = monthMaintenance.reduce((s, m) => s + (m.cost || 0), 0);
   // نفس الدالة المشتركة اللي بيستخدمها الداشبورد وصفحة التقارير بالظبط،
   // عشان "صافي الربح" في الـ PDF يتطابق مع نفس الرقم في الصفحتين لنفس الفترة.

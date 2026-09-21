@@ -32,6 +32,35 @@ export const paymentService = {
     );
   },
 
+  // Guest-safe subscription: every query is constrained to job ids that
+  // the guest has already been allowed to read.
+  subscribeByJobIds(userId, jobIds, onData, onError) {
+    const ids = [...new Set(jobIds.filter(Boolean))];
+    if (ids.length === 0) {
+      onData([]);
+      return () => {};
+    }
+
+    const chunks = [];
+    for (let i = 0; i < ids.length; i += 30) chunks.push(ids.slice(i, i + 30));
+    const results = Array(chunks.length).fill(null);
+    const emit = () => {
+      if (results.some((items) => items === null)) return;
+      onData(results.flat().sort((a, b) => (b.date || "").localeCompare(a.date || "")));
+    };
+    const unsubscribes = chunks.map((jobIdChunk, index) =>
+      onSnapshot(
+        query(col(userId), where("jobId", "in", jobIdChunk)),
+        (snap) => {
+          results[index] = snap.docs.map((d) => ({ id: d.id, ...d.data() }));
+          emit();
+        },
+        onError
+      )
+    );
+    return () => unsubscribes.forEach((unsubscribe) => unsubscribe());
+  },
+
   async getByJob(userId, jobId) {
     const q = query(col(userId), where("jobId", "==", jobId));
     const snap = await getDocs(q);

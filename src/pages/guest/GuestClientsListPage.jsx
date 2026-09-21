@@ -30,8 +30,20 @@ const GuestClientsListPage = () => {
     if (!allowed || !ownerUid) { setLoading(false); return; }
     let jobsLoaded = false, paysLoaded = false;
     const maybeDone = () => { if (jobsLoaded && paysLoaded) setLoading(false); };
-    const unsubJobs = guestAccessService.subscribeGuestJobs(ownerUid, access?.allowedClients, (list) => { setJobs(list); jobsLoaded = true; maybeDone(); }, () => { jobsLoaded = true; maybeDone(); });
-    const unsubPay = paymentService.subscribe(ownerUid, (list) => { setPayments(list); paysLoaded = true; maybeDone(); }, () => { paysLoaded = true; maybeDone(); });
+    let unsubPay = () => {};
+    const unsubJobs = guestAccessService.subscribeGuestJobs(ownerUid, access?.allowedClients, (list) => {
+      setJobs(list);
+      jobsLoaded = true;
+      paysLoaded = false;
+      unsubPay();
+      unsubPay = paymentService.subscribeByJobIds(
+        ownerUid,
+        list.map((job) => job.id),
+        (paymentList) => { setPayments(paymentList); paysLoaded = true; maybeDone(); },
+        () => { paysLoaded = true; maybeDone(); }
+      );
+      maybeDone();
+    }, () => { jobsLoaded = true; paysLoaded = true; maybeDone(); });
     return () => { unsubJobs(); unsubPay(); };
   }, [allowed, ownerUid, access]);
 

@@ -35,10 +35,12 @@ export const useEquipmentDetail = (equipmentId) => {
   );
 
   const eqFuelEntries = useMemo(
-    () => equipmentFuelEntries
-      .filter((entry) => entry.equipmentId === equipmentId)
-      .sort((a, b) => b.date.localeCompare(a.date)),
-    [equipmentFuelEntries, equipmentId]
+    () => eq?.category === "attachment"
+      ? []
+      : equipmentFuelEntries
+        .filter((entry) => entry.equipmentId === equipmentId)
+        .sort((a, b) => b.date.localeCompare(a.date)),
+    [equipmentFuelEntries, equipmentId, eq?.category]
   );
 
   const stats = useMemo(() => {

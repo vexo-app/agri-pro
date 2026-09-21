@@ -122,6 +122,7 @@ const convert = (backupData, meta = {}) => {
   const drivers = arr(data.drivers);
   const jobs = arr(data.jobs);
   const maintenance = arr(data.maintenance);
+  const equipmentFuelEntries = arr(data.equipmentFuelEntries);
   const payments = arr(data.payments);
   const salaryEntries = arr(data.salaryEntries);
   const attendance = arr(data.attendance);
@@ -222,6 +223,17 @@ const convert = (backupData, meta = {}) => {
     "معرف": m.id,
   }));
 
+  const fuelEntryRows = equipmentFuelEntries
+    .filter((entry) => equipment.find((eq) => eq.id === entry.equipmentId)?.category !== "attachment")
+    .map((entry) => ({
+      "التاريخ": formatDate(entry.date),
+      "المعدة": equipmentName(entry.equipmentId),
+      "عدد اللترات": num(entry.liters),
+      "سعر اللتر (ج.م)": num(entry.pricePerLiter),
+      "الإجمالي (ج.م)": num(entry.liters) * num(entry.pricePerLiter),
+      "معرف": entry.id,
+    }));
+
   // ═══════════════════════ 5) شيت الدفعات ═════════════════════════════════
   const paymentRows = payments.map((p) => {
     const job = jobById(p.jobId);
@@ -304,7 +316,8 @@ const convert = (backupData, meta = {}) => {
   const totalPaid = jobRows.reduce((sum, r) => sum + r["إجمالي المدفوع فعليًا (ج.م)"], 0);
   const totalRemaining = totalRevenue - totalPaid;
   const totalMaintenanceCost = maintenanceRows.reduce((sum, r) => sum + r["التكلفة (ج.م)"], 0);
-  const totalFuelCost = jobRows.reduce((sum, r) => sum + r["تكلفة الوقود (ج.م)"], 0);
+  const totalFuelCost = jobRows.reduce((sum, r) => sum + r["تكلفة الوقود (ج.م)"], 0)
+    + fuelEntryRows.reduce((sum, r) => sum + r["الإجمالي (ج.م)"], 0);
 
   const summaryRows = [
     { "البيان": "اسم الحساب / المستخدم", "القيمة": orDash(meta.userLabel) },
@@ -315,6 +328,7 @@ const convert = (backupData, meta = {}) => {
     { "البيان": "عدد السائقين", "القيمة": driverRows.length },
     { "البيان": "عدد العمليات", "القيمة": jobRows.length },
     { "البيان": "عدد سجلات الصيانة", "القيمة": maintenanceRows.length },
+    { "البيان": "عدد تسجيلات الوقود", "القيمة": fuelEntryRows.length },
     { "البيان": "عدد الدفعات", "القيمة": paymentRows.length },
     { "البيان": "عدد قيود المرتبات", "القيمة": salaryRows.length },
     { "البيان": "عدد سجلات الحضور", "القيمة": attendanceRows.length },
@@ -339,6 +353,7 @@ const convert = (backupData, meta = {}) => {
   addSheet(driverRows, "السائقين");
   addSheet(jobRows, "العمليات");
   addSheet(maintenanceRows, "الصيانة");
+  addSheet(fuelEntryRows, "وقود المعدات");
   addSheet(paymentRows, "الدفعات");
   addSheet(salaryRows, "المرتبات");
   addSheet(attendanceRows, "الحضور");

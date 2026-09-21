@@ -14,6 +14,7 @@ import {
   getJobPaidAmount,
   derivePaymentStatus,
   aggregateJobs,
+  aggregateEquipmentFuelEntries,
   buildEquipmentReport,
   buildDriverReport,
   groupByWorkType,
@@ -228,6 +229,35 @@ describe("buildEquipmentReport", () => {
     expect(report[0].totalFuel).toBe(70);
     expect(report[0].totalFuelCost).toBe(740);
     expect(report[0].netProfit).toBe(260);
+  });
+
+  test("does not count manual fuel entries for attachments", () => {
+    const report = buildEquipmentReport(
+      [{ id: "att1", category: "attachment" }],
+      [],
+      [],
+      10,
+      [],
+      [{ equipmentId: "att1", liters: 20, pricePerLiter: 12 }]
+    );
+    expect(report[0].totalFuel).toBe(0);
+    expect(report[0].totalFuelCost).toBe(0);
+  });
+});
+
+describe("aggregateEquipmentFuelEntries", () => {
+  test("adds manual fuel to global liters and cost and excludes attachments", () => {
+    const totals = aggregateEquipmentFuelEntries(
+      [
+        { equipmentId: "eq1", liters: 20, pricePerLiter: 12 },
+        { equipmentId: "att1", liters: 100, pricePerLiter: 12 },
+      ],
+      [
+        { id: "eq1", category: "base" },
+        { id: "att1", category: "attachment" },
+      ]
+    );
+    expect(totals).toEqual({ totalFuel: 20, totalFuelCost: 240 });
   });
 });
 

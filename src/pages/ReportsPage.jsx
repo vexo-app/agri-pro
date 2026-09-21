@@ -113,7 +113,7 @@ const Legend = ({ items }) => (
 const ReportsPage = () => {
   const { report: equipReport, loading: eLoading } = useEquipment();
   const {
-    salaryEntries = [], equipment = [], jobs = [], drivers = [], maintenance = [],
+    salaryEntries = [], equipment = [], jobs = [], drivers = [], maintenance = [], equipmentFuelEntries = [],
     taxDeductions = [], supplierInvoices = [], supplierPayments = [], settings,
   } = useData();
   const totalSalariesPaid = calcTotalSalariesPaid(salaryEntries, drivers);
@@ -137,7 +137,7 @@ const ReportsPage = () => {
   const handleDownloadMonthly = async () => {
     if (downloadMonth === "all") {
       await downloadMonthlySummaryPdf({
-        jobs, equipment, maintenance, drivers,
+        jobs, equipment, maintenance, equipmentFuelEntries, drivers,
         fuelPrice: settings.fuelPrice,
         allTime: true,
         totalSalariesPaid,
@@ -166,7 +166,7 @@ const ReportsPage = () => {
     ).totalPaidOut;
 
     await downloadMonthlySummaryPdf({
-      jobs, equipment, maintenance, drivers,
+      jobs, equipment, maintenance, equipmentFuelEntries, drivers,
       fuelPrice: settings.fuelPrice,
       month, year,
       allTime: false,

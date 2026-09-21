@@ -291,21 +291,28 @@ const GuestSectionPage = ({ section }) => {
     }
 
     if (isJobs) {
-      // payments مسموحة أصلاً تحت guestCanRead(uid,'jobs') في
-      // firestore.rules — نفس صلاحية jobs نفسها، مفيش صلاحية جديدة.
+      // Payments are queried only for the already-authorized job ids.
       // equipment/drivers بيتحملوا بس لو قسمهم مفعّل للضيف فعليًا،
       // عشان لو مقفول ميحصلش أي محاولة قراءة (permission-denied).
       let jobsLoaded = false, paysLoaded = false;
       const maybeDone = () => { if (jobsLoaded && paysLoaded) setLoading(false); };
+      let unsubPay = () => {};
       const unsubJobs = guestAccessService.subscribeGuestJobs(
         ownerUid, access?.allowedClients,
-        (list) => { setItems(list); jobsLoaded = true; maybeDone(); },
-        (err) => { setError(err); jobsLoaded = true; maybeDone(); }
-      );
-      const unsubPay = paymentService.subscribe(
-        ownerUid,
-        (list) => { setPayments(list); paysLoaded = true; maybeDone(); },
-        (err) => { setError(err); paysLoaded = true; maybeDone(); }
+        (list) => {
+          setItems(list);
+          jobsLoaded = true;
+          paysLoaded = false;
+          unsubPay();
+          unsubPay = paymentService.subscribeByJobIds(
+            ownerUid,
+            list.map((job) => job.id),
+            (paymentList) => { setPayments(paymentList); paysLoaded = true; maybeDone(); },
+            (err) => { setError(err); paysLoaded = true; maybeDone(); }
+          );
+          maybeDone();
+        },
+        (err) => { setError(err); jobsLoaded = true; paysLoaded = true; maybeDone(); }
       );
       let unsubEquip = () => {};
       if (equipmentOpen) {

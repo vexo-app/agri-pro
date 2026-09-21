@@ -249,27 +249,29 @@ const EquipmentDetailPage = () => {
         onRemove={isAttachment ? handleRemoveGrease : handleRemoveOilChange}
       />
 
-      <Card className="mb-5">
-        <CardHeader title={`سجل الوقود (${fuelEntries.length})`} actions={
-          <Button size="sm" onClick={() => setFuelModalOpen(true)} icon={<FuelIcon size={15}/>}>تسجيل وقود</Button>
-        }/>
-        {fuelEntries.length > 0 && (
-          <div className="divide-y divide-white/8">
-            {fuelEntries.map((entry) => (
-              <div key={entry.id} className="flex items-center justify-between gap-3 px-5 py-3.5">
-                <div>
-                  <p className="text-sm font-bold text-gray-200">{formatNumber(entry.liters)} لتر</p>
-                  <p className="text-xs text-gray-500 mt-0.5">{formatDateShort(entry.date)} · {formatCurrency(entry.pricePerLiter)} للتر</p>
+      {!isAttachment && (
+        <Card className="mb-5">
+          <CardHeader title={`سجل الوقود (${fuelEntries.length})`} actions={
+            <Button size="sm" onClick={() => setFuelModalOpen(true)} icon={<FuelIcon size={15}/>}>تسجيل وقود</Button>
+          }/>
+          {fuelEntries.length > 0 && (
+            <div className="divide-y divide-white/8">
+              {fuelEntries.map((entry) => (
+                <div key={entry.id} className="flex items-center justify-between gap-3 px-5 py-3.5">
+                  <div>
+                    <p className="text-sm font-bold text-gray-200">{formatNumber(entry.liters)} لتر</p>
+                    <p className="text-xs text-gray-500 mt-0.5">{formatDateShort(entry.date)} · {formatCurrency(entry.pricePerLiter)} للتر</p>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <span className="text-sm font-bold text-red-400">{formatCurrency(Number(entry.liters) * Number(entry.pricePerLiter))}</span>
+                    <Button variant="ghost" size="xs" icon={<TrashIcon size={12}/>} onClick={() => handleDeleteFuel(entry.id)} aria-label="حذف سجل الوقود"/>
+                  </div>
                 </div>
-                <div className="flex items-center gap-2">
-                  <span className="text-sm font-bold text-red-400">{formatCurrency(Number(entry.liters) * Number(entry.pricePerLiter))}</span>
-                  <Button variant="ghost" size="xs" icon={<TrashIcon size={12}/>} onClick={() => handleDeleteFuel(entry.id)} aria-label="حذف سجل الوقود"/>
-                </div>
-              </div>
-            ))}
-          </div>
-        )}
-      </Card>
+              ))}
+            </div>
+          )}
+        </Card>
+      )}
 
       {/* KPIs */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 mb-6">
@@ -372,9 +374,11 @@ const EquipmentDetailPage = () => {
         </>
       )}
 
-      <Modal open={fuelModalOpen} onClose={() => setFuelModalOpen(false)} title="تسجيل وقود" size="sm">
-        <FuelEntryForm fuelPrice={fuelPrice} onSave={handleAddFuel} onClose={() => setFuelModalOpen(false)}/>
-      </Modal>
+      {!isAttachment && (
+        <Modal open={fuelModalOpen} onClose={() => setFuelModalOpen(false)} title="تسجيل وقود" size="sm">
+          <FuelEntryForm fuelPrice={fuelPrice} onSave={handleAddFuel} onClose={() => setFuelModalOpen(false)}/>
+        </Modal>
+      )}
       <ConfirmDialog open={confirmState.open} onClose={confirmState.reject} onConfirm={confirmState.accept} message={confirmState.message}/>
     </div>
   );

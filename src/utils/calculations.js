@@ -117,6 +117,20 @@ export const aggregateJobs = (jobs, fuelPrice, payments = []) => {
   return { totalRevenue, totalAcres, totalFuel, totalFuelCost, netProfit, totalPaid, totalRemaining };
 };
 
+/** Totals for manually recorded fuel, excluding attachments. */
+export const aggregateEquipmentFuelEntries = (entries = [], equipment = []) => {
+  const attachmentIds = new Set(
+    equipment.filter((eq) => eq.category === "attachment").map((eq) => eq.id)
+  );
+  return entries.reduce((totals, entry) => {
+    if (attachmentIds.has(entry.equipmentId)) return totals;
+    const liters = safeNum(entry.liters);
+    totals.totalFuel += liters;
+    totals.totalFuelCost += liters * safeNum(entry.pricePerLiter);
+    return totals;
+  }, { totalFuel: 0, totalFuelCost: 0 });
+};
+
 /**
  * Build per-equipment report: jobs + maintenance costs → full P&L.
  */
@@ -124,15 +138,14 @@ export const buildEquipmentReport = (equipment, jobs, maintenance, fuelPrice, pa
   equipment.map((eq) => {
     const eqJobs  = jobs.filter((j) => j.equipmentId === eq.id);
     const eqMaint = maintenance.filter((m) => m.equipmentId === eq.id);
-    const eqFuelEntries = equipmentFuelEntries.filter((entry) => entry.equipmentId === eq.id);
+    const eqFuelEntries = eq.category === "attachment"
+      ? []
+      : equipmentFuelEntries.filter((entry) => entry.equipmentId === eq.id);
     const stats      = aggregateJobs(eqJobs, fuelPrice, payments);
-    const manualFuel = eqFuelEntries.reduce((s, entry) => s + safeNum(entry.liters), 0);
-    const manualFuelCost = eqFuelEntries.reduce(
-      (s, entry) => s + safeNum(entry.liters) * safeNum(entry.pricePerLiter), 0
-    );
-    stats.totalFuel += manualFuel;
-    stats.totalFuelCost += manualFuelCost;
-    stats.netProfit -= manualFuelCost;
+    const manualFuel = aggregateEquipmentFuelEntries(eqFuelEntries, [eq]);
+    stats.totalFuel += manualFuel.totalFuel;
+    stats.totalFuelCost += manualFuel.totalFuelCost;
+    stats.netProfit -= manualFuel.totalFuelCost;
     const maintCost  = eqMaint.reduce((s, m) => s + (safeNum(m.cost)), 0);
     const netProfit  = stats.netProfit - maintCost;
     const margin     = stats.totalRevenue > 0 ? (netProfit / stats.totalRevenue) * 100 : 0;

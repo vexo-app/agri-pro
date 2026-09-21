@@ -170,6 +170,7 @@ async function seedGuestFixtures() {
     await db.doc(`users/${GUEST_OWNER}/attendance/att1`).set({ status: "present", date: "2026-01-15", driverId: "drv1" });
     await db.doc(`users/${GUEST_OWNER}/maintenance/m1`).set({ cost: 500, equipmentId: "eq1", type: "زيت" });
     await db.doc(`users/${GUEST_OWNER}/payments/p1`).set({ amount: 100, jobId: "jobAllowedClient" });
+    await db.doc(`users/${GUEST_OWNER}/payments/p2`).set({ amount: 200, jobId: "jobOtherClient" });
     await db.doc(`users/${GUEST_OWNER}/custodyTransactions/c1`).set({ amount: 200, type: "deposit", category: "other" });
     await db.doc(`users/${GUEST_OWNER}/taxDeductions/t1`).set({ amount: 50, type: "tax" });
     await db.doc(`users/${GUEST_OWNER}/supplierInvoices/si1`).set({ amount: 300, supplierName: "مورد 1" });
@@ -478,6 +479,25 @@ async function main() {
     );
     await test("guest-access", "ضيف بفلترة عملاء ممنوع يقرا وظيفة عميل تاني", () =>
       assertFails(guestCtx("guest-client1").doc(`users/${GUEST_OWNER}/jobs/jobOtherClient`).get())
+    );
+    await test("guest-access", "ضيف بفلترة عملاء يقدر يقرا دفعات الوظيفة المسموحة", () =>
+      assertSucceeds(guestCtx("guest-client1").doc(`users/${GUEST_OWNER}/payments/p1`).get())
+    );
+    await test("guest-access", "ضيف بفلترة عملاء ممنوع يقرا دفعات عميل تاني", () =>
+      assertFails(guestCtx("guest-client1").doc(`users/${GUEST_OWNER}/payments/p2`).get())
+    );
+    await test(
+      "guest-access",
+      "ضيف بفلترة عملاء يقدر يعمل query للدفعات بشرط jobId المسموح فقط",
+      () => assertSucceeds(
+        guestCtx("guest-client1")
+          .collection(`users/${GUEST_OWNER}/payments`)
+          .where("jobId", "in", ["jobAllowedClient"])
+          .get()
+      )
+    );
+    await test("guest-access", "ضيف بفلترة عملاء ممنوع يعمل list لكل الدفعات", () =>
+      assertFails(guestCtx("guest-client1").collection(`users/${GUEST_OWNER}/payments`).get())
     );
     await test(
       "guest-access",
