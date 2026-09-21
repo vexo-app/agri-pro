@@ -379,6 +379,34 @@ async function main() {
     await test("tampering", "ممنوع إنشاء قيد راتب بـ type مش من الأنواع المسموحة", () =>
       assertFails(asA.doc(`users/${COMPANY_A}/salaryEntries/bad1`).set({ amount: 100, type: "غير_موجود" }))
     );
+    await test("tampering", "إضافة دفعة على عملية موجودة وغير مقفولة تنجح", () =>
+      assertSucceeds(asA.doc(`users/${COMPANY_A}/payments/validPayment`).set({
+        jobId: "job1", amount: 100, date: "2026-01-15",
+      }))
+    );
+    await test("tampering", "إضافة دفعة على فاتورة مورد موجودة وغير مقفولة تنجح", async () => {
+      await assertSucceeds(asA.doc(`users/${COMPANY_A}/supplierInvoices/validInvoice`).set({
+        amount: 500, supplierName: "مورد",
+      }));
+      await assertSucceeds(asA.doc(`users/${COMPANY_A}/supplierPayments/validSupplierPayment`).set({
+        supplierInvoiceId: "validInvoice", amount: 100, date: "2026-01-15",
+      }));
+    });
+    await test("tampering", "ممنوع إضافة دفعة على عملية دخلت مرحلة الحذف", async () => {
+      await assertSucceeds(asA.doc(`users/${COMPANY_A}/jobs/job1`).update({ deleting: true }));
+      await assertFails(asA.doc(`users/${COMPANY_A}/payments/lockedJobPayment`).set({
+        jobId: "job1", amount: 100, date: "2026-01-15",
+      }));
+      await assertSucceeds(asA.doc(`users/${COMPANY_A}/jobs/job1`).update({ deleting: false }));
+    });
+    await test("tampering", "ممنوع إضافة دفعة على فاتورة مورد دخلت مرحلة الحذف", async () => {
+      await assertSucceeds(asA.doc(`users/${COMPANY_A}/supplierInvoices/lockInvoice`).set({
+        amount: 500, supplierName: "مورد", deleting: true,
+      }));
+      await assertFails(asA.doc(`users/${COMPANY_A}/supplierPayments/lockedInvoicePayment`).set({
+        supplierInvoiceId: "lockInvoice", amount: 100, date: "2026-01-15",
+      }));
+    });
     await test("tampering", "ممنوع إنشاء سجل خطأ منسوب لمستخدم تاني (userId مزوّر)", () =>
       assertFails(asA.doc("errorLogs/forged1").set({ userId: COMPANY_B, message: "spoofed" }))
     );

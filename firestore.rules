@@ -78,7 +78,8 @@ service cloud.firestore {
         (!('workType' in data)       || isShortStr(data.workType)) &&
         (!('notes' in data)          || isLongStr(data.notes)) &&
         (!('equipmentId' in data)    || isShortStr(data.equipmentId)) &&
-        (!('driverId' in data)       || isShortStr(data.driverId));
+        (!('driverId' in data)       || isShortStr(data.driverId)) &&
+        (!('deleting' in data)       || data.deleting is bool);
     }
 
     function isValidPayment(data) {
@@ -87,6 +88,14 @@ service cloud.firestore {
         (!('jobId' in data)  || isShortStr(data.jobId)) &&
         (!('date' in data)   || isDateStr(data.date)) &&
         (!('notes' in data)  || isLongStr(data.notes));
+    }
+
+    function jobAcceptsPayment(uid, jobId) {
+      return
+        isShortStr(jobId) &&
+        exists(/databases/$(database)/documents/users/$(uid)/jobs/$(jobId)) &&
+        (!('deleting' in get(/databases/$(database)/documents/users/$(uid)/jobs/$(jobId)).data) ||
+          get(/databases/$(database)/documents/users/$(uid)/jobs/$(jobId)).data.deleting == false);
     }
 
     function isValidMaintenance(data) {
@@ -145,7 +154,8 @@ service cloud.firestore {
         (!('supplierName' in data) || isShortStr(data.supplierName)) &&
         (!('description' in data)  || isLongStr(data.description)) &&
         (!('date' in data)         || isDateStr(data.date)) &&
-        (!('notes' in data)        || isLongStr(data.notes));
+        (!('notes' in data)        || isLongStr(data.notes)) &&
+        (!('deleting' in data)     || data.deleting is bool);
     }
 
     function isValidSupplierPayment(data) {
@@ -154,6 +164,14 @@ service cloud.firestore {
         (!('supplierInvoiceId' in data) || isShortStr(data.supplierInvoiceId)) &&
         (!('date' in data)              || isDateStr(data.date)) &&
         (!('notes' in data)             || isLongStr(data.notes));
+    }
+
+    function supplierInvoiceAcceptsPayment(uid, supplierInvoiceId) {
+      return
+        isShortStr(supplierInvoiceId) &&
+        exists(/databases/$(database)/documents/users/$(uid)/supplierInvoices/$(supplierInvoiceId)) &&
+        (!('deleting' in get(/databases/$(database)/documents/users/$(uid)/supplierInvoices/$(supplierInvoiceId)).data) ||
+          get(/databases/$(database)/documents/users/$(uid)/supplierInvoices/$(supplierInvoiceId)).data.deleting == false);
     }
 
     function isValidEquipment(data) {
@@ -517,8 +535,8 @@ service cloud.firestore {
 
       match /payments/{id} {
         allow read:   if (isSignedIn() && (isOwner(uid) || isAdmin())) || guestCanReadPayment(uid, resource.data);
-        allow create: if isSignedIn() && isOwner(uid) && 'amount' in request.resource.data && isValidPayment(request.resource.data);
-        allow update: if isSignedIn() && isOwner(uid) && isValidPayment(request.resource.data);
+        allow create: if isSignedIn() && isOwner(uid) && 'amount' in request.resource.data && 'jobId' in request.resource.data && isValidPayment(request.resource.data) && jobAcceptsPayment(uid, request.resource.data.jobId);
+        allow update: if isSignedIn() && isOwner(uid) && 'jobId' in request.resource.data && isValidPayment(request.resource.data) && jobAcceptsPayment(uid, request.resource.data.jobId);
         allow delete: if isSignedIn() && isOwner(uid);
       }
 
@@ -531,8 +549,8 @@ service cloud.firestore {
 
       match /supplierPayments/{id} {
         allow read:   if (isSignedIn() && (isOwner(uid) || isAdmin())) || guestCanRead(uid, 'suppliers');
-        allow create: if isSignedIn() && isOwner(uid) && 'amount' in request.resource.data && isValidSupplierPayment(request.resource.data);
-        allow update: if isSignedIn() && isOwner(uid) && isValidSupplierPayment(request.resource.data);
+        allow create: if isSignedIn() && isOwner(uid) && 'amount' in request.resource.data && 'supplierInvoiceId' in request.resource.data && isValidSupplierPayment(request.resource.data) && supplierInvoiceAcceptsPayment(uid, request.resource.data.supplierInvoiceId);
+        allow update: if isSignedIn() && isOwner(uid) && 'supplierInvoiceId' in request.resource.data && isValidSupplierPayment(request.resource.data) && supplierInvoiceAcceptsPayment(uid, request.resource.data.supplierInvoiceId);
         allow delete: if isSignedIn() && isOwner(uid);
       }
 

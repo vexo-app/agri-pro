@@ -6,10 +6,11 @@
 // ذرّي واحد.
 import { useCallback } from "react";
 import toast from "react-hot-toast";
-import { getDocs, query, collection, where, doc, writeBatch, serverTimestamp } from "firebase/firestore";
+import { doc, writeBatch, serverTimestamp } from "firebase/firestore";
 import { db } from "../../../config/firebase";
 import { supplierInvoiceService } from "../../../services/supplierInvoiceService";
 import { supplierPaymentService } from "../../../services/supplierPaymentService";
+import { deleteParentWithChildren } from "../../../services/cascadeDeleteService";
 
 export function useSupplierMutations({ user, dispatch, stateRef, trackWrite }) {
   const addSupplierInvoice = useCallback(async (d) => {
@@ -43,15 +44,13 @@ export function useSupplierMutations({ user, dispatch, stateRef, trackWrite }) {
     dispatch({ type: "DELETE_SUPPLIER_PAYMENTS_BY_INVOICE", payload: id });
     dispatch({ type: "DELETE_SUPPLIER_INVOICE", payload: id });
 
-    const writePromise = (async () => {
-      const paymentsSnap = await getDocs(
-        query(collection(db, "users", user.uid, "supplierPayments"), where("supplierInvoiceId", "==", id))
-      );
-      const batch = writeBatch(db);
-      paymentsSnap.docs.forEach((d) => batch.delete(d.ref));
-      batch.delete(doc(db, "users", user.uid, "supplierInvoices", id));
-      await batch.commit();
-    })();
+    const writePromise = deleteParentWithChildren({
+      userId: user.uid,
+      parentCollection: "supplierInvoices",
+      parentId: id,
+      childCollection: "supplierPayments",
+      childForeignKey: "supplierInvoiceId",
+    });
 
     trackWrite(writePromise, {
       rollback: () => {

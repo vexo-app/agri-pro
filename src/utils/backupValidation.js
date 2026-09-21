@@ -33,7 +33,7 @@ const fieldRules = {
   jobs: {
     acres: positiveMoney, pricePerAcre: money, fuelUsed: money, fuelPriceAtJob: money,
     amountPaid: money, date: validDate, client: shortString, workType: shortString,
-    notes: longString, equipmentId: shortString, driverId: shortString,
+    notes: longString, equipmentId: shortString, driverId: shortString, deleting: boolean,
   },
   drivers: {
     salary: money,
@@ -49,7 +49,8 @@ const fieldRules = {
   },
   payments: { amount: positiveMoney, jobId: shortString, date: validDate, notes: longString },
   supplierInvoices: {
-    amount: positiveMoney, supplierName: shortString, description: longString, date: validDate, notes: longString,
+    amount: positiveMoney, supplierName: shortString, description: longString, date: validDate,
+    notes: longString, deleting: boolean,
   },
   supplierPayments: {
     amount: positiveMoney, supplierInvoiceId: shortString, date: validDate, notes: longString,

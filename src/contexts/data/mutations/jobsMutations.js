@@ -7,10 +7,9 @@
 // تضارب دائم بين الشاشة والسيرفر.
 import { useCallback } from "react";
 import toast from "react-hot-toast";
-import { getDocs, query, collection, where, doc, writeBatch } from "firebase/firestore";
-import { db } from "../../../config/firebase";
 import { jobService } from "../../../services/jobService";
 import { paymentService } from "../../../services/paymentService";
+import { deleteParentWithChildren } from "../../../services/cascadeDeleteService";
 
 export function useJobsMutations({ user, dispatch, stateRef, trackWrite }) {
   const addJob = useCallback(async (d) => {
@@ -41,15 +40,13 @@ export function useJobsMutations({ user, dispatch, stateRef, trackWrite }) {
     dispatch({ type: "DELETE_PAYMENTS_BY_JOB", payload: id });
     dispatch({ type: "DELETE_JOB", payload: id });
 
-    const writePromise = (async () => {
-      const paymentsSnap = await getDocs(
-        query(collection(db, "users", user.uid, "payments"), where("jobId", "==", id))
-      );
-      const batch = writeBatch(db);
-      paymentsSnap.docs.forEach((d) => batch.delete(d.ref));
-      batch.delete(doc(db, "users", user.uid, "jobs", id));
-      await batch.commit();
-    })();
+    const writePromise = deleteParentWithChildren({
+      userId: user.uid,
+      parentCollection: "jobs",
+      parentId: id,
+      childCollection: "payments",
+      childForeignKey: "jobId",
+    });
 
     trackWrite(writePromise, {
       rollback: () => {
