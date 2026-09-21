@@ -14,6 +14,7 @@ const COUNT_LABELS = {
   jobs:          "سجل الشغل",
   drivers:       "السائقين",
   maintenance:   "الصيانة",
+  equipmentFuelEntries: "سجل وقود المعدات",
   payments:      "الدفعات",
   supplierInvoices: "فواتير الموردين",
   supplierPayments: "دفعات الموردين",
@@ -21,6 +22,7 @@ const COUNT_LABELS = {
   attendance:    "الحضور",
   custodyTransactions: "العهدة",
   taxDeductions: "الضرائب والخصومات",
+  settings:      "الإعدادات",
 };
 
 const CONFIRM_WORD = "استرجاع";
@@ -47,6 +49,7 @@ const RestoreModal = ({ open, onClose }) => {
     jobs:          data.jobs?.length          || 0,
     drivers:       data.drivers?.length       || 0,
     maintenance:   data.maintenance?.length   || 0,
+    equipmentFuelEntries: data.equipmentFuelEntries?.length || 0,
     payments:      data.payments?.length      || 0,
     supplierInvoices: data.supplierInvoices?.length || 0,
     supplierPayments: data.supplierPayments?.length || 0,
@@ -88,6 +91,7 @@ const RestoreModal = ({ open, onClose }) => {
     jobs:          data.jobs,
     drivers:       data.drivers,
     maintenance:   data.maintenance,
+    equipmentFuelEntries: data.equipmentFuelEntries,
     payments:      data.payments,
     supplierInvoices: data.supplierInvoices,
     supplierPayments: data.supplierPayments,
@@ -112,8 +116,12 @@ const RestoreModal = ({ open, onClose }) => {
 
       setBusyLabel("جاري استرجاع البيانات...");
       await backupService.restoreSnapshot(user.uid, snapshotData, {
-        onProgress: ({ completedKeys, totalKeys }) =>
-          setBusyLabel(`جاري استرجاع البيانات... (${completedKeys.length}/${totalKeys})`),
+        onProgress: ({ completedKeys, totalKeys, activeKey, batchNumber, batchCount }) =>
+          setBusyLabel(
+            batchCount > 1
+              ? `جاري استرجاع ${COUNT_LABELS[activeKey] || activeKey}... (دفعة ${batchNumber}/${batchCount})`
+              : `جاري استرجاع البيانات... (${completedKeys.length}/${totalKeys})`
+          ),
       });
 
       toast.success("تم الاسترجاع بنجاح، جاري إعادة تحميل البرنامج...");
@@ -129,6 +137,8 @@ const RestoreModal = ({ open, onClose }) => {
         isPartialFailure: !!err.isPartialFailure,
         completedKeys: err.completedKeys || [],
         totalKeys: err.totalKeys || Object.keys(COUNT_LABELS).length,
+        activeKey: err.activeKey || null,
+        appliedOperations: err.appliedOperations || 0,
         safetyBackupId,
       });
       setBusy(false);
@@ -149,8 +159,12 @@ const RestoreModal = ({ open, onClose }) => {
     try {
       const safetyData = await backupService.getSnapshot(user.uid, restoreError.safetyBackupId);
       await backupService.restoreSnapshot(user.uid, safetyData, {
-        onProgress: ({ completedKeys, totalKeys }) =>
-          setBusyLabel(`جاري الرجوع لوضعك قبل المحاولة... (${completedKeys.length}/${totalKeys})`),
+        onProgress: ({ completedKeys, totalKeys, activeKey, batchNumber, batchCount }) =>
+          setBusyLabel(
+            batchCount > 1
+              ? `جاري الرجوع لنسخة الأمان — ${COUNT_LABELS[activeKey] || activeKey} (دفعة ${batchNumber}/${batchCount})`
+              : `جاري الرجوع لوضعك قبل المحاولة... (${completedKeys.length}/${totalKeys})`
+          ),
       });
       toast.success("تم الرجوع لوضعك قبل محاولة الاسترجاع، جاري إعادة تحميل البرنامج...");
       setTimeout(() => window.location.reload(), 1200);
@@ -159,6 +173,8 @@ const RestoreModal = ({ open, onClose }) => {
         isPartialFailure: !!err.isPartialFailure,
         completedKeys: err.completedKeys || [],
         totalKeys: err.totalKeys || Object.keys(COUNT_LABELS).length,
+        activeKey: err.activeKey || null,
+        appliedOperations: err.appliedOperations || 0,
         safetyBackupId: restoreError.safetyBackupId,
         recoveryAlsoFailed: true,
       });
@@ -188,9 +204,10 @@ const RestoreModal = ({ open, onClose }) => {
                     الاسترجاع توقف في المنتصف ولم يكتمل
                   </p>
                   <p>
-                    تم استرجاع {restoreError.completedKeys.length} من {restoreError.totalKeys} مجموعة بيانات
-                    قبل ما العملية تتوقف — يعني بياناتك الحالية دلوقتي خليط بين القديم والنسخة اللي كنت
-                    بتسترجعها، مش وضعك الأصلي ومش النسخة المطلوبة بالكامل.
+                    تم تطبيق {restoreError.appliedOperations} تعديل فعلي
+                    {restoreError.activeKey ? `، وتوقف أثناء استرجاع ${COUNT_LABELS[restoreError.activeKey] || restoreError.activeKey}` : ""}.
+                    {" "}اكتملت {restoreError.completedKeys.length} من {restoreError.totalKeys} مجموعة بيانات بالكامل —
+                    يعني بياناتك الحالية دلوقتي خليط بين القديم والنسخة اللي كنت بتسترجعها.
                   </p>
                 </div>
               </div>
@@ -216,9 +233,10 @@ const RestoreModal = ({ open, onClose }) => {
               {restoreError.recoveryAlsoFailed && (
                 <div className="bg-red-900/20 border border-red-800/40 rounded-xl px-4 py-3">
                   <p className="text-xs text-red-300 leading-relaxed">
-                    محاولة الرجوع لنسخة الأمان فشلت هي كمان (استرجعت {restoreError.completedKeys.length} من{" "}
-                    {restoreError.totalKeys}). متقفلش الشاشة دي — كلم الدعم الفني دلوقتي وابعتله نفس الرقمين
-                    دول، وخليك متصل بالإنترنت وسيب البرنامج مفتوح لحد ما يتأكد من حالة بياناتك.
+                    محاولة الرجوع لنسخة الأمان فشلت هي كمان بعد تطبيق {restoreError.appliedOperations} تعديل
+                    {restoreError.activeKey ? ` أثناء ${COUNT_LABELS[restoreError.activeKey] || restoreError.activeKey}` : ""}.
+                    متقفلش الشاشة دي — كلم الدعم الفني دلوقتي، وخليك متصل بالإنترنت وسيب البرنامج مفتوح
+                    لحد ما يتأكد من حالة بياناتك.
                   </p>
                 </div>
               )}

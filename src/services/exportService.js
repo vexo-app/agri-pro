@@ -9,10 +9,11 @@
 // بياخد أي object جاهز ويحوّله لملف، أو ياخد ملف ويرجّعه object.
 // ─────────────────────────────────────────────────────────
 
-const EXPORT_VERSION = 1;
+const EXPORT_VERSION = 2;
 
 const BACKUP_KEYS = [
   "equipment", "jobs", "drivers", "maintenance",
+  "equipmentFuelEntries",
   "payments", "supplierInvoices", "supplierPayments",
   "salaryEntries", "attendance", "custodyTransactions", "taxDeductions", "settings",
 ];
@@ -80,6 +81,9 @@ export const exportService = {
 
     if (!(Number.isInteger(parsed.version) && parsed.version >= 1 && parsed.version <= EXPORT_VERSION)) {
       throw new Error("نسخة الملف غير مدعومة، برجاء استخدام نسخة احتياطية حديثة");
+    }
+    if (parsed.version === 1 && parsed.data.equipmentFuelEntries === undefined) {
+      parsed.data.equipmentFuelEntries = [];
     }
 
     // كل المجموعات المطلوبة (ما عدا settings) لازم تكون موجودة وشكلها array —

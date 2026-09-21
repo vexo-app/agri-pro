@@ -52,6 +52,7 @@ const BackupSection = ({ open, onOpenRestore }) => {
         jobs:          data.jobs,
         drivers:       data.drivers,
         maintenance:   data.maintenance,
+        equipmentFuelEntries: data.equipmentFuelEntries,
         payments:      data.payments,
         supplierInvoices: data.supplierInvoices,
         supplierPayments: data.supplierPayments,

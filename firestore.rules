@@ -98,6 +98,14 @@ service cloud.firestore {
         (!('notes' in data)       || isLongStr(data.notes));
     }
 
+    function isValidEquipmentFuelEntry(data) {
+      return
+        (!('liters' in data)        || (data.liters is number && data.liters > 0 && data.liters <= 1000000000)) &&
+        (!('pricePerLiter' in data) || (data.pricePerLiter is number && data.pricePerLiter > 0 && data.pricePerLiter <= 1000000000)) &&
+        (!('equipmentId' in data)   || isShortStr(data.equipmentId)) &&
+        (!('date' in data)          || isDateStr(data.date));
+    }
+
     function isValidSalaryEntry(data) {
       return
         (!('amount' in data)   || isMoney(data.amount)) &&
@@ -481,6 +489,18 @@ service cloud.firestore {
         allow read:   if (isSignedIn() && (isOwner(uid) || isAdmin())) || guestCanRead(uid, 'maintenance');
         allow create: if isSignedIn() && isOwner(uid) && 'cost' in request.resource.data && isValidMaintenance(request.resource.data);
         allow update: if isSignedIn() && isOwner(uid) && isValidMaintenance(request.resource.data);
+        allow delete: if isSignedIn() && isOwner(uid);
+      }
+
+      match /equipmentFuelEntries/{id} {
+        allow read:   if (isSignedIn() && (isOwner(uid) || isAdmin())) || guestCanRead(uid, 'equipment');
+        allow create: if isSignedIn() && isOwner(uid) &&
+          'liters' in request.resource.data &&
+          'pricePerLiter' in request.resource.data &&
+          'equipmentId' in request.resource.data &&
+          'date' in request.resource.data &&
+          isValidEquipmentFuelEntry(request.resource.data);
+        allow update: if isSignedIn() && isOwner(uid) && isValidEquipmentFuelEntry(request.resource.data);
         allow delete: if isSignedIn() && isOwner(uid);
       }
 

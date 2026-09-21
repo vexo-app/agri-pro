@@ -35,6 +35,7 @@ import { equipmentService }    from "../../services/equipmentService";
 import { jobService }          from "../../services/jobService";
 import { driverService }       from "../../services/driverService";
 import { maintenanceService }  from "../../services/maintenanceService";
+import { equipmentFuelEntryService } from "../../services/equipmentFuelEntryService";
 import { settingsService }     from "../../services/settingsService";
 import { paymentService }      from "../../services/paymentService";
 import { supplierInvoiceService } from "../../services/supplierInvoiceService";
@@ -62,6 +63,7 @@ const COLLECTIONS = [
   { key: "jobs",              service: jobService,              stateKey: "jobs" },
   { key: "drivers",           service: driverService,           stateKey: "drivers" },
   { key: "maintenance",       service: maintenanceService,      stateKey: "maintenance" },
+  { key: "equipmentFuelEntries", service: equipmentFuelEntryService, stateKey: "equipmentFuelEntries" },
   { key: "settings",          service: settingsService,         stateKey: "settings" },
   { key: "payments",          service: paymentService,          stateKey: "payments" },
   { key: "supplierInvoices",  service: supplierInvoiceService,  stateKey: "supplierInvoices" },

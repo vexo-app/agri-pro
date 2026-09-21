@@ -26,6 +26,7 @@ const BACKUP_COLLECTIONS = [
   ["jobs",                "jobs"],
   ["drivers",             "drivers"],
   ["maintenance",         "maintenance"],
+  ["equipmentFuelEntries", "equipmentFuelEntries"],
   ["payments",            "payments"],
   ["supplierInvoices",    "supplierInvoices"],
   ["supplierPayments",    "supplierPayments"],
@@ -82,7 +83,7 @@ const reviveTimestamps = (value) => {
 // given snapshot items: deletes any live doc not present in the snapshot,
 // and upserts every snapshot item back under its original id. Batched in
 // chunks of 450 writes.
-const restoreCollection = async (subName, userId, items) => {
+const restoreCollection = async (subName, userId, items, { onBatchCommitted } = {}) => {
   const colRef = collection(db, "users", userId, subName);
   const liveSnap = await getDocs(colRef);
   const snapshotIds = new Set(items.map((it) => it.id).filter(Boolean));
@@ -99,11 +100,20 @@ const restoreCollection = async (subName, userId, items) => {
 
   for (let i = 0; i < ops.length; i += 450) {
     const batch = writeBatch(db);
-    ops.slice(i, i + 450).forEach((op) => {
+    const batchOps = ops.slice(i, i + 450);
+    batchOps.forEach((op) => {
       if (op.type === "delete") batch.delete(op.ref);
       else batch.set(op.ref, op.data);
     });
     await batch.commit();
+    // Firestore commits each batch atomically, but a collection may need
+    // several batches. Report every successful commit immediately so a
+    // failure in the next batch is never mistaken for "nothing changed".
+    onBatchCommitted?.({
+      operationsApplied: batchOps.length,
+      batchNumber: Math.floor(i / 450) + 1,
+      batchCount: Math.ceil(ops.length / 450),
+    });
   }
 };
 
@@ -267,7 +277,8 @@ export const backupService = {
    * (a plain Error), so the UI could only ever say a single generic "لم
    * تتأثر بالكامل" message — which is actively WRONG the moment even one
    * collection has already been overwritten. Now the thrown error carries
-   * enough information (`isPartialFailure`, `completedKeys`, `totalKeys`)
+   * enough information (`isPartialFailure`, `completedKeys`, `totalKeys`,
+   * `activeKey`, `appliedOperations`)
    * for the UI to tell the two situations apart and say something true in
    * each case, per the "never say restore succeeded when it didn't, and
    * never be vague about partial" requirement.
@@ -284,6 +295,10 @@ export const backupService = {
     if (!snapshotData || typeof snapshotData !== "object") {
       throw new Error("بيانات الاسترجاع غير صالحة");
     }
+    // Backups created before the fuel log existed legitimately lack this key.
+    if (snapshotData.equipmentFuelEntries === undefined) {
+      snapshotData = { ...snapshotData, equipmentFuelEntries: [] };
+    }
     const invalidKey = BACKUP_COLLECTIONS.find(
       ([key]) => !Array.isArray(snapshotData[key])
     );
@@ -295,33 +310,52 @@ export const backupService = {
     // snapshot actually carries settings — see below).
     const totalKeys = BACKUP_COLLECTIONS.length + (snapshotData.settings ? 1 : 0);
     const completedKeys = [];
+    let activeKey = null;
+    let appliedOperations = 0;
 
     try {
       for (const [key, subName] of BACKUP_COLLECTIONS) {
-        await restoreCollection(subName, userId, snapshotData[key] || []);
+        activeKey = key;
+        await restoreCollection(subName, userId, snapshotData[key] || [], {
+          onBatchCommitted: ({ operationsApplied, batchNumber, batchCount }) => {
+            appliedOperations += operationsApplied;
+            onProgress?.({
+              completedKeys: [...completedKeys],
+              totalKeys,
+              activeKey: key,
+              appliedOperations,
+              batchNumber,
+              batchCount,
+            });
+          },
+        });
         completedKeys.push(key);
         onProgress?.({ completedKeys: [...completedKeys], totalKeys, justCompleted: key });
       }
       if (snapshotData.settings) {
+        activeKey = "settings";
         await setDoc(doc(db, "users", userId, "meta", "settings"), reviveTimestamps(snapshotData.settings));
+        appliedOperations += 1;
         completedKeys.push("settings");
         onProgress?.({ completedKeys: [...completedKeys], totalKeys, justCompleted: "settings" });
       }
     } catch (err) {
-      const isPartialFailure = completedKeys.length > 0;
+      const isPartialFailure = appliedOperations > 0;
       const wrapped = new Error(
         isPartialFailure
-          ? `توقف الاسترجاع في المنتصف بعد ${completedKeys.length} من ${totalKeys} مجموعات بيانات — بياناتك الحالية بقت خليط بين القديم والجديد`
+          ? `توقف الاسترجاع بعد تطبيق ${appliedOperations} عملية كتابة — بياناتك الحالية بقت خليط بين القديم والجديد`
           : "فشل الاسترجاع قبل أي تعديل فعلي على بياناتك الحالية"
       );
       wrapped.isPartialFailure = isPartialFailure;
       wrapped.completedKeys = completedKeys;
       wrapped.totalKeys = totalKeys;
+      wrapped.activeKey = activeKey;
+      wrapped.appliedOperations = appliedOperations;
       wrapped.cause = err;
       throw wrapped;
     }
 
-    return { completedKeys, totalKeys };
+    return { completedKeys, totalKeys, appliedOperations };
   },
 
   /**

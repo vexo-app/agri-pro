@@ -69,6 +69,7 @@ export function useAutoBackup({ user, loading, loadError, stateRef }) {
           jobs:          current.jobs,
           drivers:       current.drivers,
           maintenance:   current.maintenance,
+          equipmentFuelEntries: current.equipmentFuelEntries,
           payments:      current.payments,
           supplierInvoices: current.supplierInvoices,
           supplierPayments: current.supplierPayments,

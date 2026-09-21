@@ -9,12 +9,16 @@ import DownloadReportButton   from "../components/ui/DownloadReportButton";
 import { Card, CardHeader, CardBody, StatCard, SummaryRow, EmptyState, ProgressBar, Badge } from "../components/ui/Card";
 import Button                 from "../components/ui/Button";
 import { Input }              from "../components/ui/Input";
+import Modal                  from "../components/ui/Modal";
+import ConfirmDialog          from "../components/ui/ConfirmDialog";
+import FuelEntryForm          from "../features/equipment/FuelEntryForm";
+import { useConfirm }         from "../hooks/useConfirm";
 import LoadingScreen          from "../components/ui/LoadingScreen";
 import { formatCurrency, formatNumber, formatDateShort, formatPercent } from "../utils/formatters";
 import { getLastOilChange, getLastGreaseDate } from "../utils/serviceHistory";
 import {
   TractorIcon, FuelIcon, AcreIcon, RevenueIcon, ProfitIcon, CalendarIcon,
-  EQUIP_TYPE_ICON_MAP, LinkIcon, OilCanIcon,
+  EQUIP_TYPE_ICON_MAP, LinkIcon, OilCanIcon, TrashIcon,
 } from "../components/ui/Icons";
 import { printEquipmentReport, downloadEquipmentReportPdf } from "../utils/pdfGenerator";
 import { EQUIPMENT_CATEGORY } from "../config/constants";
@@ -32,14 +36,16 @@ const PrintSVG = () => (
 const EquipmentDetailPage = () => {
   const { equipmentId } = useParams();
   const navigate        = useNavigate();
-  const { drivers, equipment: allEquipment, updateEquipment } = useData();
+  const { drivers, equipment: allEquipment, updateEquipment, addEquipmentFuelEntry, deleteEquipmentFuelEntry } = useData();
   const {
-    equipment, jobs, maintenance,
+    equipment, jobs, maintenance, fuelEntries,
     stats, maintCost, netProfit, margin,
     loading, fuelPrice,
   } = useEquipmentDetail(equipmentId);
   const [editingReminder, setEditingReminder] = useState(false);
   const [reminderDraft, setReminderDraft]     = useState("");
+  const [fuelModalOpen, setFuelModalOpen]     = useState(false);
+  const { confirm, confirmState } = useConfirm();
 
   if (loading) return <LoadingScreen />;
   if (!equipment) return (
@@ -109,6 +115,7 @@ const EquipmentDetailPage = () => {
       equipment,
       jobs,
       maintenance,
+      fuelEntries,
       fuelPrice,
       driverName: driverLabel,
     });
@@ -118,9 +125,15 @@ const EquipmentDetailPage = () => {
     equipment,
     jobs,
     maintenance,
+    fuelEntries,
     fuelPrice,
     driverName: driverLabel,
   });
+
+  const handleAddFuel = (entry) => addEquipmentFuelEntry({ ...entry, equipmentId });
+  const handleDeleteFuel = async (id) => {
+    if (await confirm(id, "هل أنت متأكد من حذف تسجيل الوقود؟")) deleteEquipmentFuelEntry(id);
+  };
 
   return (
     <div className="p-4 lg:p-6 max-w-4xl mx-auto" dir="rtl">
@@ -236,6 +249,28 @@ const EquipmentDetailPage = () => {
         onRemove={isAttachment ? handleRemoveGrease : handleRemoveOilChange}
       />
 
+      <Card className="mb-5">
+        <CardHeader title={`سجل الوقود (${fuelEntries.length})`} actions={
+          <Button size="sm" onClick={() => setFuelModalOpen(true)} icon={<FuelIcon size={15}/>}>تسجيل وقود</Button>
+        }/>
+        {fuelEntries.length > 0 && (
+          <div className="divide-y divide-white/8">
+            {fuelEntries.map((entry) => (
+              <div key={entry.id} className="flex items-center justify-between gap-3 px-5 py-3.5">
+                <div>
+                  <p className="text-sm font-bold text-gray-200">{formatNumber(entry.liters)} لتر</p>
+                  <p className="text-xs text-gray-500 mt-0.5">{formatDateShort(entry.date)} · {formatCurrency(entry.pricePerLiter)} للتر</p>
+                </div>
+                <div className="flex items-center gap-2">
+                  <span className="text-sm font-bold text-red-400">{formatCurrency(Number(entry.liters) * Number(entry.pricePerLiter))}</span>
+                  <Button variant="ghost" size="xs" icon={<TrashIcon size={12}/>} onClick={() => handleDeleteFuel(entry.id)} aria-label="حذف سجل الوقود"/>
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+      </Card>
+
       {/* KPIs */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 mb-6">
         <StatCard icon={<AcreIcon size={24}/>}    label="إجمالي الأفدنة" value={formatNumber(stats.totalAcres)}    color="blue"/>
@@ -336,6 +371,11 @@ const EquipmentDetailPage = () => {
           </Card>
         </>
       )}
+
+      <Modal open={fuelModalOpen} onClose={() => setFuelModalOpen(false)} title="تسجيل وقود" size="sm">
+        <FuelEntryForm fuelPrice={fuelPrice} onSave={handleAddFuel} onClose={() => setFuelModalOpen(false)}/>
+      </Modal>
+      <ConfirmDialog open={confirmState.open} onClose={confirmState.reject} onConfirm={confirmState.accept} message={confirmState.message}/>
     </div>
   );
 };

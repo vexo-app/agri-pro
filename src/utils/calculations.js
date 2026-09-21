@@ -120,11 +120,19 @@ export const aggregateJobs = (jobs, fuelPrice, payments = []) => {
 /**
  * Build per-equipment report: jobs + maintenance costs → full P&L.
  */
-export const buildEquipmentReport = (equipment, jobs, maintenance, fuelPrice, payments = []) =>
+export const buildEquipmentReport = (equipment, jobs, maintenance, fuelPrice, payments = [], equipmentFuelEntries = []) =>
   equipment.map((eq) => {
     const eqJobs  = jobs.filter((j) => j.equipmentId === eq.id);
     const eqMaint = maintenance.filter((m) => m.equipmentId === eq.id);
+    const eqFuelEntries = equipmentFuelEntries.filter((entry) => entry.equipmentId === eq.id);
     const stats      = aggregateJobs(eqJobs, fuelPrice, payments);
+    const manualFuel = eqFuelEntries.reduce((s, entry) => s + safeNum(entry.liters), 0);
+    const manualFuelCost = eqFuelEntries.reduce(
+      (s, entry) => s + safeNum(entry.liters) * safeNum(entry.pricePerLiter), 0
+    );
+    stats.totalFuel += manualFuel;
+    stats.totalFuelCost += manualFuelCost;
+    stats.netProfit -= manualFuelCost;
     const maintCost  = eqMaint.reduce((s, m) => s + (safeNum(m.cost)), 0);
     const netProfit  = stats.netProfit - maintCost;
     const margin     = stats.totalRevenue > 0 ? (netProfit / stats.totalRevenue) * 100 : 0;

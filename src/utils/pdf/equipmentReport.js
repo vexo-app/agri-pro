@@ -7,12 +7,14 @@ import { sortOilHistory, sortGreaseHistory } from "../serviceHistory";
 import { EQUIPMENT_CATEGORY } from "../../config/constants";
 import { escapeHtml, printWindow, downloadReportPdf } from "./core";
 
-const buildEquipmentReportHtml = ({ equipment, jobs, maintenance, fuelPrice, driverName }) => {
+const buildEquipmentReportHtml = ({ equipment, jobs, maintenance, fuelEntries = [], fuelPrice, driverName }) => {
   const today      = new Date().toLocaleDateString("ar-EG");
   const totalRevenue  = jobs.reduce((s, j) => s + calcRevenue(j.acres, j.pricePerAcre), 0);
   const totalAcres    = jobs.reduce((s, j) => s + (j.acres || 0), 0);
-  const totalFuel     = jobs.reduce((s, j) => s + (j.fuelUsed || 0), 0);
-  const totalFuelCost = jobs.reduce((s, j) => s + calcFuelCost(j.fuelUsed, getJobFuelPrice(j, fuelPrice)), 0);
+  const totalFuel     = jobs.reduce((s, j) => s + (Number(j.fuelUsed) || 0), 0)
+    + fuelEntries.reduce((s, entry) => s + (Number(entry.liters) || 0), 0);
+  const totalFuelCost = jobs.reduce((s, j) => s + calcFuelCost(j.fuelUsed, getJobFuelPrice(j, fuelPrice)), 0)
+    + fuelEntries.reduce((s, entry) => s + (Number(entry.liters) || 0) * (Number(entry.pricePerLiter) || 0), 0);
   const maintCost     = maintenance.reduce((s, m) => s + (m.cost || 0), 0);
   const netProfit     = totalRevenue - totalFuelCost - maintCost;
 
@@ -32,6 +34,15 @@ const buildEquipmentReportHtml = ({ equipment, jobs, maintenance, fuelPrice, dri
       <td>${escapeHtml(m.type)}</td>
       <td>${escapeHtml(m.notes) || "—"}</td>
       <td>${formatCurrency(m.cost)}</td>
+    </tr>
+  `).join("");
+
+  const fuelRows = fuelEntries.map((entry) => `
+    <tr>
+      <td>${formatDate(entry.date)}</td>
+      <td>${formatNumber(entry.liters)}</td>
+      <td>${formatCurrency(entry.pricePerLiter)}</td>
+      <td>${formatCurrency(Number(entry.liters) * Number(entry.pricePerLiter))}</td>
     </tr>
   `).join("");
 
@@ -102,6 +113,15 @@ const buildEquipmentReportHtml = ({ equipment, jobs, maintenance, fuelPrice, dri
         <table>
           <thead><tr><th>التاريخ</th><th>النوع</th><th>ملاحظات</th><th>التكلفة</th></tr></thead>
           <tbody>${maintRows}</tbody>
+        </table>
+      </div>` : ""}
+
+      ${fuelRows ? `
+      <div class="section">
+        <h2>سجل الوقود الإضافي (${fuelEntries.length})</h2>
+        <table>
+          <thead><tr><th>التاريخ</th><th>اللترات</th><th>سعر اللتر</th><th>الإجمالي</th></tr></thead>
+          <tbody>${fuelRows}</tbody>
         </table>
       </div>` : ""}
 

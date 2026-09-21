@@ -10,6 +10,7 @@ import { useCallback } from "react";
 import toast from "react-hot-toast";
 import { equipmentService } from "../../../services/equipmentService";
 import { maintenanceService } from "../../../services/maintenanceService";
+import { equipmentFuelEntryService } from "../../../services/equipmentFuelEntryService";
 
 export function useEquipmentMutations({ user, dispatch, stateRef, trackWrite }) {
   const addEquipment = useCallback(async (d) => {
@@ -74,8 +75,30 @@ export function useEquipmentMutations({ user, dispatch, stateRef, trackWrite }) 
     toast.success("تم حذف الصيانة");
   }, [user, dispatch, stateRef, trackWrite]);
 
+  const addEquipmentFuelEntry = useCallback(async (d) => {
+    const { id, promise } = equipmentFuelEntryService.add(user.uid, d);
+    dispatch({ type: "ADD_EQUIPMENT_FUEL_ENTRY", payload: { id, ...d } });
+    trackWrite(promise, {
+      rollback: () => dispatch({ type: "DELETE_EQUIPMENT_FUEL_ENTRY", payload: id }),
+      errorMessage: "تعذر حفظ الوقود، تم التراجع عن الإضافة",
+    });
+    toast.success("تم تسجيل الوقود");
+    return id;
+  }, [user, dispatch, trackWrite]);
+
+  const deleteEquipmentFuelEntry = useCallback(async (id) => {
+    const previous = stateRef.current.equipmentFuelEntries.find((e) => e.id === id);
+    dispatch({ type: "DELETE_EQUIPMENT_FUEL_ENTRY", payload: id });
+    trackWrite(equipmentFuelEntryService.remove(user.uid, id), {
+      rollback: () => previous && dispatch({ type: "ADD_EQUIPMENT_FUEL_ENTRY", payload: previous }),
+      errorMessage: "تعذر حذف سجل الوقود، تم استرجاعه",
+    });
+    toast.success("تم حذف سجل الوقود");
+  }, [user, dispatch, stateRef, trackWrite]);
+
   return {
     addEquipment, updateEquipment, deleteEquipment,
     addMaintenance, updateMaintenance, deleteMaintenance,
+    addEquipmentFuelEntry, deleteEquipmentFuelEntry,
   };
 }

@@ -215,6 +215,20 @@ describe("buildEquipmentReport", () => {
     );
     expect(report[0].margin).toBe(0);
   });
+
+  test("adds manual fuel liters and cost to the equipment totals", () => {
+    const report = buildEquipmentReport(
+      [{ id: "eq1" }],
+      [{ equipmentId: "eq1", acres: 1, pricePerAcre: 1000, fuelUsed: 50, fuelPriceAtJob: 10 }],
+      [],
+      10,
+      [],
+      [{ equipmentId: "eq1", liters: 20, pricePerLiter: 12 }]
+    );
+    expect(report[0].totalFuel).toBe(70);
+    expect(report[0].totalFuelCost).toBe(740);
+    expect(report[0].netProfit).toBe(260);
+  });
 });
 
 describe("buildDriverReport", () => {

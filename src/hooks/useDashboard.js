@@ -65,7 +65,7 @@ const buildMonthFinancials = (monthPrefix, {
 
 export const useDashboard = () => {
   const {
-    jobs, equipment, maintenance, drivers, payments = [],
+    jobs, equipment, maintenance, equipmentFuelEntries = [], drivers, payments = [],
     supplierInvoices = [], supplierPayments = [],
     settings, salaryEntries = [], taxDeductions = [], loading,
   } = useData();
@@ -127,8 +127,8 @@ export const useDashboard = () => {
   const workTypeBreakdown = useMemo(() => groupByWorkType(jobs), [jobs]);
 
   const equipReport = useMemo(
-    () => buildEquipmentReport(equipment, jobs, maintenance, fuelPrice, payments),
-    [equipment, jobs, maintenance, fuelPrice, payments]
+    () => buildEquipmentReport(equipment, jobs, maintenance, fuelPrice, payments, equipmentFuelEntries),
+    [equipment, jobs, maintenance, fuelPrice, payments, equipmentFuelEntries]
   );
 
   const bestEquipment = equipReport[0] ?? null;

@@ -99,7 +99,7 @@ const EquipmentPage = () => {
   const handleDelete = async (id) => {
     const eq = report.find((e) => e.id === id);
     const counts = getEquipmentDependencyCounts(id);
-    const hasHistory = counts.jobs > 0 || counts.maintenance > 0 || counts.custody > 0 || counts.attachments > 0;
+    const hasHistory = counts.jobs > 0 || counts.maintenance > 0 || counts.fuelEntries > 0 || counts.custody > 0 || counts.attachments > 0;
 
     if (hasHistory) {
       setBlockedDeleteTarget({ eq, counts });
@@ -236,6 +236,7 @@ const EquipmentPage = () => {
             <ul className="list-disc list-inside text-gray-300 text-sm mb-4 space-y-0.5">
               {blockedDeleteTarget.counts.jobs > 0 && <li>{blockedDeleteTarget.counts.jobs} عملية شغل</li>}
               {blockedDeleteTarget.counts.maintenance > 0 && <li>{blockedDeleteTarget.counts.maintenance} سجل صيانة</li>}
+              {blockedDeleteTarget.counts.fuelEntries > 0 && <li>{blockedDeleteTarget.counts.fuelEntries} سجل وقود</li>}
               {blockedDeleteTarget.counts.custody > 0 && <li>{blockedDeleteTarget.counts.custody} سجل عهدة</li>}
               {blockedDeleteTarget.counts.attachments > 0 && <li>{blockedDeleteTarget.counts.attachments} ملحق متعلّق عليها</li>}
             </ul>

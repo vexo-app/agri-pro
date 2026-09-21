@@ -10,6 +10,7 @@ export const initialState = {
   jobs:          [],
   drivers:       [],
   maintenance:   [],
+  equipmentFuelEntries: [],
   payments:      [],
   supplierInvoices: [],
   supplierPayments: [],
@@ -49,6 +50,9 @@ export const reducer = (state, action) => {
     case "ADD_MAINTENANCE":    return { ...state, maintenance: [action.payload, ...state.maintenance] };
     case "UPDATE_MAINTENANCE": return { ...state, maintenance: state.maintenance.map(m => m.id === action.payload.id ? { ...m, ...action.payload } : m) };
     case "DELETE_MAINTENANCE": return { ...state, maintenance: state.maintenance.filter(m => m.id !== action.payload) };
+
+    case "ADD_EQUIPMENT_FUEL_ENTRY": return { ...state, equipmentFuelEntries: [action.payload, ...state.equipmentFuelEntries] };
+    case "DELETE_EQUIPMENT_FUEL_ENTRY": return { ...state, equipmentFuelEntries: state.equipmentFuelEntries.filter(e => e.id !== action.payload) };
 
     case "ADD_PAYMENT":    return { ...state, payments: [action.payload, ...state.payments] };
     case "UPDATE_PAYMENT": return { ...state, payments: state.payments.map(p => p.id === action.payload.id ? { ...p, ...action.payload } : p) };
