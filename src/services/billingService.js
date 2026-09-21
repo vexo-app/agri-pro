@@ -13,12 +13,13 @@
 import {
   doc, getDoc, getDocs, setDoc, addDoc, updateDoc,
   collection, query, orderBy, onSnapshot, serverTimestamp,
-  Timestamp,
+  Timestamp, runTransaction,
 } from "firebase/firestore";
 import { db, auth } from "../config/firebase";
 import { COLLECTIONS } from "../config/constants";
 import {
   CYCLE_DAYS, BILLING_REQUEST_STATUS, PLAN_IDS, ENTITLEMENT_SOURCE, TRIAL_DAYS,
+  BILLING_CYCLE, MANUAL_PAYMENT_METHODS, getPlanById,
 } from "../config/constants/billing";
 
 const entitlementRef  = (uid) => doc(db, COLLECTIONS.ENTITLEMENTS, uid);
@@ -26,6 +27,22 @@ const subscriptionRef = (uid) => doc(db, COLLECTIONS.SUBSCRIPTIONS, uid);
 const billingRequestsCol = () => collection(db, COLLECTIONS.BILLING_REQUESTS);
 
 const addDays = (date, days) => new Date(date.getTime() + days * 24 * 60 * 60 * 1000);
+const toDate = (value) => value?.toDate?.() || (value instanceof Date ? value : null);
+
+export const calculateBillingPeriod = ({ now, billingCycle, entitlement, subscription }) => {
+  const candidates = [
+    toDate(entitlement?.expirationDate),
+    toDate(subscription?.currentPeriodEnd),
+  ].filter((date) => date && date.getTime() > now.getTime());
+  const periodStart = candidates.reduce(
+    (latest, date) => date.getTime() > latest.getTime() ? date : latest,
+    now
+  );
+  return {
+    periodStart,
+    periodEnd: addDays(periodStart, CYCLE_DAYS[billingCycle] || 30),
+  };
+};
 
 export const billingService = {
   // ─── الشركة نفسها ────────────────────────────────────────────────────
@@ -84,6 +101,14 @@ export const billingService = {
   createBillingRequest: async ({ planId, billingCycle, amount, method }) => {
     const uid = auth.currentUser?.uid;
     if (!uid) throw new Error("لازم تكون مسجّل دخول");
+    const plan = getPlanById(planId);
+    const expectedAmount = billingCycle === BILLING_CYCLE.ANNUAL
+      ? plan?.priceAnnual
+      : billingCycle === BILLING_CYCLE.MONTHLY ? plan?.priceMonthly : null;
+    if (!plan || amount !== expectedAmount) throw new Error("بيانات الباقة أو المبلغ غير صحيحة");
+    if (!Object.values(MANUAL_PAYMENT_METHODS).includes(method)) {
+      throw new Error("طريقة الدفع غير صحيحة");
+    }
     const docRef = await addDoc(billingRequestsCol(), {
       uid,
       planId,
@@ -142,44 +167,59 @@ export const billingService = {
     const admin = auth.currentUser;
     if (!admin) throw new Error("لازم تكون مسجّل دخول كأدمن");
 
-    const now = new Date();
-    const periodEnd = addDays(now, CYCLE_DAYS[request.billingCycle] || 30);
+    const requestRef = doc(db, COLLECTIONS.BILLING_REQUESTS, request.id);
+    await runTransaction(db, async (transaction) => {
+      // Read the request again inside the transaction. This prevents a stale
+      // admin screen or a double click from activating the same payment twice.
+      const requestSnap = await transaction.get(requestRef);
+      if (!requestSnap.exists()) throw new Error("طلب الاشتراك غير موجود");
+      const currentRequest = requestSnap.data();
+      if (currentRequest.status !== BILLING_REQUEST_STATUS.PENDING_REVIEW) {
+        throw new Error("طلب الاشتراك تمت مراجعته بالفعل");
+      }
 
-    // نقرا الـ entitlement الحالي عشان نحافظ على startDate الأصلي لو
-    // الشركة دي كانت مشتركة قبل كده (تجديد، مش اشتراك أول مرة).
-    const existingSnap = await getDoc(entitlementRef(request.uid));
-    const startDate = existingSnap.exists() && existingSnap.data().startDate
-      ? existingSnap.data().startDate
-      : Timestamp.fromDate(now);
+      const currentEntitlementRef = entitlementRef(currentRequest.uid);
+      const currentSubscriptionRef = subscriptionRef(currentRequest.uid);
+      const existingEntitlementSnap = await transaction.get(currentEntitlementRef);
+      const existingSubscriptionSnap = await transaction.get(currentSubscriptionRef);
+      const existingEntitlement = existingEntitlementSnap.exists() ? existingEntitlementSnap.data() : null;
+      const existingSubscription = existingSubscriptionSnap.exists() ? existingSubscriptionSnap.data() : null;
+      const now = new Date();
+      const { periodStart, periodEnd } = calculateBillingPeriod({
+        now,
+        billingCycle: currentRequest.billingCycle,
+        entitlement: existingEntitlement,
+        subscription: existingSubscription,
+      });
+      const startDate = existingEntitlement?.startDate || Timestamp.fromDate(now);
 
-    await Promise.all([
-      updateDoc(doc(db, COLLECTIONS.BILLING_REQUESTS, request.id), {
+      transaction.update(requestRef, {
         status: BILLING_REQUEST_STATUS.CONFIRMED,
         confirmedAt: serverTimestamp(),
         confirmedBy: admin.uid,
-      }),
-      setDoc(subscriptionRef(request.uid), {
-        planId: request.planId,
-        billingCycle: request.billingCycle,
+      });
+      transaction.set(currentSubscriptionRef, {
+        planId: currentRequest.planId,
+        billingCycle: currentRequest.billingCycle,
         status: "active",
-        currentPeriodStart: Timestamp.fromDate(now),
+        currentPeriodStart: Timestamp.fromDate(periodStart),
         currentPeriodEnd: Timestamp.fromDate(periodEnd),
         gatewayProvider: "manual",
-        lastPaymentAmount: request.amount,
-        lastPaymentMethod: request.method,
+        lastPaymentAmount: currentRequest.amount,
+        lastPaymentMethod: currentRequest.method,
         updatedAt: serverTimestamp(),
-      }, { merge: true }),
-      setDoc(entitlementRef(request.uid), {
+      }, { merge: true });
+      transaction.set(currentEntitlementRef, {
         type: "plan",
         source: "manual_payment",
-        planId: request.planId,
+        planId: currentRequest.planId,
         startDate,
         expirationDate: Timestamp.fromDate(periodEnd),
         adminOverrideBy: admin.uid,
         adminOverrideAt: serverTimestamp(),
-        notes: existingSnap.exists() ? (existingSnap.data().notes || "") : "",
-      }, { merge: true }),
-    ]);
+        notes: existingEntitlement?.notes || "",
+      }, { merge: true });
+    });
   },
 
   /** رفض طلب دفع (مبلغ غلط، التحويل ملوش أصل...) — بدون أي تفعيل. */

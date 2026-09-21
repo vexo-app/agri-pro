@@ -40,6 +40,13 @@ export function useSalaryMutations({ user, dispatch, stateRef, trackWrite }) {
   }, [user, dispatch, stateRef, trackWrite]);
 
   const addAttendance = useCallback(async (d) => {
+    const duplicate = stateRef.current.attendance.some(
+      (record) => record.driverId === d.driverId && record.date === d.date
+    );
+    if (duplicate) {
+      toast.error("تم تسجيل حضور هذا السائق في اليوم ده بالفعل");
+      return null;
+    }
     const { id, promise } = attendanceService.add(user.uid, d);
     dispatch({ type: "ADD_ATTENDANCE", payload: { id, ...d } });
     trackWrite(promise, {
@@ -48,7 +55,7 @@ export function useSalaryMutations({ user, dispatch, stateRef, trackWrite }) {
     });
     toast.success("تم تسجيل الحضور");
     return id;
-  }, [user, dispatch, trackWrite]);
+  }, [user, dispatch, stateRef, trackWrite]);
 
   const updateAttendance = useCallback(async (id, d) => {
     const previous = stateRef.current.attendance.find((a) => a.id === id);

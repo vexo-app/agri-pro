@@ -31,9 +31,13 @@ export const attendanceService = {
 
   // Returns { id, promise } — see equipmentService.js for why.
   add(userId, data) {
-    const ref = doc(col(userId));
+    // A driver can only have one attendance document per calendar day.
+    // Using the same Firestore id on every device makes concurrent saves
+    // converge to one record instead of creating two random-id records.
+    const id = `${data.driverId}__${data.date}`;
+    const ref = doc(col(userId), id);
     const promise = setDoc(ref, { ...data, createdAt: serverTimestamp() });
-    return { id: ref.id, promise };
+    return { id, promise };
   },
 
   update(userId, id, data) {

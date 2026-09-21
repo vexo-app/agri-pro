@@ -91,8 +91,7 @@ const DriverDetailPage = () => {
   };
 
   const handleSaveAttend = async (data) => {
-    await addAttendance(data);
-    setModal(null);
+    return addAttendance(data);
   };
 
   const handleDeleteAttend = async (id) => {

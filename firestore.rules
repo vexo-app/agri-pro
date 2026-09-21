@@ -577,7 +577,16 @@ service cloud.firestore {
 
       match /attendance/{id} {
         allow read:            if (isSignedIn() && (isOwner(uid) || isAdmin())) || guestCanRead(uid, 'drivers');
-        allow create, update: if isSignedIn() && isOwner(uid) && isValidAttendance(request.resource.data);
+        allow create: if isSignedIn() && isOwner(uid) &&
+          'status' in request.resource.data &&
+          'date' in request.resource.data &&
+          'driverId' in request.resource.data &&
+          isValidAttendance(request.resource.data);
+        allow update: if isSignedIn() && isOwner(uid) &&
+          'status' in request.resource.data &&
+          'date' in request.resource.data &&
+          'driverId' in request.resource.data &&
+          isValidAttendance(request.resource.data);
         allow delete:          if isSignedIn() && isOwner(uid);
       }
 
@@ -734,9 +743,14 @@ service cloud.firestore {
 
     function isValidSubscription(data) {
       return
-        (!('planId' in data)          || data.planId in ['starter', 'professional', 'business']) &&
-        (!('billingCycle' in data)    || data.billingCycle in ['monthly', 'annual']) &&
-        (!('status' in data)          || data.status in ['trialing', 'active', 'canceled']) &&
+        ('planId' in data)             && data.planId in ['starter', 'professional', 'business'] &&
+        ('billingCycle' in data)       && data.billingCycle in ['monthly', 'annual'] &&
+        ('status' in data)             && data.status in ['trialing', 'active', 'canceled'] &&
+        ('currentPeriodStart' in data) && data.currentPeriodStart is timestamp &&
+        ('currentPeriodEnd' in data)   && data.currentPeriodEnd is timestamp &&
+        data.currentPeriodEnd > data.currentPeriodStart &&
+        (!('lastPaymentAmount' in data) || isMoney(data.lastPaymentAmount)) &&
+        (!('lastPaymentMethod' in data) || data.lastPaymentMethod in ['vodafone_cash', 'instapay']) &&
         (!('gatewayProvider' in data) || isShortStr(data.gatewayProvider));
     }
 
@@ -758,6 +772,15 @@ service cloud.firestore {
         ('planId' in data)       && data.planId in ['starter', 'professional', 'business'] &&
         ('billingCycle' in data) && data.billingCycle in ['monthly', 'annual'] &&
         ('amount' in data)       && isMoney(data.amount) &&
+        ((data.planId == 'starter' &&
+          ((data.billingCycle == 'monthly' && data.amount == 499) ||
+           (data.billingCycle == 'annual'  && data.amount == 4990))) ||
+         (data.planId == 'professional' &&
+          ((data.billingCycle == 'monthly' && data.amount == 1199) ||
+           (data.billingCycle == 'annual'  && data.amount == 11990))) ||
+         (data.planId == 'business' &&
+          ((data.billingCycle == 'monthly' && data.amount == 2499) ||
+           (data.billingCycle == 'annual'  && data.amount == 24990)))) &&
         ('method' in data)       && data.method in ['vodafone_cash', 'instapay'] &&
         ('status' in data)       && data.status == 'pending_review';
     }

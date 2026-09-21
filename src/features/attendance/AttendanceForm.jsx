@@ -19,8 +19,8 @@ const AttendanceForm = ({ driverId, driverName, onSave, onClose }) => {
   });
 
   const onSubmit = async (data) => {
-    await onSave({ ...data, driverId });
-    onClose();
+    const savedId = await onSave({ ...data, driverId });
+    if (savedId) onClose();
   };
 
   return (

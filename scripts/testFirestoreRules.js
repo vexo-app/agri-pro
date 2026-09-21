@@ -355,6 +355,20 @@ async function main() {
       "شركة أ لسه ممنوعة تقرا subcollection بيانات شركة ب حتى بعد إضافة صلاحية الأدمن (مش هي الأدمن)",
       () => assertFails(asA.doc(`users/${COMPANY_B}/jobs/job1`).get())
     );
+    await test("admin-vs-user", "الأدمن يقدر ينشئ اشتراك مكتمل", () =>
+      assertSucceeds(asAdmin.doc(`subscriptions/${COMPANY_A}`).set({
+        planId: "professional", billingCycle: "monthly", status: "active",
+        currentPeriodStart: new Date("2026-01-01T00:00:00Z"),
+        currentPeriodEnd: new Date("2026-01-31T00:00:00Z"),
+        gatewayProvider: "manual", lastPaymentAmount: 1199,
+        lastPaymentMethod: "instapay",
+      }))
+    );
+    await test("admin-vs-user", "ممنوع حتى للأدمن حفظ اشتراك ناقص تواريخ الدورة", () =>
+      assertFails(asAdmin.doc(`subscriptions/${COMPANY_B}`).set({
+        planId: "starter", billingCycle: "monthly", status: "active",
+      }))
+    );
   }
 
   console.log("\n── المجموعة 3: مستندات بحقول متلاعب بيها (تخريب متعمد) ──");
@@ -378,6 +392,26 @@ async function main() {
     );
     await test("tampering", "ممنوع إنشاء قيد راتب بـ type مش من الأنواع المسموحة", () =>
       assertFails(asA.doc(`users/${COMPANY_A}/salaryEntries/bad1`).set({ amount: 100, type: "غير_موجود" }))
+    );
+    await test("tampering", "تسجيل حضور كامل وصحيح مسموح", () =>
+      assertSucceeds(asA.doc(`users/${COMPANY_A}/attendance/driver1__2026-01-15`).set({
+        driverId: "driver1", date: "2026-01-15", status: "present",
+      }))
+    );
+    await test("tampering", "ممنوع تسجيل حضور من غير السائق أو التاريخ أو الحالة", () =>
+      assertFails(asA.doc(`users/${COMPANY_A}/attendance/incomplete`).set({ status: "present" }))
+    );
+    await test("tampering", "طلب اشتراك بالمبلغ الرسمي مسموح", () =>
+      assertSucceeds(asA.doc("billingRequests/validPrice").set({
+        uid: COMPANY_A, planId: "starter", billingCycle: "monthly", amount: 499,
+        method: "vodafone_cash", status: "pending_review",
+      }))
+    );
+    await test("tampering", "ممنوع إنشاء طلب اشتراك بمبلغ متلاعب فيه", () =>
+      assertFails(asA.doc("billingRequests/tamperedPrice").set({
+        uid: COMPANY_A, planId: "starter", billingCycle: "monthly", amount: 1,
+        method: "vodafone_cash", status: "pending_review",
+      }))
     );
     await test("tampering", "إضافة دفعة على عملية موجودة وغير مقفولة تنجح", () =>
       assertSucceeds(asA.doc(`users/${COMPANY_A}/payments/validPayment`).set({

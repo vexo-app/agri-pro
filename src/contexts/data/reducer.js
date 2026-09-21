@@ -77,7 +77,7 @@ export const reducer = (state, action) => {
     case "UPDATE_SALARY": return { ...state, salaryEntries: state.salaryEntries.map(s => s.id === action.payload.id ? { ...s, ...action.payload } : s) };
     case "DELETE_SALARY": return { ...state, salaryEntries: state.salaryEntries.filter(s => s.id !== action.payload) };
 
-    case "ADD_ATTENDANCE":    return { ...state, attendance: [action.payload, ...state.attendance] };
+    case "ADD_ATTENDANCE":    return { ...state, attendance: [action.payload, ...state.attendance.filter(a => a.id !== action.payload.id)] };
     case "UPDATE_ATTENDANCE": return { ...state, attendance: state.attendance.map(a => a.id === action.payload.id ? { ...a, ...action.payload } : a) };
     case "DELETE_ATTENDANCE": return { ...state, attendance: state.attendance.filter(a => a.id !== action.payload) };
 
