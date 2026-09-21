@@ -116,7 +116,16 @@ const ReportsPage = () => {
     salaryEntries = [], equipment = [], jobs = [], drivers = [], maintenance = [], equipmentFuelEntries = [],
     taxDeductions = [], supplierInvoices = [], supplierPayments = [], settings,
   } = useData();
-  const totalSalariesPaid = calcTotalSalariesPaid(salaryEntries, drivers);
+  // نفس قاعدة الداشبورد: راتب الشهر الحالي مستحق لكل عضو نشط حتى لو لسه
+  // مفيش قيد راتب اتسجل له. ده يمنع اختلاف رقم الرواتب وصافي الربح بين
+  // الداشبورد والتقارير لنفس البيانات.
+  const currentPeriod = resolveMonth("current");
+  const currentMonthPrefix = `${currentPeriod.year}-${String(currentPeriod.month).padStart(2, "0")}`;
+  const totalSalariesPaid = calcTotalSalariesPaid(
+    salaryEntries,
+    drivers,
+    { assumeDueForMonth: currentMonthPrefix }
+  );
   const totalTaxDeductions = calcTotalTaxDeductions(taxDeductions);
   // نفس أسلوب الداشبورد بالظبط (cash basis): اللي بيتخصم من الربح هو
   // الواصل فعلاً للموردين، مش المتبقي غير المدفوع — عشان "صافي الربح" هنا
@@ -152,7 +161,8 @@ const ReportsPage = () => {
     const monthPrefix = `${year}-${String(month).padStart(2, "0")}`;
     const salariesForPeriod = calcTotalSalariesPaid(
       salaryEntries.filter((e) => (e.date || "").startsWith(monthPrefix)),
-      drivers
+      drivers,
+      downloadMonth === "current" ? { assumeDueForMonth: monthPrefix } : undefined
     );
     const taxDeductionsForPeriod = taxDeductions
       .filter((t) => (t.date || "").startsWith(monthPrefix))

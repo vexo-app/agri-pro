@@ -264,6 +264,26 @@ describe("calcTotalSalariesPaid", () => {
     const total = calcTotalSalariesPaid([], drivers, { assumeDueForMonth: "2026-09" });
     expect(total).toBe(3000); // one assumed month only, not one per calendar month
   });
+
+  test("all-time report and dashboard include the same current-month salary assumption", () => {
+    const entries = [
+      { driverId: "d1", type: SALARY_ENTRY_TYPES.BASE, amount: 2500, date: "2026-08-01" },
+    ];
+    const drivers = [{
+      id: "d1",
+      salary: 3000,
+      status: DRIVER_STATUS.ACTIVE,
+      salaryHistory: [
+        { effectiveFrom: "2026-08", salary: 2500 },
+        { effectiveFrom: "2026-09", salary: 3000 },
+      ],
+    }];
+
+    const sharedTotal = calcTotalSalariesPaid(entries, drivers, {
+      assumeDueForMonth: "2026-09",
+    });
+    expect(sharedTotal).toBe(5500);
+  });
 });
 
 // ─── calcDailyRate ────────────────────────────────────────────────────────────
