@@ -60,6 +60,7 @@ const BackupSection = ({ open, onOpenRestore }) => {
         attendance:    data.attendance,
         custodyTransactions: data.custody,
         taxDeductions: data.taxDeductions,
+        contacts:      data.contacts,
         settings:      data.settings,
       });
       localStorage.setItem(`lastBackupAt:${user.uid}`, String(Date.now()));

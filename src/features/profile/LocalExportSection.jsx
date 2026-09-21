@@ -42,6 +42,7 @@ const LocalExportSection = ({ onOpenImport }) => {
         attendance:    data.attendance,
         custodyTransactions: data.custody,
         taxDeductions: data.taxDeductions,
+        contacts:      data.contacts,
         settings:      data.settings,
       });
       const now = String(Date.now());

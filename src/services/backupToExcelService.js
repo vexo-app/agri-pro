@@ -2,7 +2,7 @@
 // ─────────────────────────────────────────────────────────
 // أدمن بس: بياخد بيانات نسخة احتياطية يدوية (نفس الشكل اللي بينزله
 // exportService.downloadBackupFile — { equipment, jobs, drivers,
-// maintenance, payments, salaryEntries, attendance,
+// maintenance, payments, salaryEntries, attendance, contacts,
 // custodyTransactions, settings }) ويحوّلها لملف Excel واحد فيه
 // شيتات منفصلة ومترابطة (IDs اتحولت لأسامي حقيقية)، جاهز يتبعت
 // للمستخدم كمرجع كامل لبياناته من غير ما يضيع أي حقل من الأصل.
@@ -126,6 +126,7 @@ const convert = (backupData, meta = {}) => {
   const payments = arr(data.payments);
   const salaryEntries = arr(data.salaryEntries);
   const attendance = arr(data.attendance);
+  const contacts = arr(data.contacts);
   const custody = arr(data.custodyTransactions || data.custody);
   const settings = data.settings || {};
 
@@ -269,6 +270,13 @@ const convert = (backupData, meta = {}) => {
     "معرف": a.id,
   }));
 
+  const contactRows = contacts.map((contact) => ({
+    "الاسم": orDash(contact.name),
+    "النوع": contact.type === "client" ? "عميل" : contact.type === "supplier" ? "مورد" : orDash(contact.type),
+    "رقم الهاتف": orDash(contact.phone),
+    "معرف": contact.id,
+  }));
+
   // ═══════════════════════ 8) شيت العهدة (برصيد تراكمي) ═══════════════════
   const custodySorted = [...custody].sort((a, b) => {
     const da = new Date(a.date || 0).getTime();
@@ -332,6 +340,7 @@ const convert = (backupData, meta = {}) => {
     { "البيان": "عدد الدفعات", "القيمة": paymentRows.length },
     { "البيان": "عدد قيود المرتبات", "القيمة": salaryRows.length },
     { "البيان": "عدد سجلات الحضور", "القيمة": attendanceRows.length },
+    { "البيان": "عدد جهات الاتصال", "القيمة": contactRows.length },
     { "البيان": "عدد حركات العهدة", "القيمة": custodyRows.length },
     { "البيان": "—", "القيمة": "—" },
     { "البيان": "إجمالي الإيراد (ج.م)", "القيمة": totalRevenue },
@@ -357,6 +366,7 @@ const convert = (backupData, meta = {}) => {
   addSheet(paymentRows, "الدفعات");
   addSheet(salaryRows, "المرتبات");
   addSheet(attendanceRows, "الحضور");
+  addSheet(contactRows, "جهات الاتصال");
   addSheet(custodyRows, "العهدة");
   addSheet(settingsRows, "الإعدادات");
 

@@ -23,6 +23,7 @@ const COUNT_LABELS = {
   attendance:    "الحضور",
   custodyTransactions: "العهدة",
   taxDeductions: "الضرائب والخصومات",
+  contacts:      "جهات الاتصال",
   settings:      "الإعدادات",
 };
 
@@ -56,6 +57,7 @@ const ImportModal = ({ open, onClose }) => {
     attendance:    data.attendance?.length    || 0,
     custodyTransactions: data.custody?.length || 0,
     taxDeductions: data.taxDeductions?.length || 0,
+    contacts:      data.contacts?.length || 0,
   };
 
   const reset = () => {
@@ -97,6 +99,7 @@ const ImportModal = ({ open, onClose }) => {
     attendance:    data.attendance,
     custodyTransactions: data.custody,
     taxDeductions: data.taxDeductions,
+    contacts:      data.contacts,
     settings:      data.settings,
   });
 
@@ -298,7 +301,7 @@ const ImportModal = ({ open, onClose }) => {
               <div className="text-gray-500 font-bold text-left">الحالي ← بعد الاسترجاع</div>
               {Object.entries(COUNT_LABELS).map(([key, label]) => {
                 const before = currentCounts[key];
-                const after  = picked.counts?.[key] ?? 0;
+                const after  = picked.counts?.[key] ?? before;
                 const changed = before !== after;
                 return (
                   <React.Fragment key={key}>

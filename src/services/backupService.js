@@ -6,6 +6,7 @@ import {
 } from "firebase/firestore";
 import { db } from "../config/firebase";
 import { COLLECTIONS, MAX_BACKUPS_KEPT, BACKUP_CHUNK_BYTES } from "../config/constants";
+import { validateBackupData } from "../utils/backupValidation";
 
 const metaRef      = (userId) => doc(db, COLLECTIONS.BACKUPS, userId);
 const snapshotsCol = (userId) => collection(db, COLLECTIONS.BACKUPS, userId, "snapshots");
@@ -34,19 +35,13 @@ const BACKUP_COLLECTIONS = [
   ["attendance",          "attendance"],
   ["custodyTransactions", "custodyTransactions"],
   ["taxDeductions",       "taxDeductions"],
+  ["contacts",            "contacts"],
 ];
 
-// audit finding D1: `contacts` و `driverCosts` (users/{uid}/contacts,
-// users/{uid}/driverCosts) لسه ما اتضافوش لـ BACKUP_COLLECTIONS، لأن
-// إضافتهم هناك كانت هتأثر كمان على createBackup/restoreSnapshot (كل
-// أماكن بناء payload الباك أب الأربعة: BackupSection/RestoreModal/
-// ImportModal/useAutoBackup محتاجة تتعدّل كلها، وكل نسخة احتياطية قديمة
-// موجودة فعليًا دلوقتي هتفشل في الاستعادة لأنها ناقصة الحقلين الجدد —
-// ده تعديل أكبر وله مخاطرة على النسخ الموجودة، يحتاج قرارك بشكل مستقل).
-// هنا بس بنقفل فجوة wipeAllData (حذف الحساب نهائيًا) لأنها الجزء الآمن
-// والمحدود من الـfinding: لازم تُمسح فعليًا زي باقي الـsubcollections،
-// حتى من غير ما نلمس منطق الباك أب/الاستعادة أصلًا.
-const WIPE_ONLY_COLLECTIONS = ["contacts", "driverCosts"];
+// driverCosts بيانات قديمة بتترحّل تلقائيًا للرواتب، فبتتمسح مع حذف
+// الحساب فقط. contacts بقت جزءًا كاملًا من النسخ والاسترجاع أعلاه.
+const WIPE_ONLY_COLLECTIONS = ["driverCosts"];
+const LEGACY_OPTIONAL_COLLECTIONS = new Set(["contacts"]);
 
 const countsFor = (data) =>
   BACKUP_COLLECTIONS.reduce((acc, [key]) => {
@@ -260,6 +255,21 @@ export const backupService = {
   },
 
   /**
+   * Load the requested cloud snapshot before creating the safety backup.
+   * createBackup prunes snapshots beyond the retention limit, so reversing
+   * this order could delete the selected oldest snapshot before it is read.
+   */
+  async prepareRestore(userId, snapshotId, currentData, { onStage } = {}) {
+    onStage?.("loadingSnapshot");
+    const snapshotData = await this.getSnapshot(userId, snapshotId);
+
+    onStage?.("creatingSafetyBackup");
+    const safetyBackupId = await this.createBackup(userId, currentData);
+
+    return { snapshotData, safetyBackupId };
+  },
+
+  /**
    * Overwrite the user's live data with a snapshot's data.
    * Caller is responsible for taking a fresh "safety" backup first.
    *
@@ -299,16 +309,31 @@ export const backupService = {
     if (snapshotData.equipmentFuelEntries === undefined) {
       snapshotData = { ...snapshotData, equipmentFuelEntries: [] };
     }
+    try {
+      validateBackupData(snapshotData, {
+        allowMissingContacts: true,
+        allowMissingSettings: true,
+      });
+    } catch (err) {
+      throw new Error(`بيانات الاسترجاع ناقصة أو غير صالحة: ${err.message}`);
+    }
     const invalidKey = BACKUP_COLLECTIONS.find(
       ([key]) => !Array.isArray(snapshotData[key])
+        && !(snapshotData[key] === undefined && LEGACY_OPTIONAL_COLLECTIONS.has(key))
     );
     if (invalidKey) {
       throw new Error("بيانات الاسترجاع ناقصة أو غير صالحة، تم إلغاء العملية قبل أي تعديل");
     }
 
+    // النسخ القديمة قبل إضافة contacts بتسيب جهات الاتصال الحالية كما هي
+    // بدل ما تمسحها أو تفشل عملية الاسترجاع كلها.
+    const collectionsToRestore = BACKUP_COLLECTIONS.filter(
+      ([key]) => snapshotData[key] !== undefined
+    );
+
     // +1 for the trailing "settings" step (only really a step when the
     // snapshot actually carries settings — see below).
-    const totalKeys = BACKUP_COLLECTIONS.length + (snapshotData.settings ? 1 : 0);
+    const totalKeys = collectionsToRestore.length + (snapshotData.settings ? 1 : 0);
     const completedKeys = [];
     let activeKey = null;
     let appliedOperations = 0;
@@ -325,7 +350,7 @@ export const backupService = {
     };
 
     try {
-      for (const [key, subName] of BACKUP_COLLECTIONS) {
+      for (const [key, subName] of collectionsToRestore) {
         activeKey = key;
         await restoreCollection(subName, userId, snapshotData[key] || [], {
           onBatchCommitted: handleBatchCommitted(key),

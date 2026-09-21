@@ -1,5 +1,7 @@
 // src/services/exportService.js
 // ─────────────────────────────────────────────────────────
+
+import { validateBackupData } from "../utils/backupValidation";
 // نسخة احتياطية "خارجية" حقيقية: بتنزل ملف JSON على جهاز
 // المستخدم نفسه (تليفون/كمبيوتر)، بره مشروع Firebase تمامًا.
 // لو حصل أي حاجة في حساب Firebase نفسه (تعليق، فوترة، حذف
@@ -9,13 +11,13 @@
 // بياخد أي object جاهز ويحوّله لملف، أو ياخد ملف ويرجّعه object.
 // ─────────────────────────────────────────────────────────
 
-const EXPORT_VERSION = 2;
+const EXPORT_VERSION = 3;
 
 const BACKUP_KEYS = [
   "equipment", "jobs", "drivers", "maintenance",
   "equipmentFuelEntries",
   "payments", "supplierInvoices", "supplierPayments",
-  "salaryEntries", "attendance", "custodyTransactions", "taxDeductions", "settings",
+  "salaryEntries", "attendance", "custodyTransactions", "taxDeductions", "contacts", "settings",
 ];
 
 /** بناء اسم ملف واضح فيه تاريخ اليوم، عشان لو حمّل أكتر من نسخة يعرف يميزهم. */
@@ -91,16 +93,23 @@ export const exportService = {
     // نوصل لأي كتابة فعلية على Firestore في restoreSnapshot.
     const missingOrInvalid = BACKUP_KEYS.some((key) => {
       if (key === "settings") return parsed.data[key] === undefined;
+      if (key === "contacts" && parsed.version < 3 && parsed.data[key] === undefined) return false;
       return !Array.isArray(parsed.data[key]);
     });
     if (missingOrInvalid) {
       throw new Error("الملف ده ناقص أو تالف — بعض البيانات المطلوبة مش موجودة");
     }
 
+    try {
+      validateBackupData(parsed.data, { allowMissingContacts: parsed.version < 3 });
+    } catch (err) {
+      throw new Error(`الملف ده تالف — ${err.message}`);
+    }
+
     // بناء counts للعرض في شاشة التأكيد قبل الاسترجاع
     const counts = BACKUP_KEYS.reduce((acc, key) => {
       if (key === "settings") return acc;
-      acc[key] = Array.isArray(parsed.data[key]) ? parsed.data[key].length : 0;
+      if (Array.isArray(parsed.data[key])) acc[key] = parsed.data[key].length;
       return acc;
     }, {});
 

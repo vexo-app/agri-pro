@@ -22,6 +22,7 @@ const COUNT_LABELS = {
   attendance:    "الحضور",
   custodyTransactions: "العهدة",
   taxDeductions: "الضرائب والخصومات",
+  contacts:      "جهات الاتصال",
   settings:      "الإعدادات",
 };
 
@@ -57,6 +58,7 @@ const RestoreModal = ({ open, onClose }) => {
     attendance:    data.attendance?.length    || 0,
     custodyTransactions: data.custody?.length || 0,
     taxDeductions: data.taxDeductions?.length || 0,
+    contacts:      data.contacts?.length || 0,
   };
 
   const loadList = useCallback(async () => {
@@ -99,6 +101,7 @@ const RestoreModal = ({ open, onClose }) => {
     attendance:    data.attendance,
     custodyTransactions: data.custody,
     taxDeductions: data.taxDeductions,
+    contacts:      data.contacts,
     settings:      data.settings,
   });
 
@@ -108,14 +111,22 @@ const RestoreModal = ({ open, onClose }) => {
     setRestoreError(null);
     let safetyBackupId = null;
     try {
-      setBusyLabel("جاري أخذ نسخة أمان من وضعك الحالي...");
-      safetyBackupId = await backupService.createBackup(user.uid, currentDataPayload());
-
-      setBusyLabel("جاري تحميل النسخة المطلوبة...");
-      const snapshotData = await backupService.getSnapshot(user.uid, selected.id);
+      const prepared = await backupService.prepareRestore(
+        user.uid,
+        selected.id,
+        currentDataPayload(),
+        {
+          onStage: (stage) => setBusyLabel(
+            stage === "loadingSnapshot"
+              ? "جاري تحميل النسخة المطلوبة..."
+              : "جاري أخذ نسخة أمان من وضعك الحالي..."
+          ),
+        }
+      );
+      safetyBackupId = prepared.safetyBackupId;
 
       setBusyLabel("جاري استرجاع البيانات...");
-      await backupService.restoreSnapshot(user.uid, snapshotData, {
+      await backupService.restoreSnapshot(user.uid, prepared.snapshotData, {
         onProgress: ({ completedKeys, totalKeys, activeKey, batchNumber, batchCount }) =>
           setBusyLabel(
             batchCount > 1
@@ -311,7 +322,7 @@ const RestoreModal = ({ open, onClose }) => {
               <div className="text-gray-500 font-bold text-left">الحالي ← بعد الاسترجاع</div>
               {Object.entries(COUNT_LABELS).map(([key, label]) => {
                 const before = currentCounts[key];
-                const after  = selected.counts?.[key] ?? 0;
+                const after  = selected.counts?.[key] ?? before;
                 const changed = before !== after;
                 return (
                   <React.Fragment key={key}>

@@ -51,6 +51,7 @@ const emptySnapshot = () => ({
   attendance: [],
   custodyTransactions: [],
   taxDeductions: [],
+  contacts: [],
 });
 
 describe("backupService.restoreSnapshot", () => {
@@ -100,5 +101,63 @@ describe("backupService.restoreSnapshot", () => {
       activeKey: "equipment",
       appliedOperations: 0,
     });
+  });
+
+  test("restores contacts from new backups", async () => {
+    const snapshot = emptySnapshot();
+    snapshot.contacts = [{ id: "contact-1", name: "عميل", type: "client", phone: "01000000000" }];
+    mockBatchCommit.mockResolvedValue(undefined);
+
+    await backupService.restoreSnapshot("user-1", snapshot);
+
+    expect(mockBatchSet).toHaveBeenCalledWith(
+      expect.stringContaining("users/user-1/contacts/contact-1"),
+      expect.objectContaining({ name: "عميل", type: "client" })
+    );
+  });
+
+  test("legacy backups without contacts preserve the live contacts collection", async () => {
+    const snapshot = emptySnapshot();
+    delete snapshot.contacts;
+    mockBatchCommit.mockResolvedValue(undefined);
+
+    await backupService.restoreSnapshot("user-1", snapshot);
+
+    expect(mockGetDocs.mock.calls.some(([path]) => String(path).includes("/contacts"))).toBe(false);
+  });
+
+  test("rejects a malformed record before any Firestore read or write", async () => {
+    const snapshot = emptySnapshot();
+    snapshot.payments = [{ id: "payment-1", amount: -10, date: "not-a-date" }];
+
+    await expect(backupService.restoreSnapshot("user-1", snapshot))
+      .rejects.toThrow("الحقل amount غير صالح");
+    expect(mockGetDocs).not.toHaveBeenCalled();
+    expect(mockBatchCommit).not.toHaveBeenCalled();
+  });
+});
+
+describe("backupService.prepareRestore", () => {
+  test("loads the selected snapshot before creating a safety backup that may prune it", async () => {
+    const order = [];
+    const targetData = emptySnapshot();
+    const currentData = emptySnapshot();
+    const getSpy = jest.spyOn(backupService, "getSnapshot").mockImplementation(async () => {
+      order.push("load-target");
+      return targetData;
+    });
+    const createSpy = jest.spyOn(backupService, "createBackup").mockImplementation(async () => {
+      order.push("create-safety");
+      return "safety-1";
+    });
+
+    try {
+      const result = await backupService.prepareRestore("user-1", "oldest-1", currentData);
+      expect(order).toEqual(["load-target", "create-safety"]);
+      expect(result).toEqual({ snapshotData: targetData, safetyBackupId: "safety-1" });
+    } finally {
+      getSpy.mockRestore();
+      createSpy.mockRestore();
+    }
   });
 });

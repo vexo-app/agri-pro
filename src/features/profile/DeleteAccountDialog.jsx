@@ -21,6 +21,7 @@ const STEP_LABELS = {
   supplierInvoices: "فواتير الموردين", supplierPayments: "مدفوعات الموردين",
   salaryEntries: "الرواتب", attendance: "الحضور",
   custodyTransactions: "العهدة", taxDeductions: "الضرائب",
+  contacts: "جهات الاتصال",
   settings: "الإعدادات", backups: "النسخ الاحتياطية",
   account: "بيانات الحساب",
 };

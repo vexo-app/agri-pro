@@ -77,6 +77,7 @@ export function useAutoBackup({ user, loading, loadError, stateRef }) {
           attendance:    current.attendance,
           custodyTransactions: current.custody,
           taxDeductions: current.taxDeductions,
+          contacts:      current.contacts,
           settings:      current.settings,
         });
         localStorage.setItem(`lastBackupAt:${user.uid}`, String(Date.now()));
