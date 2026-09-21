@@ -18,7 +18,7 @@ import { driverService } from "../../services/driverService";
 import { salaryService } from "../../services/salaryService";
 import { attendanceService } from "../../services/attendanceService";
 import {
-  calcMonthlySalary, getMonthEntries, calcAttendanceSummary,
+  calcMonthlySalary, getMonthEntries, calcAttendanceSummary, getSalaryForMonth,
 } from "../../utils/salaryCalculations";
 import { Card, CardHeader, CardBody, StatCard, Badge, EmptyState } from "../../components/ui/Card";
 import LoadingScreen from "../../components/ui/LoadingScreen";
@@ -101,7 +101,10 @@ const GuestDriverDetailPage = () => {
   if (loading) return <LoadingScreen />;
   if (!driver) return <div className="p-6 text-center text-gray-400">العضو غير موجود</div>;
 
-  const monthlySummary = { ...calcMonthlySalary(getMonthEntries(salaryEntries, driverId, selectedMonth), driver.salary) };
+  const monthlySummary = { ...calcMonthlySalary(
+    getMonthEntries(salaryEntries, driverId, selectedMonth),
+    getSalaryForMonth(driver, selectedMonth)
+  ) };
   const monthEntries = getMonthEntries(salaryEntries, driverId, selectedMonth);
   const attendSummary = calcAttendanceSummary(attendance, driverId, selectedMonth);
   const monthAttend = attendance.filter((r) => r.driverId === driverId && (r.date || "").startsWith(selectedMonth)).sort((a, b) => b.date.localeCompare(a.date));

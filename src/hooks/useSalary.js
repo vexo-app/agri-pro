@@ -6,6 +6,7 @@ import {
   calcTotalSalariesPaid,
   getMonthEntries,
   calcAttendanceSummary,
+  getSalaryForMonth,
 } from "../utils/salaryCalculations";
 
 export const useSalary = () => {
@@ -29,7 +30,7 @@ export const useSalary = () => {
     (driverId, yearMonth) => {
       const entries = getMonthEntries(salaryEntries, driverId, yearMonth);
       const driver  = drivers.find((d) => d.id === driverId);
-      return { ...calcMonthlySalary(entries, driver?.salary), entries };
+      return { ...calcMonthlySalary(entries, getSalaryForMonth(driver, yearMonth)), entries };
     },
     [salaryEntries, drivers]
   );

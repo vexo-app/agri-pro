@@ -4,6 +4,7 @@ import { Outlet, useLocation } from "react-router-dom";
 import { useGuest } from "../../contexts/GuestContext";
 import GuestSidebar from "./GuestSidebar";
 import { MenuIcon, EyeIcon } from "../ui/Icons";
+import { trackPageview } from "../../config/posthog";
 
 /**
  * الشكل العام لواجهة الضيف: بانر ثابت واضح فوق كل صفحة (البرومبت الأصلي
@@ -14,7 +15,10 @@ const GuestLayout = () => {
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const { pathname } = useLocation();
 
-  useEffect(() => { setSidebarOpen(false); }, [pathname]);
+  useEffect(() => {
+    setSidebarOpen(false);
+    trackPageview(pathname);
+  }, [pathname]);
 
   const companyLabel = ownerProfile?.displayName || ownerProfile?.email || access?.name || "الحساب";
 

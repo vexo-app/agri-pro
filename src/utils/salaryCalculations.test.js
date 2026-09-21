@@ -5,6 +5,8 @@ import {
   calcTotalSalariesPaid,
   calcDailyRate,
   calcAttendanceSummary,
+  getSalaryForMonth,
+  buildSalaryHistory,
 } from "./salaryCalculations";
 import { SALARY_ENTRY_TYPES, MAX_MONEY_VALUE, DRIVER_STATUS } from "../config/constants";
 
@@ -62,6 +64,51 @@ describe("calcMonthlySalary", () => {
     expect(result.base).toBe(1000);
     expect(result.gross).toBe(1000);
     expect(result.net).toBe(1000);
+  });
+});
+
+describe("salary history", () => {
+  test("keeps old months on the old salary after the current salary changes", () => {
+    const driver = {
+      salary: 4000,
+      salaryHistory: [
+        { effectiveFrom: "0000-01", salary: 3000 },
+        { effectiveFrom: "2026-09", salary: 4000 },
+      ],
+    };
+
+    expect(getSalaryForMonth(driver, "2026-08")).toBe(3000);
+    expect(getSalaryForMonth(driver, "2026-09")).toBe(4000);
+  });
+
+  test("a new driver has no salary before their first effective month", () => {
+    const driver = {
+      salary: 3000,
+      salaryHistory: [{ effectiveFrom: "2026-09", salary: 3000 }],
+    };
+    expect(getSalaryForMonth(driver, "2026-08")).toBe(0);
+  });
+
+  test("first salary change gives an existing driver a past-rate baseline", () => {
+    const history = buildSalaryHistory({ salary: 3000 }, 4000, "2026-09");
+    expect(history).toEqual([
+      { effectiveFrom: "0000-01", salary: 3000 },
+      { effectiveFrom: "2026-09", salary: 4000 },
+    ]);
+  });
+
+  test("another edit in the same month replaces that month's rate", () => {
+    const driver = {
+      salary: 4000,
+      salaryHistory: [
+        { effectiveFrom: "0000-01", salary: 3000 },
+        { effectiveFrom: "2026-09", salary: 4000 },
+      ],
+    };
+    expect(buildSalaryHistory(driver, 4500, "2026-09")).toEqual([
+      { effectiveFrom: "0000-01", salary: 3000 },
+      { effectiveFrom: "2026-09", salary: 4500 },
+    ]);
   });
 });
 
@@ -157,6 +204,21 @@ describe("calcTotalSalariesPaid", () => {
     const drivers = [{ id: "d1", salary: 3000 }];
     // May: 3000 (explicit BASE). June: 3000 (default) - 300 = 2700.
     expect(calcTotalSalariesPaid(entries, drivers)).toBe(3000 + 2700);
+  });
+
+  test("uses the salary rate for each entry month instead of the driver's current salary", () => {
+    const entries = [
+      { driverId: "d1", type: SALARY_ENTRY_TYPES.DEDUCTION, amount: 100, date: "2026-08-05" },
+    ];
+    const drivers = [{
+      id: "d1",
+      salary: 4000,
+      salaryHistory: [
+        { effectiveFrom: "0000-01", salary: 3000 },
+        { effectiveFrom: "2026-09", salary: 4000 },
+      ],
+    }];
+    expect(calcTotalSalariesPaid(entries, drivers)).toBe(2900);
   });
 
   // ── options.assumeDueForMonth ────────────────────────────────────────────

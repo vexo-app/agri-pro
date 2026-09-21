@@ -1,6 +1,43 @@
 // src/utils/salaryCalculations.js
 import { SALARY_ENTRY_TYPES, DRIVER_STATUS } from "../config/constants";
 
+const monthPrefixOf = (date = new Date()) =>
+  `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}`;
+
+/** Return the salary rate that was effective for a specific calendar month. */
+export const getSalaryForMonth = (driver, yearMonth) => {
+  if (!driver) return 0;
+  const history = Array.isArray(driver.salaryHistory)
+    ? driver.salaryHistory
+        .filter((item) => /^\d{4}-\d{2}$/.test(item?.effectiveFrom || ""))
+        .sort((a, b) => a.effectiveFrom.localeCompare(b.effectiveFrom))
+    : [];
+
+  if (history.length === 0) return Number(driver.salary) || 0;
+
+  const eligible = history.filter((item) => item.effectiveFrom <= yearMonth);
+  const effective = eligible[eligible.length - 1];
+  return effective ? Number(effective.salary) || 0 : 0;
+};
+
+/**
+ * Build salary history when the current salary changes. Existing drivers that
+ * predate this field get one baseline row preserving their old salary for all
+ * past months, then the new rate starts in the current month.
+ */
+export const buildSalaryHistory = (driver, nextSalary, effectiveFrom = monthPrefixOf()) => {
+  const history = Array.isArray(driver?.salaryHistory)
+    ? driver.salaryHistory.map((item) => ({ ...item }))
+    : [{ effectiveFrom: "0000-01", salary: Number(driver?.salary) || 0 }];
+  const next = { effectiveFrom, salary: Number(nextSalary) || 0 };
+  const existingIndex = history.findIndex((item) => item.effectiveFrom === effectiveFrom);
+
+  if (existingIndex >= 0) history[existingIndex] = next;
+  else history.push(next);
+
+  return history.sort((a, b) => a.effectiveFrom.localeCompare(b.effectiveFrom));
+};
+
 /**
  * Calculate net salary for a driver in a specific month.
  * entries = all salary entries for that driver in that month
@@ -92,7 +129,7 @@ export const calcTotalSalariesPaid = (allEntries, drivers = [], options = {}) =>
   if (assumeDueForMonth) {
     drivers.forEach((d) => {
       if (d.status === DRIVER_STATUS.INACTIVE) return;
-      if (!(Number(d.salary) > 0)) return;
+      if (!(getSalaryForMonth(d, assumeDueForMonth) > 0)) return;
       const key = `${d.id}|${assumeDueForMonth}`;
       if (!groups.has(key)) groups.set(key, []);
     });
@@ -100,8 +137,8 @@ export const calcTotalSalariesPaid = (allEntries, drivers = [], options = {}) =>
 
   let total = 0;
   groups.forEach((entries, key) => {
-    const driverId = key.split("|")[0];
-    const defaultBase = driverById.get(driverId)?.salary || 0;
+    const [driverId, yearMonth] = key.split("|");
+    const defaultBase = getSalaryForMonth(driverById.get(driverId), yearMonth);
     total += calcMonthlySalary(entries, defaultBase).net;
   });
   return total;
