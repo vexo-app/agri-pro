@@ -312,22 +312,23 @@ export const backupService = {
     const completedKeys = [];
     let activeKey = null;
     let appliedOperations = 0;
+    const handleBatchCommitted = (key) => ({ operationsApplied, batchNumber, batchCount }) => {
+      appliedOperations += operationsApplied;
+      onProgress?.({
+        completedKeys: [...completedKeys],
+        totalKeys,
+        activeKey: key,
+        appliedOperations,
+        batchNumber,
+        batchCount,
+      });
+    };
 
     try {
       for (const [key, subName] of BACKUP_COLLECTIONS) {
         activeKey = key;
         await restoreCollection(subName, userId, snapshotData[key] || [], {
-          onBatchCommitted: ({ operationsApplied, batchNumber, batchCount }) => {
-            appliedOperations += operationsApplied;
-            onProgress?.({
-              completedKeys: [...completedKeys],
-              totalKeys,
-              activeKey: key,
-              appliedOperations,
-              batchNumber,
-              batchCount,
-            });
-          },
+          onBatchCommitted: handleBatchCommitted(key),
         });
         completedKeys.push(key);
         onProgress?.({ completedKeys: [...completedKeys], totalKeys, justCompleted: key });
