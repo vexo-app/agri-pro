@@ -15,7 +15,7 @@ import FuelEntryForm          from "../features/equipment/FuelEntryForm";
 import { useConfirm }         from "../hooks/useConfirm";
 import LoadingScreen          from "../components/ui/LoadingScreen";
 import { formatCurrency, formatNumber, formatDateShort, formatPercent } from "../utils/formatters";
-import { getLastOilChange, getLastGreaseDate } from "../utils/serviceHistory";
+import { getLastOilChange, getLastGreaseDate, removeOilEntryPatch, findLinkedOilMaintenance } from "../utils/serviceHistory";
 import {
   TractorIcon, FuelIcon, AcreIcon, RevenueIcon, ProfitIcon, CalendarIcon,
   EQUIP_TYPE_ICON_MAP, LinkIcon, OilCanIcon, TrashIcon,
@@ -36,7 +36,7 @@ const PrintSVG = () => (
 const EquipmentDetailPage = () => {
   const { equipmentId } = useParams();
   const navigate        = useNavigate();
-  const { drivers, equipment: allEquipment, updateEquipment, addEquipmentFuelEntry, deleteEquipmentFuelEntry } = useData();
+  const { drivers, equipment: allEquipment, updateEquipment, addEquipmentFuelEntry, deleteEquipmentFuelEntry, addMaintenance, deleteMaintenance } = useData();
   const {
     equipment, jobs, maintenance, fuelEntries,
     stats, maintCost, netProfit, margin,
@@ -71,18 +71,48 @@ const EquipmentDetailPage = () => {
   // في نفس الوقت من صفحة المعدات، مانمسحش تعديله بإعادة كتابة نسخة قديمة
   // من باقي الحقول.
   const handleAddOilChange = async (entry) => {
-    const oilChangeHistory = [...(equipment.oilChangeHistory || []), entry];
+    // لو اتكتب كمية أو ثمن للزيت، نسجّل الغيار كمان كسجل صيانة على
+    // المعدة (نوع "تغيير زيت") علشان يظهر في صفحة الصيانة ويتحسب في
+    // مصاريفها. مصروف على المعدة بس — من غير مخزن ولا خزنة.
+    // oilChangeId بيربط سجل الصيانة بالغيار علشان الحذف والتقرير.
+    // الفلوس والكمية بتتخزن في سجل الصيانة بس (مصدر واحد للحقيقة)،
+    // والغيار نفسه بيشيل maintenanceId للربط.
+    const { oilKg, oilCost, ...baseEntry } = entry;
+    let finalEntry = baseEntry;
+    if ((oilKg || 0) > 0 || (oilCost || 0) > 0) {
+      const notes = [
+        "غيار زيت",
+        oilKg > 0 ? `${formatNumber(oilKg)} كيلو` : null,
+        `عداد ${formatNumber(entry.meter)}`,
+      ].filter(Boolean).join(" · ");
+      const maintData = {
+        equipmentId: equipment.id,
+        type:        "تغيير زيت",
+        cost:        oilCost || 0,
+        date:        entry.date,
+        notes,
+        oilChangeId: entry.id,
+      };
+      if (oilKg > 0) maintData.oilKg = oilKg;
+      const maintenanceId = await addMaintenance(maintData);
+      finalEntry = { ...baseEntry, maintenanceId };
+    }
+    const oilChangeHistory = [...(equipment.oilChangeHistory || []), finalEntry];
     const last = getLastOilChange({ oilChangeHistory });
     await updateEquipment(equipment.id, {
       oilChangeHistory, lastOilChangeMeter: last?.meter ?? "",
     });
   };
   const handleRemoveOilChange = async (entryId) => {
-    const oilChangeHistory = (equipment.oilChangeHistory || []).filter((e) => e.id !== entryId);
-    const last = getLastOilChange({ oilChangeHistory });
-    await updateEquipment(equipment.id, {
-      oilChangeHistory, lastOilChangeMeter: last?.meter ?? "",
-    });
+    // نحذف سجل الصيانة المرتبط (لو موجود) علشان مصروفه مايفضلش لوحده.
+    const removed = (equipment.oilChangeHistory || []).find((e) => e.id === entryId);
+    const linked  = findLinkedOilMaintenance(maintenance, removed);
+    const ok = await confirm(entryId, linked
+      ? `حذف الغيار ده هيحذف كمان سجل الصيانة بتاعه (${formatCurrency(linked.cost)}). متأكد؟`
+      : "هل أنت متأكد من حذف غيار الزيت ده؟");
+    if (!ok) return;
+    if (linked) await deleteMaintenance(linked.id);
+    await updateEquipment(equipment.id, removeOilEntryPatch(equipment, entryId));
   };
   // Smart-alerts (Phase 1) — manual reminder date the owner sets themselves.
   // Works the same way for both base-equipment oil changes and attachment
@@ -247,6 +277,7 @@ const EquipmentDetailPage = () => {
         entries={isAttachment ? (equipment.greaseHistory || []) : (equipment.oilChangeHistory || [])}
         onAdd={isAttachment ? handleAddGrease : handleAddOilChange}
         onRemove={isAttachment ? handleRemoveGrease : handleRemoveOilChange}
+        maintenance={maintenance}
       />
 
       {!isAttachment && (

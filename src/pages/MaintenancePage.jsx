@@ -13,10 +13,20 @@ import LoadingScreen            from "../components/ui/LoadingScreen";
 import { PlusIcon, WrenchIcon, RevenueIcon } from "../components/ui/Icons";
 import { formatCurrency }       from "../utils/formatters";
 import { trackEvent }           from "../config/posthog";
+import toast                    from "react-hot-toast";
+import { removeOilEntryPatch }  from "../utils/serviceHistory";
 
 const MaintenancePage = () => {
-  const { byEquipment, totalCost, loading, addMaintenance, updateMaintenance, deleteMaintenance } = useMaintenance();
-  const { equipment } = useData();
+  const { maintenance, byEquipment, totalCost, loading, addMaintenance, updateMaintenance, deleteMaintenance } = useMaintenance();
+  const { equipment, updateEquipment } = useData();
+
+  // The oil-change entry (on the equipment doc) linked to a maintenance record.
+  const findLinkedOilEntry = (record) => {
+    if (!record?.oilChangeId) return null;
+    const eq = equipment.find((e) => e.id === record.equipmentId);
+    const entry = eq?.oilChangeHistory?.find((e) => e.id === record.oilChangeId);
+    return entry ? { eq, entry } : null;
+  };
   const { confirm, confirmState } = useConfirm();
   const [modal, setModal] = useState(null);
 
@@ -29,13 +39,33 @@ const MaintenancePage = () => {
       await addMaintenance(formData);
       trackEvent("maintenance_recorded");
     } else {
-      await updateMaintenance(modal.data.id, formData);
+      const record = modal.data;
+      // سجل مربوط بغيار زيت: مينفعش ينتقل لمعدة تانية، وإلا الغيار يفضل
+      // على معدة والفلوس على معدة تانية.
+      if (record.oilChangeId && formData.equipmentId && formData.equipmentId !== record.equipmentId) {
+        toast.error("السجل ده مربوط بغيار زيت — امسحه وسجّله من صفحة المعدة الصحيحة");
+        return;
+      }
+      await updateMaintenance(record.id, formData);
+      // تغيير التاريخ يتنقل لسجل الغيار كمان.
+      const link = formData.date ? findLinkedOilEntry(record) : null;
+      if (link && link.entry.date !== formData.date) {
+        await updateEquipment(link.eq.id, {
+          oilChangeHistory: link.eq.oilChangeHistory.map((e) =>
+            e.id === link.entry.id ? { ...e, date: formData.date } : e),
+        });
+      }
     }
   };
 
   const handleDelete = async (id) => {
     const ok = await confirm(id);
-    if (ok) deleteMaintenance(id);
+    if (!ok) return;
+    const record = maintenance.find((m) => m.id === id);
+    const link = findLinkedOilEntry(record);
+    deleteMaintenance(id);
+    // لو السجل ده غيار زيت، نشيله من سجل الغيار على المعدة كمان.
+    if (link) await updateEquipment(link.eq.id, removeOilEntryPatch(link.eq, link.entry.id));
   };
 
   if (loading) return <LoadingScreen />;

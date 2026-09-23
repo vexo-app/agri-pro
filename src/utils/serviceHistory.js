@@ -49,6 +49,25 @@ export const getLastGreaseDate = (equipment) => {
 };
 
 /**
+ * Patch that removes one oil-change entry from an equipment doc and
+ * recomputes lastOilChangeMeter. Used by both the equipment page and the
+ * maintenance page so the two stay identical.
+ */
+export const removeOilEntryPatch = (equipment, entryId) => {
+  const oilChangeHistory = (equipment?.oilChangeHistory || []).filter((e) => e.id !== entryId);
+  const last = getLastOilChange({ oilChangeHistory });
+  return { oilChangeHistory, lastOilChangeMeter: last?.meter ?? "" };
+};
+
+/**
+ * The maintenance record linked to an oil-change entry (or undefined).
+ * The maintenance record is the ONLY place the oil money lives.
+ */
+export const findLinkedOilMaintenance = (maintenance = [], entry) =>
+  entry ? maintenance.find((m) =>
+    m.oilChangeId === entry.id || (entry.maintenanceId && m.id === entry.maintenanceId)) : undefined;
+
+/**
  * Small unique id for a new history entry — good enough for a
  * client-generated array item id (not a Firestore document id).
  */
