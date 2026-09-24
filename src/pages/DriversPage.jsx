@@ -107,7 +107,10 @@ const DriversPage = () => {
 
     const remaining = Math.max(0, due - paid);
 
-    return { due, paid, remaining, deductionsThisMonth };
+    // baseDue = مجموع الرواتب الأساسية الثابتة للأعضاء النشطين بس — ده اللي
+    // بيتعرض في كارت "إجمالي رواتب الشهر المستحقة" عشان يفضل رقم ثابت كل شهر
+    // (المالك المفروض يدفع كام). "المتبقي" لسه محسوب من due زي ما هو.
+    return { baseDue, due, paid, remaining, deductionsThisMonth };
   }, [tabReport, tabMemberIds, salaryEntries, currentMonth]);
 
   const visibleDrivers = useMemo(() => {
@@ -244,7 +247,7 @@ const DriversPage = () => {
 
       {/* KPIs — SALARIES this month for the active tab (not machine/job revenue) */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 mb-6">
-        <StatCard icon={<RevenueIcon size={24}/>} label="إجمالي رواتب الشهر المستحقة"  value={formatCurrency(salaryTotals.due)}       color="amber" sensitive/>
+        <StatCard icon={<RevenueIcon size={24}/>} label="إجمالي رواتب الشهر المستحقة"  value={formatCurrency(salaryTotals.baseDue)}       color="amber" sensitive/>
         <StatCard icon={<RevenueIcon size={24}/>} label="إجمالي الرواتب المصروفة"       value={formatCurrency(salaryTotals.paid)}      color="green" sensitive/>
         <StatCard icon={<RevenueIcon size={24}/>} label="إجمالي المتبقي"                value={formatCurrency(salaryTotals.remaining)} color={salaryTotals.remaining > 0 ? "amber" : "green"} sensitive/>
         <StatCard icon={<WalletIcon size={24}/>}  label="إجمالي الخصومات هذا الشهر" value={formatCurrency(salaryTotals.deductionsThisMonth)} color="orange" sensitive/>

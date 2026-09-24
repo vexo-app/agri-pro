@@ -20,6 +20,7 @@ const buildCustodyReportNumber = () => {
 const buildCustodyReportHtml = ({
   transactions, totalExpenses, totalDeposits, expensesByCategory, getLinkedName,
   company = {}, month = null, allTime = true, reportType = CUSTODY_TYPES.EXPENSE,
+  dateFrom = null, dateTo = null,
 }) => {
   const today = new Date().toLocaleDateString("ar-EG");
   const printedAt = formatDateTime(new Date());
@@ -40,18 +41,28 @@ const buildCustodyReportHtml = ({
   // that prefix and recompute the total/category breakdown from the
   // filtered list itself — never from the page's all-time totals passed
   // in — so a monthly download can't accidentally show all-time numbers.
-  const forPeriod = (!allTime && month) ? allForType.filter((t) => (t.date || "").startsWith(month)) : allForType;
-  const periodTotal = (!allTime && month)
+  // نطاق مخصص (من يوم لـ يوم): نفس فكرة الشهر بالظبط — فلترة بالتاريخ
+  // (YYYY-MM-DD، شامل اليومين) وإعادة حساب الإجمالي من القايمة المفلترة.
+  const isRange = !allTime && !!dateFrom && !!dateTo;
+  const isScoped = isRange || (!allTime && !!month);
+  const forPeriod = isRange
+    ? allForType.filter((t) => { const d = (t.date || "").slice(0, 10); return d >= dateFrom && d <= dateTo; })
+    : (!allTime && month) ? allForType.filter((t) => (t.date || "").startsWith(month)) : allForType;
+  const periodTotal = isScoped
     ? (isExpenseReport ? calcTotalExpenses(forPeriod) : calcTotalDeposits(forPeriod))
     : (isExpenseReport ? totalExpenses : totalDeposits);
-  const periodExpensesByCategory = (!allTime && month)
+  const periodExpensesByCategory = isScoped
     ? calcExpensesByCategory(forPeriod)
     : expensesByCategory;
 
-  const periodLabel = (!allTime && month)
+  const periodLabel = isRange
+    ? `من ${formatDate(dateFrom)} إلى ${formatDate(dateTo)}`
+    : (!allTime && month)
     ? new Date(`${month}-01`).toLocaleDateString("ar-EG", { month: "long", year: "numeric" })
     : "كل الوقت";
-  const reportTitle = (!allTime && month)
+  const reportTitle = isRange
+    ? (isExpenseReport ? "تقرير العهدة" : "تقرير إضافات العهدة")
+    : (!allTime && month)
     ? (isExpenseReport ? "تقرير العهدة الشهري" : "تقرير إضافات العهدة الشهري")
     : (isExpenseReport ? "تقرير العهدة" : "تقرير إضافات العهدة");
   const totalLabel = isExpenseReport ? "إجمالي المصروف" : "إجمالي الإضافات";
@@ -162,7 +173,7 @@ const buildCustodyReportHtml = ({
             <td style="color:${totalColor}">${formatCurrency(periodTotal)}</td>
           </tr>
         </table>
-      </div>` : `<div class="section"><p style="color:#666;text-align:center;padding:20px 0;">لا توجد حركات مسجلة${(!allTime && month) ? " في هذا الشهر" : " بعد"}</p></div>`}
+      </div>` : `<div class="section"><p style="color:#666;text-align:center;padding:20px 0;">لا توجد حركات مسجلة${isRange ? " في هذه الفترة" : (!allTime && month) ? " في هذا الشهر" : " بعد"}</p></div>`}
 
       <div class="inv-closing">
         <div class="inv-sign-section">
@@ -182,7 +193,7 @@ const buildCustodyReportHtml = ({
     </div>
   `;
 
-  const titleSuffix = (!allTime && month) ? periodLabel : today;
+  const titleSuffix = isRange ? `${dateFrom}_${dateTo}` : (!allTime && month) ? periodLabel : today;
   const filenamePrefix = isExpenseReport ? "تقرير-العهدة-المنصرف" : "تقرير-العهدة-الواصل";
   return { html, title: `${reportTitle} - ${titleSuffix}`, filename: `${filenamePrefix}-${titleSuffix}` };
 };
