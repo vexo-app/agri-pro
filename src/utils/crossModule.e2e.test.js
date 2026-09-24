@@ -12,6 +12,7 @@ import {
 } from "./calculations";
 import { buildPeriodFinancials, calcTotalMaintenanceCost } from "./financialSummary";
 import { buildMonthlySummaryHtmlForTest } from "./pdf/monthlySummary";
+import { formatProfit } from "./formatters";
 
 const equipment = [{ id: "e1", name: "جرار 1" }, { id: "e2", name: "جرار 2" }];
 const drivers = [{ id: "d1", name: "سائق", salary: 3000 }];
@@ -115,7 +116,7 @@ describe("Dashboard = Reports = PDF (same source)", () => {
   test("monthly PDF prints exactly the figures it is given", () => {
     const f = buildPeriodFinancials(data, { monthPrefix: "2026-08" });
     const { html } = buildMonthlySummaryHtmlForTest({ jobs, equipment, month: 8, year: 2026, financials: f });
-    expect(html).toContain(new Intl.NumberFormat("ar-EG", { maximumFractionDigits: 0 }).format(f.netProfit));
+    expect(html).toContain(formatProfit(f.netProfit));
   });
 });
 

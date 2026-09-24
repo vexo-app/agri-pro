@@ -89,6 +89,10 @@ export const DataProvider = ({ children }) => {
   return <DataContext.Provider value={value}>{children}</DataContext.Provider>;
 };
 
+// Step 4: نسخة مش بترمي خطأ برا الـProvider (لمكونات مشتركة زي EmptyState
+// بتتعرض كمان في صفحات الضيف).
+export const useDataOptional = () => useContext(DataContext);
+
 export const useData = () => {
   const ctx = useContext(DataContext);
   if (!ctx) throw new Error("useData must be inside DataProvider");

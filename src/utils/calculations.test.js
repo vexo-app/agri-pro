@@ -25,6 +25,16 @@ import {
   getInvoicePaidAmount,
   aggregateSupplierInvoices,
 } from "./calculations";
+import {
+  roundMoney,
+  calcOverpaidAmount,
+  findLegacyPaidWithPayments,
+  aggregateJobOverpayments,
+  aggregateSupplierOverpayments,
+  checkOverdueDebts as _checkOverdueDebts,
+  calcSupplierRemaining as _calcSupplierRemaining,
+  aggregateJobs as _aggregateJobs,
+} from "./calculations";
 import { MAX_MONEY_VALUE } from "../config/constants";
 
 // ─── calcRevenue / calcFuelCost ────────────────────────────────────────────
@@ -489,16 +499,6 @@ describe("aggregateSupplierInvoices", () => {
 });
 
 // ─── Step 1 financial fixes (audit FIN-1 / FIN-2 / FIN-4) ─────────────────────
-import {
-  roundMoney,
-  calcOverpaidAmount,
-  findLegacyPaidWithPayments,
-  aggregateJobOverpayments,
-  aggregateSupplierOverpayments,
-  checkOverdueDebts as _checkOverdueDebts,
-  calcSupplierRemaining as _calcSupplierRemaining,
-  aggregateJobs as _aggregateJobs,
-} from "./calculations";
 
 describe("FIN-1 floating-point: full payment must be 'paid'", () => {
   test("1.1 acres × 100 paid 110 → paid, remaining 0", () => {

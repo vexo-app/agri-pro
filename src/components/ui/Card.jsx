@@ -2,6 +2,7 @@
 import React from "react";
 import clsx from "clsx";
 import { usePrivacy } from "../../contexts/PrivacyContext";
+import { useDataOptional } from "../../contexts/DataContext";
 import { ArrowUpCircleIcon, ArrowDownCircleIcon } from "./Icons";
 import { formatPercent } from "../../utils/formatters";
 
@@ -154,17 +155,28 @@ export const StatCard = ({ icon, label, value, color = "green", sensitive = fals
 
 
 // ── EmptyState ────────────────────────────────────────────
-export const EmptyState = ({ icon, title, description, action }) => (
-  <div className="flex flex-col items-center justify-center py-16 px-6 text-center">
-    {React.isValidElement(icon)
-      ? <div className="opacity-40 mb-2">{icon}</div>
-      : <div className="text-5xl mb-4 opacity-40">{icon}</div>
-    }
-    <h3 className="text-base font-bold text-gray-300 mb-1">{title}</h3>
-    {description && <p className="text-sm text-gray-500 mb-5">{description}</p>}
-    {action}
-  </div>
-);
+export const EmptyState = ({ icon, title, description, action }) => {
+  // Step 4: لو تحميل البيانات فشل جزئيًا، "مفيش بيانات" ممكن تكون غلط —
+  // بنقول ده صراحة بدل ما القائمة الفاضية تبان كأن البيانات اتمسحت.
+  const data = useDataOptional();
+  const loadError = !!data?.loadError;
+  return (
+    <div className="flex flex-col items-center justify-center py-16 px-6 text-center">
+      {React.isValidElement(icon)
+        ? <div className="opacity-40 mb-2">{icon}</div>
+        : <div className="text-5xl mb-4 opacity-40">{icon}</div>
+      }
+      <h3 className="text-base font-bold text-gray-300 mb-1">{title}</h3>
+      {description && <p className="text-sm text-gray-500 mb-5">{description}</p>}
+      {loadError && (
+        <p className="text-xs font-bold text-amber-400 bg-amber-500/10 border border-amber-500/20 rounded-xl px-3 py-2 mb-4 max-w-sm">
+          ⚠ بعض البيانات ما اتحملتش لسه — القائمة ممكن تكون ناقصة، مش فاضية فعلًا. بياناتك محفوظة.
+        </p>
+      )}
+      {action}
+    </div>
+  );
+};
 
 export const Divider = ({ className }) => (
   <hr className={clsx("border-0 border-t border-white/8", className)} />
