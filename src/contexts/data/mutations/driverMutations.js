@@ -4,7 +4,7 @@
 // في السلوك.
 import { useCallback } from "react";
 import { driverService } from "../../../services/driverService";
-import { buildSalaryHistory } from "../../../utils/salaryCalculations";
+import { buildSalaryHistory, buildStatusHistory } from "../../../utils/salaryCalculations";
 
 const currentMonth = () => {
   const now = new Date();
@@ -31,9 +31,15 @@ export function useDriverMutations({ user, dispatch, stateRef, trackWrite }) {
     const previous = stateRef.current.drivers.find((x) => x.id === id);
     const salaryChanged = Object.prototype.hasOwnProperty.call(d, "salary")
       && Number(d.salary) !== Number(previous?.salary);
-    const data = salaryChanged
+    let data = salaryChanged
       ? { ...d, salaryHistory: buildSalaryHistory(previous, d.salary, currentMonth()) }
       : d;
+    // قرار المالك: إيقاف العضو ما يشيلش مستحقاته اللي فاتت — بنسجل من
+    // إمتى اتوقف (أو اترجع) عشان حساب الرواتب يوقف الشهور الجاية بس.
+    const prevStatus = previous?.status || "active";
+    if (Object.prototype.hasOwnProperty.call(d, "status") && d.status && d.status !== prevStatus) {
+      data = { ...data, statusHistory: buildStatusHistory(previous, d.status, currentMonth()) };
+    }
     dispatch({ type: "UPDATE_DRIVER", payload: { id, ...data } });
     trackWrite(driverService.update(user.uid, id, data), {
       rollback: () => previous && dispatch({ type: "UPDATE_DRIVER", payload: previous }),

@@ -163,3 +163,130 @@ export const calcAttendanceSummary = (attendanceRecords, driverId, yearMonth) =>
   const half     = records.filter((r) => r.status === "half").length;
   return { present, absent, late, half, total: records.length };
 };
+
+// ─── مصروف الرواتب المستحق (قرار المالك: "المستحق الكامل") ────────────────
+//
+// كل عضو فريق له راتب بيتحسب له راتب كل شهر من أول شهر ليه في البرنامج
+// لحد الشهر الحالي، + الحوافز − الخصومات، سواء اتصرف أو لأ. قيد "راتب
+// أساسي" متسجل في شهر بيحل محل الراتب الافتراضي للشهر ده (نفس
+// calcMonthlySalary بالظبط، ونفس ملخص الشهر في صفحة العضو).
+//
+// العضو اللي بقى "غير نشط": الشهور اللي فاتت كلها بتفضل محسوبة، والشهور
+// اللي بعد إيقافه بس هي اللي ما بتتحسبش (statusHistory). أي قيد متسجل
+// فعلًا (حافز/خصم/أساسي) بيتحسب دايمًا، حتى لو في شهر كان فيه موقوف.
+
+const YM_RE = /^\d{4}-\d{2}$/;
+
+const ymOfTimestamp = (ts) => {
+  if (!ts) return null;
+  let d = null;
+  if (typeof ts.toDate === "function") d = ts.toDate();
+  else if (typeof ts.seconds === "number") d = new Date(ts.seconds * 1000);
+  else if (typeof ts === "string" || typeof ts === "number") d = new Date(ts);
+  if (!d || Number.isNaN(d.getTime())) return null;
+  return monthPrefixOf(d);
+};
+
+export const nextMonthOf = (ym) => {
+  const [y, m] = ym.split("-").map(Number);
+  return m === 12 ? `${y + 1}-01` : `${y}-${String(m + 1).padStart(2, "0")}`;
+};
+
+/** كل الشهور من `from` لـ`to` (شاملة الاتنين). حد أقصى 50 سنة كحماية. */
+export const monthRange = (from, to) => {
+  const out = [];
+  if (!YM_RE.test(from || "") || !YM_RE.test(to || "") || from > to) return out;
+  let cur = from;
+  while (cur <= to && out.length < 600) { out.push(cur); cur = nextMonthOf(cur); }
+  return out;
+};
+
+/**
+ * سجل تغييرات الحالة: كل عنصر { from: "YYYY-MM", status }. الإيقاف بيبدأ
+ * من الشهر اللي بعد الشهر الحالي (شهر الإيقاف نفسه لسه مستحق)، والتفعيل
+ * من الشهر الحالي.
+ */
+export const buildStatusHistory = (driver, nextStatus, month = monthPrefixOf()) => {
+  const history = Array.isArray(driver?.statusHistory) ? driver.statusHistory.map((h) => ({ ...h })) : [];
+  const from = nextStatus === DRIVER_STATUS.INACTIVE ? nextMonthOf(month) : month;
+  const filtered = history.filter((h) => h.from !== from);
+  filtered.push({ from, status: nextStatus });
+  return filtered.sort((a, b) => a.from.localeCompare(b.from));
+};
+
+/** هل العضو كان مستحق راتب في الشهر ده حسب حالته؟ */
+export const isMemberDueInMonth = (driver, ym, lastEntryMonth = null) => {
+  const history = Array.isArray(driver?.statusHistory)
+    ? driver.statusHistory.filter((h) => YM_RE.test(h?.from || "")).sort((a, b) => a.from.localeCompare(b.from))
+    : [];
+  const applicable = history.filter((h) => h.from <= ym);
+  if (applicable.length) return applicable[applicable.length - 1].status !== DRIVER_STATUS.INACTIVE;
+  // قبل أول تغيير متسجل للحالة: لو أول تغيير كان "تفعيل"، يبقى كان موقوف قبله.
+  const legacyInactive = history.length
+    ? history[0].status !== DRIVER_STATUS.INACTIVE
+    : driver?.status === DRIVER_STATUS.INACTIVE;
+  if (!legacyInactive) return true;
+  // عضو موقوف من قبل ما البرنامج يسجل تاريخ الإيقاف: بنعتبره كان شغال
+  // لحد آخر شهر ليه فيه أي قيد راتب — ماضيه ما بيتشالش، ومفيش تخمين بعده.
+  return !!lastEntryMonth && ym <= lastEntryMonth;
+};
+
+/** أول شهر للعضو في البرنامج: الأقدم من تاريخ إضافته، أول راتب حقيقي في سجله، وأول قيد راتب. */
+export const getMemberStartMonth = (driver, firstEntryMonth = null) => {
+  const candidates = [
+    ymOfTimestamp(driver?.createdAt),
+    ...(Array.isArray(driver?.salaryHistory)
+      ? driver.salaryHistory.map((h) => h?.effectiveFrom).filter((m) => YM_RE.test(m || "") && m !== "0000-01")
+      : []),
+    firstEntryMonth,
+  ].filter((m) => YM_RE.test(m || ""));
+  return candidates.length ? candidates.sort()[0] : null;
+};
+
+/**
+ * إجمالي مصروف الرواتب المستحق.
+ * - فترة شهر محدد: fromMonth = toMonth = "YYYY-MM".
+ * - كل الوقت: fromMonth = null، toMonth = الشهر الحالي (الاستحقاق بيقف
+ *   عنده؛ أي قيد متسجل بيتحسب مهما كان تاريخه).
+ */
+export const calcSalaryExpense = (allEntries = [], drivers = [], { fromMonth = null, toMonth = monthPrefixOf() } = {}) => {
+  const driverById = new Map(drivers.map((d) => [d.id, d]));
+  const groups = new Map();
+  const firstEntry = new Map();
+  const lastEntry = new Map();
+
+  allEntries.forEach((e) => {
+    const ym = (e.date || "").slice(0, 7);
+    if (YM_RE.test(ym)) {
+      if (!firstEntry.has(e.driverId) || ym < firstEntry.get(e.driverId)) firstEntry.set(e.driverId, ym);
+      if (!lastEntry.has(e.driverId) || ym > lastEntry.get(e.driverId)) lastEntry.set(e.driverId, ym);
+    }
+    if (fromMonth && (!YM_RE.test(ym) || ym < fromMonth || ym > toMonth)) return;
+    const key = `${e.driverId}|${ym || "_nodate"}`;
+    if (!groups.has(key)) groups.set(key, []);
+    groups.get(key).push(e);
+  });
+
+  drivers.forEach((d) => {
+    const start = getMemberStartMonth(d, firstEntry.get(d.id) || null);
+    if (!start) return;
+    const from = fromMonth && fromMonth > start ? fromMonth : start;
+    monthRange(from, toMonth).forEach((ym) => {
+      if (!(getSalaryForMonth(d, ym) > 0)) return;
+      if (!isMemberDueInMonth(d, ym, lastEntry.get(d.id) || null)) return;
+      const key = `${d.id}|${ym}`;
+      if (!groups.has(key)) groups.set(key, []);
+    });
+  });
+
+  let total = 0;
+  groups.forEach((entries, key) => {
+    const [driverId, yearMonth] = key.split("|");
+    const driver = driverById.get(driverId);
+    // شهر كان فيه العضو موقوف: القيود المتسجلة بتتحسب زي ما هي، بس من غير
+    // ما نفترض راتب أساسي افتراضي للشهر ده.
+    const due = !YM_RE.test(yearMonth) || !driver || isMemberDueInMonth(driver, yearMonth, lastEntry.get(driverId) || null);
+    total += calcMonthlySalary(entries, due ? getSalaryForMonth(driver, yearMonth) : 0).net;
+  });
+  return total;
+};

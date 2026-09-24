@@ -126,7 +126,7 @@ const ReportsPage = () => {
   };
   const currentPeriod = resolveMonth("current");
   const currentMonthPrefix = `${currentPeriod.year}-${String(currentPeriod.month).padStart(2, "0")}`;
-  const allTimeFinancials = buildPeriodFinancials(financialData, { assumeSalaryDueForMonth: currentMonthPrefix });
+  const allTimeFinancials = buildPeriodFinancials(financialData, { asOfMonth: currentMonthPrefix });
   const orphanJobs = findJobsWithMissingEquipment(jobs, equipment);
   const { report: driverReportAll, loading: dLoading } = useDrivers();
   // تقرير الأداء ده خاص بالعمليات الميدانية (أفدنة/عمليات/إيراد) — مالهاش
@@ -146,10 +146,7 @@ const ReportsPage = () => {
 
     const { year, month } = resolveMonth(downloadMonth);
     const monthPrefix = `${year}-${String(month).padStart(2, "0")}`;
-    const financials = buildPeriodFinancials(financialData, {
-      monthPrefix,
-      assumeSalaryDueForMonth: downloadMonth === "current" ? monthPrefix : null,
-    });
+    const financials = buildPeriodFinancials(financialData, { monthPrefix });
     await downloadMonthlySummaryPdf({ jobs, equipment, month, year, allTime: false, financials });
     trackEvent("monthly_report_downloaded", { report_period: downloadMonth });
   };
@@ -248,7 +245,7 @@ const ReportsPage = () => {
               { label:"إجمالي الإيراد",  value:formatCurrency(totalRevenue),  color:"text-amber-400",  icon:<RevenueIcon size={18}/> },
               { label:"تكلفة الوقود",    value:formatDeduction(totalFuelCost), color:"text-blue-400",   icon:<FuelIcon size={18}/> },
               { label:"تكاليف الصيانة",   value:formatDeduction(totalMaintCost),      color:"text-purple-400", icon:<AcreIcon size={18}/> },
-              { label:"مرتبات الفريق", value:formatDeduction(totalSalariesPaid), color:"text-red-400",    icon:<DriverIcon size={18}/> },
+              { label:"مرتبات الفريق (المستحقة)", value:formatDeduction(totalSalariesPaid), color:"text-red-400",    icon:<DriverIcon size={18}/> },
               { label:"الواصل للمورد", value:formatDeduction(totalSupplierPaidOut), color:"text-red-400",    icon:<ReceiptIcon size={18}/> },
               { label:"ضرائب وخصومات",   value:formatDeduction(totalTaxDeductions), color:"text-red-400",    icon:<ReceiptIcon size={18}/> },
               { label:"صافي الربح",      value:formatProfit(totalProfit),   color:totalProfit>=0?"text-green-400":"text-red-400", icon:<ChartIcon size={18}/> },

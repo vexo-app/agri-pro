@@ -11,7 +11,7 @@ import {
   aggregateSupplierInvoices,
   calcNetProfit,
 } from "./calculations";
-import { calcTotalSalariesPaid } from "./salaryCalculations";
+import { calcSalaryExpense } from "./salaryCalculations";
 import { calcTotalTaxDeductions } from "./taxCalculations";
 
 const num = (v) => {
@@ -28,12 +28,15 @@ export const calcTotalMaintenanceCost = (maintenance = []) =>
  *                salaryEntries, drivers, taxDeductions, supplierInvoices,
  *                supplierPayments, fuelPrice }
  * @param opts.monthPrefix  "YYYY-MM" لشهر محدد، أو null = كل الوقت.
- * @param opts.assumeSalaryDueForMonth  "YYYY-MM" (الشهر الحالي بس) — نفس
- *        خيار calcTotalSalariesPaid بالظبط.
+ * @param opts.asOfMonth  "YYYY-MM" — آخر شهر بيتحسب فيه الراتب المستحق لما
+ *        الفترة "كل الوقت" (الافتراضي: الشهر الحالي).
+ *
+ * الرواتب: "المستحق الكامل" (calcSalaryExpense) — كل عضو ليه راتب، كل شهر
+ * من أول شهر ليه لحد الشهر الحالي، + حوافز − خصومات، سواء اتصرف أو لأ.
  *
  * الموردين: نقدي حسب تاريخ الدفعة (مش تاريخ الفاتورة) — زي ما كان.
  */
-export const buildPeriodFinancials = (data, { monthPrefix = null, assumeSalaryDueForMonth = null } = {}) => {
+export const buildPeriodFinancials = (data, { monthPrefix = null, asOfMonth = null } = {}) => {
   const {
     jobs = [], payments = [], maintenance = [], equipmentFuelEntries = [], equipment = [],
     salaryEntries = [], drivers = [], taxDeductions = [],
@@ -48,11 +51,10 @@ export const buildPeriodFinancials = (data, { monthPrefix = null, assumeSalaryDu
   const totalFuel      = jobTotals.totalFuel + manualFuel.totalFuel;
   const totalFuelCost  = jobTotals.totalFuelCost + manualFuel.totalFuelCost;
   const totalMaintCost = calcTotalMaintenanceCost(maintenance.filter(inPeriod));
-  const totalSalariesPaid = calcTotalSalariesPaid(
-    salaryEntries.filter(inPeriod),
-    drivers,
-    assumeSalaryDueForMonth ? { assumeDueForMonth: assumeSalaryDueForMonth } : undefined
-  );
+  const totalSalariesPaid = calcSalaryExpense(salaryEntries, drivers, {
+    fromMonth: monthPrefix,
+    toMonth: monthPrefix || asOfMonth || monthPrefixOf(new Date()),
+  });
   const totalTaxDeductions   = calcTotalTaxDeductions(taxDeductions.filter(inPeriod));
   const totalSupplierPaidOut = aggregateSupplierInvoices(
     supplierInvoices, supplierPayments.filter(inPeriod)

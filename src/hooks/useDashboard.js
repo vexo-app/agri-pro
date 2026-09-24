@@ -33,7 +33,7 @@ export const useDashboard = () => {
 
   // كل الوقت — راتب الشهر الحالي مستحق لكل عضو نشط (نفس القاعدة القديمة).
   const allTime = useMemo(
-    () => buildPeriodFinancials(financialData, { assumeSalaryDueForMonth: currentMonthPrefix }),
+    () => buildPeriodFinancials(financialData, { asOfMonth: currentMonthPrefix }),
     [financialData, currentMonthPrefix]
   );
 
@@ -80,9 +80,7 @@ export const useDashboard = () => {
   const monthlyComparison = useMemo(() => {
     const now = new Date();
     const prevMonthDate = new Date(now.getFullYear(), now.getMonth() - 1, 1);
-    const current  = buildPeriodFinancials(financialData, {
-      monthPrefix: monthPrefixOf(now), assumeSalaryDueForMonth: monthPrefixOf(now),
-    });
+    const current  = buildPeriodFinancials(financialData, { monthPrefix: monthPrefixOf(now) });
     const previous = buildPeriodFinancials(financialData, { monthPrefix: monthPrefixOf(prevMonthDate) });
     const pair = (curr, prev) => ({ current: curr, change: calcPercentChange(curr, prev) });
     return {

@@ -94,7 +94,7 @@ describe("Job → Equipment → Driver", () => {
 
 describe("Dashboard = Reports = PDF (same source)", () => {
   test("all-time figures", () => {
-    const f = buildPeriodFinancials(data);
+    const f = buildPeriodFinancials(data, { asOfMonth: "2026-08" });
     const t = aggregateJobs(jobs, fuelPrice, payments);
     expect(f.totalRevenue).toBe(t.totalRevenue);          // includes orphan job j4
     expect(f.totalMaintCost).toBe(calcTotalMaintenanceCost(maintenance));

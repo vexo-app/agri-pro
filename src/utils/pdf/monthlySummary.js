@@ -76,7 +76,7 @@ const buildMonthlySummaryHtml = ({ jobs, equipment, month, year, allTime = false
           <tr><td style="font-weight:600">إجمالي الإيراد</td><td style="color:#15803d;font-weight:700">${formatCurrency(totalRevenue)}</td></tr>
           <tr><td style="font-weight:600">تكلفة الوقود</td><td>${formatCurrency(totalFuelCost)}</td></tr>
           <tr><td style="font-weight:600">تكاليف الصيانة</td><td>${formatCurrency(maintCost)}</td></tr>
-          ${totalSalariesPaid ? `<tr><td style="font-weight:600">مرتبات الفريق</td><td>${formatCurrency(totalSalariesPaid)}</td></tr>` : ""}
+          ${totalSalariesPaid ? `<tr><td style="font-weight:600">مرتبات الفريق (المستحقة)</td><td>${formatCurrency(totalSalariesPaid)}</td></tr>` : ""}
           ${totalSupplierPaidOut ? `<tr><td style="font-weight:600">الواصل للمورد</td><td>${formatCurrency(totalSupplierPaidOut)}</td></tr>` : ""}
           ${totalTaxDeductions ? `<tr><td style="font-weight:600">ضرائب وخصومات</td><td>${formatCurrency(totalTaxDeductions)}</td></tr>` : ""}
           <tr class="total-row"><td>صافي الربح</td><td style="color:${netProfit>=0?"#15803d":"#991b1b"}">${formatProfit(netProfit)}</td></tr>

@@ -329,7 +329,7 @@ const DashboardPage = () => {
             <SummaryRow label="إجمالي الإيراد"  value={formatCurrency(totalRevenue)}         valueColor="text-amber-400" sensitive/>
             <SummaryRow label="تكلفة الوقود"    value={formatDeduction(totals.totalFuelCost)} valueColor="text-red-400" sensitive/>
             <SummaryRow label="تكاليف الصيانة"  value={formatDeduction(totalMaintCost)}  valueColor="text-red-400" sensitive/>
-            <SummaryRow label="مرتبات الفريق" value={formatDeduction(totalSalaries||0)} valueColor="text-red-400" sensitive/>
+            <SummaryRow label="مرتبات الفريق (المستحقة)" value={formatDeduction(totalSalaries||0)} valueColor="text-red-400" sensitive/>
             <SummaryRow label="الواصل للمورد" value={formatDeduction(totalSupplierPaidOut||0)} valueColor="text-red-400" sensitive/>
             <SummaryRow label="ضرائب وخصومات"   value={formatDeduction(totalTaxDeductions||0)} valueColor="text-red-400" sensitive/>
             <div className="border-t border-white/8 mt-2 pt-2">
