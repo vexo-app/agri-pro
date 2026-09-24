@@ -151,14 +151,22 @@ const GuestAccessSection = () => {
   const toggleSection = (section) =>
     setForm((f) => ({ ...f, sections: { ...f.sections, [section]: !f.sections[section] } }));
 
-  const toggleClient = (name) =>
+  // Step 2: العميل الواحد ممكن يكون متسجل بأكتر من كتابة ("أحمد" و"أحمد ")
+  // وقواعد Firestore بتفلتر بالنص الأصلي بالحرف — فاختيار العميل بيضيف كل
+  // الكتابات الأصلية بتاعته (aliases) عشان الضيف يشوف كل عملياته.
+  const clientAliases = (c) => (c.aliases && c.aliases.length ? c.aliases : [c.client]);
+  const isClientSelected = (c, selected) => clientAliases(c).every((a) => selected.includes(a));
+  const toggleClient = (c) =>
     setForm((f) => {
-      const has = f.selectedClients.includes(name);
-      if (!has && f.selectedClients.length >= MAX_ALLOWED_CLIENTS) {
+      const aliases = clientAliases(c);
+      const has = isClientSelected(c, f.selectedClients);
+      if (has) return { ...f, selectedClients: f.selectedClients.filter((x) => !aliases.includes(x)) };
+      const next = [...new Set([...f.selectedClients, ...aliases])];
+      if (next.length > MAX_ALLOWED_CLIENTS) {
         toast.error(`أقصى عدد عملاء لكود واحد ${MAX_ALLOWED_CLIENTS}`);
         return f;
       }
-      return { ...f, selectedClients: has ? f.selectedClients.filter((c) => c !== name) : [...f.selectedClients, name] };
+      return { ...f, selectedClients: next };
     });
 
   const handleCreate = async (e) => {
@@ -319,8 +327,8 @@ const GuestAccessSection = () => {
                   {clients.map((c) => (
                     <label key={c.client} className="flex items-center gap-2 text-xs text-gray-300 py-0.5">
                       <input type="checkbox" className="accent-brand-600"
-                        checked={form.selectedClients.includes(c.client)}
-                        onChange={() => toggleClient(c.client)} />
+                        checked={isClientSelected(c, form.selectedClients)}
+                        onChange={() => toggleClient(c)} />
                       {c.client}
                     </label>
                   ))}

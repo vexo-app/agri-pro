@@ -4,10 +4,10 @@
 // downloadable PDF (current month / previous month / all time).
 
 import { formatCurrency, formatNumber } from "../formatters";
-import { calcRevenue, calcFuelCost, getJobFuelPrice, calcNetProfit, aggregateEquipmentFuelEntries } from "../calculations";
+import { calcRevenue } from "../calculations";
 import { escapeHtml, downloadReportPdf } from "./core";
 
-const buildMonthlySummaryHtml = ({ jobs, equipment, maintenance, equipmentFuelEntries = [], drivers, fuelPrice, month, year, allTime = false, totalSalariesPaid = 0, totalTaxDeductions = 0, totalSupplierPaidOut = 0 }) => {
+const buildMonthlySummaryHtml = ({ jobs, equipment, month, year, allTime = false, financials }) => {
   const today = new Date().toLocaleDateString("ar-EG");
   // allTime reuses the exact same report layout/calculations below, just
   // without the date filters on jobs/maintenance — so it lines up with the
@@ -24,31 +24,18 @@ const buildMonthlySummaryHtml = ({ jobs, equipment, maintenance, equipmentFuelEn
 
   const prefix = `${year}-${String(month).padStart(2,"0")}`;
   const monthJobs = allTime ? jobs : jobs.filter((j) => j.date?.startsWith(prefix));
-  const monthMaintenance = allTime ? maintenance : maintenance.filter((m) => m.date?.startsWith(prefix));
-  const monthFuelEntries = allTime ? equipmentFuelEntries : equipmentFuelEntries.filter((entry) => entry.date?.startsWith(prefix));
-
-  const totalRevenue  = monthJobs.reduce((s, j) => s + calcRevenue(j.acres, j.pricePerAcre), 0);
-  const totalAcres    = monthJobs.reduce((s, j) => s + (j.acres || 0), 0);
-  const manualFuel = aggregateEquipmentFuelEntries(monthFuelEntries, equipment);
-  const totalFuelCost = monthJobs.reduce((s, j) => s + calcFuelCost(j.fuelUsed, getJobFuelPrice(j, fuelPrice)), 0)
-    + manualFuel.totalFuelCost;
-  const maintCost     = monthMaintenance.reduce((s, m) => s + (m.cost || 0), 0);
-  // نفس الدالة المشتركة اللي بيستخدمها الداشبورد وصفحة التقارير بالظبط،
-  // عشان "صافي الربح" في الـ PDF يتطابق مع نفس الرقم في الصفحتين لنفس الفترة.
-  const netProfit = calcNetProfit({
-    totalRevenue,
-    totalFuelCost,
-    totalMaintCost: maintCost,
-    totalSalariesPaid,
-    totalTaxDeductions,
-    totalSupplierPaidOut,
-  });
+  // Step 2: كل الأرقام المالية جاية جاهزة من buildPeriodFinancials (نفس
+  // مصدر الداشبورد وصفحة التقارير) — الـPDF ما بيحسبش أي إجمالي بنفسه.
+  const {
+    totalRevenue, totalAcres, totalFuelCost, totalMaintCost: maintCost,
+    totalSalariesPaid, totalTaxDeductions, totalSupplierPaidOut, netProfit,
+  } = financials;
 
   const equip = [...new Set(monthJobs.map((j) => j.equipmentId))].map((id) => {
     const eq       = equipment.find((e) => e.id === id);
     const eqJobs   = monthJobs.filter((j) => j.equipmentId === id);
     const revenue  = eqJobs.reduce((s, j) => s + calcRevenue(j.acres, j.pricePerAcre), 0);
-    const acres    = eqJobs.reduce((s, j) => s + j.acres, 0);
+    const acres    = eqJobs.reduce((s, j) => s + (Number(j.acres) || 0), 0);
     return `<tr><td>${escapeHtml(eq?.name) || "—"}</td><td>${eqJobs.length}</td><td>${formatNumber(acres)}</td><td>${formatCurrency(revenue)}</td></tr>`;
   }).join("");
 
@@ -107,3 +94,6 @@ export const downloadMonthlySummaryPdf = (args) => {
   const { html, filename } = buildMonthlySummaryHtml(args);
   return downloadReportPdf(html, filename);
 };
+
+// exported for tests only (crossModule.e2e.test.js)
+export const buildMonthlySummaryHtmlForTest = (args) => buildMonthlySummaryHtml(args);

@@ -1,14 +1,27 @@
 {
   "files": {
-    "main.css": "/static/css/main.920542eb.css",
-    "main.js": "/static/js/main.02f2b477.js",
+    "main.css": "/static/css/main.810bd778.css",
+    "main.js": "/static/js/main.1c8b8b22.js",
+    "static/js/89.126e8de7.chunk.js": "/static/js/89.126e8de7.chunk.js",
+    "static/js/937.8613422f.chunk.js": "/static/js/937.8613422f.chunk.js",
+    "static/media/before-convoy.webp": "/static/media/before-convoy.fb15717e733c24cd2c08.webp",
+    "static/media/hero-tractor.webp": "/static/media/hero-tractor.9a9252f8b4111f05b473.webp",
+    "static/media/problem-bg.webp": "/static/media/problem-bg.157dee602b61d3774477.webp",
+    "static/media/after-calm.webp": "/static/media/after-calm.4dc4069254c0b0027586.webp",
+    "static/media/trust-fleet.webp": "/static/media/trust-fleet.66dc3167a84cba0116aa.webp",
+    "static/media/office-flow.webp": "/static/media/office-flow.6cdae1f204837b28aa58.webp",
+    "static/media/cta-tractor.webp": "/static/media/cta-tractor.e6c11294871ff8c5911f.webp",
     "service-worker.js": "/service-worker.js",
+    "static/media/founder-bg.webp": "/static/media/founder-bg.e972cf7fac1533c1adf1.webp",
+    "static/media/sidebar-brand-bg.webp": "/static/media/sidebar-brand-bg.3dade08648b4ba8fdd46.webp",
     "index.html": "/index.html",
-    "main.920542eb.css.map": "/static/css/main.920542eb.css.map",
-    "main.02f2b477.js.map": "/static/js/main.02f2b477.js.map"
+    "main.810bd778.css.map": "/static/css/main.810bd778.css.map",
+    "main.1c8b8b22.js.map": "/static/js/main.1c8b8b22.js.map",
+    "89.126e8de7.chunk.js.map": "/static/js/89.126e8de7.chunk.js.map",
+    "937.8613422f.chunk.js.map": "/static/js/937.8613422f.chunk.js.map"
   },
   "entrypoints": [
-    "static/css/main.920542eb.css",
-    "static/js/main.02f2b477.js"
+    "static/css/main.810bd778.css",
+    "static/js/main.1c8b8b22.js"
   ]
 }

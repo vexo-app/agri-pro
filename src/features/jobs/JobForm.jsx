@@ -5,7 +5,7 @@ import { Input, Select, Textarea, NumberInput } from "../../components/ui/Input"
 import Button from "../../components/ui/Button";
 import { SummaryRow } from "../../components/ui/Card";
 import { WORK_TYPES, MAX_MONEY_VALUE, DEFAULT_FUEL_PRICE } from "../../config/constants";
-import { calcRevenue, calcFuelCost, calcRemainingAmount } from "../../utils/calculations";
+import { calcRevenue, calcFuelCost, calcRemainingAmount, normalizeClientName } from "../../utils/calculations";
 import { formatCurrency, todayISO } from "../../utils/formatters";
 
 const JobForm = ({ mode = "add", initial, equipment, drivers, fuelPrice, onSave, onClose }) => {
@@ -88,7 +88,7 @@ const JobForm = ({ mode = "add", initial, equipment, drivers, fuelPrice, onSave,
       const payload = {};
       if (dirtyFields.equipmentId)  payload.equipmentId  = data.equipmentId;
       if (dirtyFields.driverId)     payload.driverId     = data.driverId;
-      if (dirtyFields.client)       payload.client       = data.client;
+      if (dirtyFields.client)       payload.client       = normalizeClientName(data.client);
       if (dirtyFields.workType || dirtyFields.customWorkType) payload.workType = finalWorkType;
       if (dirtyFields.acres)        payload.acres        = Number(data.acres) || 0;
       if (dirtyFields.pricePerAcre) payload.pricePerAcre = Number(data.pricePerAcre) || 0;
@@ -103,7 +103,7 @@ const JobForm = ({ mode = "add", initial, equipment, drivers, fuelPrice, onSave,
     await onSave({
       equipmentId:  data.equipmentId,
       driverId:     data.driverId,
-      client:       data.client,
+      client:       normalizeClientName(data.client),
       workType:     finalWorkType,
       acres:        Number(data.acres)        || 0,
       pricePerAcre: Number(data.pricePerAcre) || 0,

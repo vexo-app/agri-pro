@@ -25,7 +25,7 @@ import {
   AlertIcon, StarIcon, WORK_TYPE_ICON_MAP, ChevronLeftIcon,
 } from "../components/ui/Icons";
 import { formatCurrency, formatNumber, formatDateShort } from "../utils/formatters";
-import { calcRevenue, calcFuelCost, getJobFuelPrice, calcRemainingAmount, derivePaymentStatus, getJobPaidAmount } from "../utils/calculations";
+import { enrichJob } from "../utils/calculations";
 import { shortNum, createAngledNameTick } from "../components/charts/chartHelpers";
 
 // ── Color palettes ────────────────────────────────────────────────────────
@@ -552,16 +552,7 @@ const DashboardPage = () => {
             {recentJobs.map((job) => {
               const eq  = equipment.find((e) => e.id === job.equipmentId);
               const drv = drivers.find((d)  => d.id === job.driverId);
-              const revenue         = calcRevenue(job.acres, job.pricePerAcre);
-              const fuelCost        = calcFuelCost(job.fuelUsed, getJobFuelPrice(job, fuelPrice));
-              const amountPaid      = getJobPaidAmount(job, payments);
-              const remainingAmount = calcRemainingAmount(revenue, amountPaid);
-              const paymentStatus   = derivePaymentStatus(revenue, amountPaid);
-              const enriched = {
-                ...job, revenue, fuelCost,
-                profit: revenue - fuelCost,
-                amountPaid, remainingAmount, paymentStatus,
-              };
+              const enriched = enrichJob(job, fuelPrice, payments);
               return (
                 <JobCard key={job.id} job={enriched}
                   equipmentName={eq?.name} driverName={drv?.name}

@@ -2,9 +2,10 @@
 import { useMemo, useState } from "react";
 import { useData } from "../contexts/DataContext";
 import {
-  aggregateJobs, calcRevenue, calcFuelCost, getJobFuelPrice,
-  calcRemainingAmount, derivePaymentStatus, getJobPaidAmount,
+  aggregateJobs, calcRevenue, derivePaymentStatus, getJobPaidAmount,
+  enrichJob, indexPaymentsByJob,
 } from "../utils/calculations";
+import { calcTotalMaintenanceCost } from "../utils/financialSummary";
 
 export const useJobs = () => {
   const { jobs, maintenance = [], payments, settings, loading, addJob, updateJob, deleteJob } = useData();
@@ -14,15 +15,7 @@ export const useJobs = () => {
     dateFrom:"", dateTo:"", paymentStatus:"",
   });
 
-  const enrichJob = (job) => {
-    const revenue         = calcRevenue(job.acres, job.pricePerAcre);
-    const fuelCost        = calcFuelCost(job.fuelUsed, getJobFuelPrice(job, settings.fuelPrice));
-    const profit           = revenue - fuelCost;
-    const amountPaid       = getJobPaidAmount(job, payments);
-    const remainingAmount = calcRemainingAmount(revenue, amountPaid);
-    const paymentStatus   = derivePaymentStatus(revenue, amountPaid);
-    return { ...job, revenue, fuelCost, profit, amountPaid, remainingAmount, paymentStatus };
-  };
+  const paidByJobId = useMemo(() => indexPaymentsByJob(payments), [payments]);
 
   const filtered = useMemo(() => {
     return jobs
@@ -34,14 +27,14 @@ export const useJobs = () => {
         if (filters.dateTo      && j.date        >  filters.dateTo)       return false;
         if (filters.paymentStatus) {
           const rev    = calcRevenue(j.acres, j.pricePerAcre);
-          const paid   = getJobPaidAmount(j, payments);
+          const paid   = getJobPaidAmount(j, paidByJobId);
           const status = derivePaymentStatus(rev, paid);
           if (status !== filters.paymentStatus) return false;
         }
         return true;
       })
       .sort((a, b) => b.date.localeCompare(a.date));
-  }, [jobs, filters, payments]);
+  }, [jobs, filters, paidByJobId]);
 
   const totals = useMemo(
     () => aggregateJobs(filtered, settings.fuelPrice, payments),
@@ -53,14 +46,13 @@ export const useJobs = () => {
   // paymentStatus don't apply to maintenance records, so they're ignored
   // here — maintenance isn't tied to a driver or a work type).
   const totalMaintCost = useMemo(() => {
-    return maintenance
+    return calcTotalMaintenanceCost(maintenance
       .filter((m) => {
         if (filters.equipmentId && m.equipmentId !== filters.equipmentId) return false;
         if (filters.dateFrom    && m.date        <  filters.dateFrom)     return false;
         if (filters.dateTo      && m.date        >  filters.dateTo)       return false;
         return true;
-      })
-      .reduce((s, m) => s + (Number(m.cost) || 0), 0);
+      }));
   }, [maintenance, filters.equipmentId, filters.dateFrom, filters.dateTo]);
 
   const netProfit = totals.netProfit - totalMaintCost;
@@ -69,7 +61,7 @@ export const useJobs = () => {
     setFilters({ equipmentId:"", driverId:"", workType:"", dateFrom:"", dateTo:"", paymentStatus:"" });
 
   return {
-    jobs: filtered.map(enrichJob),
+    jobs: filtered.map((j) => enrichJob(j, settings.fuelPrice, paidByJobId)),
     allJobs: jobs,
     totals, totalMaintCost, netProfit,
     filters, setFilters, clearFilters,

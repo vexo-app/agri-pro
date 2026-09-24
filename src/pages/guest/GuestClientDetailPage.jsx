@@ -10,9 +10,7 @@ import { useGuest } from "../../contexts/GuestContext";
 import { guestAccessService } from "../../services/guestAccessService";
 import { paymentService } from "../../services/paymentService";
 import { equipmentService } from "../../services/equipmentService";
-import {
-  calcRevenue, calcRemainingAmount, derivePaymentStatus, getJobPaidAmount,
-} from "../../utils/calculations";
+import { buildClientSummary } from "../../utils/calculations";
 import PaymentBadge from "../../features/clients/PaymentBadge";
 import { Card, CardHeader, CardBody, SummaryRow, EmptyState, ProgressBar } from "../../components/ui/Card";
 import LoadingScreen from "../../components/ui/LoadingScreen";
@@ -55,26 +53,13 @@ const GuestClientDetailPage = () => {
     return () => { unsubJobs(); unsubPay(); unsubEquip(); };
   }, [allowed, ownerUid, access, equipmentOpen]);
 
-  const clientJobs = useMemo(() => {
-    return jobs
-      .filter((j) => j.client === decodedName)
-      .map((job) => {
-        const revenue = calcRevenue(job.acres, job.pricePerAcre);
-        const amountPaid = getJobPaidAmount(job, payments);
-        const remainingAmount = calcRemainingAmount(revenue, amountPaid);
-        const paymentStatus = derivePaymentStatus(revenue, amountPaid);
-        return { ...job, revenue, amountPaid, remainingAmount, paymentStatus };
-      })
-      .sort((a, b) => (b.date || "").localeCompare(a.date || ""));
-  }, [jobs, decodedName, payments]);
-
-  const totals = useMemo(() => {
-    const totalRevenue = clientJobs.reduce((s, j) => s + j.revenue, 0);
-    const totalPaid = clientJobs.reduce((s, j) => s + j.amountPaid, 0);
-    const totalRemaining = clientJobs.reduce((s, j) => s + j.remainingAmount, 0);
-    const totalAcres = clientJobs.reduce((s, j) => s + (Number(j.acres) || 0), 0);
-    return { totalRevenue, totalPaid, totalRemaining, totalAcres };
-  }, [clientJobs]);
+  // Step 2: نفس buildClientSummary بتاعة المالك (مطابقة الاسم بعد trim).
+  const summary = useMemo(
+    () => buildClientSummary(decodedName, jobs, undefined, payments),
+    [jobs, decodedName, payments]
+  );
+  const clientJobs = summary.jobs;
+  const totals = summary;
 
   const paidPct = totals.totalRevenue > 0 ? (totals.totalPaid / totals.totalRevenue) * 100 : 0;
   const equipmentNameById = useMemo(() => new Map(equipmentList.map((e) => [e.id, e.name])), [equipmentList]);

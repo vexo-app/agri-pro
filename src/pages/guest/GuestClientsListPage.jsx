@@ -12,7 +12,7 @@ import { Link } from "react-router-dom";
 import { useGuest } from "../../contexts/GuestContext";
 import { guestAccessService } from "../../services/guestAccessService";
 import { paymentService } from "../../services/paymentService";
-import { calcRevenue, calcRemainingAmount, getJobPaidAmount } from "../../utils/calculations";
+import { buildClientList } from "../../utils/calculations";
 import { Card, ProgressBar, EmptyState } from "../../components/ui/Card";
 import LoadingScreen from "../../components/ui/LoadingScreen";
 import { formatCurrency, formatNumber, getInitial } from "../../utils/formatters";
@@ -47,23 +47,8 @@ const GuestClientsListPage = () => {
     return () => { unsubJobs(); unsubPay(); };
   }, [allowed, ownerUid, access]);
 
-  const clients = useMemo(() => {
-    const map = {};
-    jobs.forEach((job) => {
-      const name = job.client;
-      if (!name) return;
-      if (!map[name]) map[name] = { client: name, ops: 0, totalRevenue: 0, totalAcres: 0, totalPaid: 0, totalRemaining: 0 };
-      const revenue = calcRevenue(job.acres, job.pricePerAcre);
-      const paid = getJobPaidAmount(job, payments);
-      const remaining = calcRemainingAmount(revenue, paid);
-      map[name].ops += 1;
-      map[name].totalRevenue += revenue;
-      map[name].totalAcres += Number(job.acres) || 0;
-      map[name].totalPaid += paid;
-      map[name].totalRemaining += remaining;
-    });
-    return Object.values(map).sort((a, b) => b.totalRemaining - a.totalRemaining);
-  }, [jobs, payments]);
+  // Step 2: نفس buildClientList بتاعة صفحة العملاء عند المالك بالحرف.
+  const clients = useMemo(() => buildClientList(jobs, undefined, payments), [jobs, payments]);
 
   if (!allowed) {
     return (

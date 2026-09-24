@@ -144,6 +144,25 @@ export const derivePaymentStatus = (revenue, amountPaid) => {
   return "partial";
 };
 
+/**
+ * Step 2: مصدر واحد لكل الأرقام المشتقة لعملية واحدة (كانت متكررة حرفيًا
+ * في useJobs/useClients/useEquipmentDetail/DashboardPage/صفحات الضيف).
+ * `payments` = مصفوفة الدفعات أو Map جاهز من buildPaidAmountsByJobId.
+ */
+export const enrichJob = (job, fallbackFuelPrice, payments = []) => {
+  const revenue         = calcRevenue(job.acres, job.pricePerAcre);
+  const fuelCost        = calcFuelCost(job.fuelUsed, getJobFuelPrice(job, fallbackFuelPrice));
+  const profit          = revenue - fuelCost;
+  const amountPaid      = getJobPaidAmount(job, payments);
+  const remainingAmount = calcRemainingAmount(revenue, amountPaid);
+  const paymentStatus   = derivePaymentStatus(revenue, amountPaid);
+  return { ...job, revenue, fuelCost, profit, amountPaid, remainingAmount, paymentStatus };
+};
+
+/** Pre-builds the jobId → paid Map once, for callers enriching many jobs. */
+export const indexPaymentsByJob = (payments = []) =>
+  payments instanceof Map ? payments : buildPaidAmountsByJobId(payments);
+
 // ─── Aggregation ──────────────────────────────────────────────────────────────
 
 /**
@@ -247,31 +266,67 @@ export const groupByWorkType = (jobs) => {
 // ─── Client / Debt helpers ────────────────────────────────────────────────────
 
 /**
- * Aggregate all jobs for a single client name.
- * Returns the client's full financial summary.
+ * Step 2 (اسم العميل): `job.client` نص حر، فـ"أحمد" و"أحمد " و"أحمد  علي"
+ * كانوا بيتحسبوا عملاء مختلفين ودين العميل بيتقسم. التجميع والمطابقة بقوا
+ * على الاسم بعد trim + توحيد المسافات. البيانات المخزنة ما بتتغيرش؛
+ * `aliases` = كل الكتابات الأصلية الموجودة للعميل (مهمة لفلتر الضيف في
+ * firestore.rules اللي بيطابق النص الأصلي بالحرف).
  */
-export const buildClientSummary = (clientName, jobs, fuelPrice, payments = []) => {
-  const clientJobs = jobs.filter((j) => j.client === clientName);
-  const stats      = aggregateJobs(clientJobs, fuelPrice, payments);
-  return {
-    client:        clientName,
-    jobs:          clientJobs,
-    ops:           clientJobs.length,
-    totalRevenue:  stats.totalRevenue,
-    totalPaid:     stats.totalPaid,
-    totalRemaining: stats.totalRemaining,
-    totalAcres:    stats.totalAcres,
+export const normalizeClientName = (name) =>
+  String(name ?? "").trim().replace(/\s+/g, " ");
+
+const summarizeClientJobs = (clientName, clientJobs, fuelPrice, paidByJobId) => {
+  const summary = {
+    client: clientName, aliases: [], jobs: [], ops: clientJobs.length,
+    totalRevenue: 0, totalPaid: 0, totalRemaining: 0, totalAcres: 0,
   };
+  const aliases = new Set();
+  clientJobs.forEach((job) => {
+    const e = enrichJob(job, fuelPrice, paidByJobId);
+    aliases.add(job.client);
+    summary.totalRevenue   += e.revenue;
+    summary.totalPaid      += e.amountPaid;
+    summary.totalRemaining += e.remainingAmount;
+    summary.totalAcres     += safeNum(job.acres);
+    summary.jobs.push(e);
+  });
+  summary.aliases = [...aliases];
+  summary.jobs.sort((a, b) => (b.date || "").localeCompare(a.date || ""));
+  return summary;
 };
 
 /**
- * Build the full client list from jobs, sorted by debt (descending).
+ * Aggregate all jobs for a single client (matched by normalized name).
+ * `jobs` in the result are enriched (revenue/amountPaid/remainingAmount/...).
+ */
+export const buildClientSummary = (clientName, jobs, fuelPrice, payments = []) => {
+  const key = normalizeClientName(clientName);
+  const clientJobs = jobs.filter((j) => normalizeClientName(j.client) === key);
+  return summarizeClientJobs(key, clientJobs, fuelPrice, indexPaymentsByJob(payments));
+};
+
+/**
+ * Build the full client list from jobs (one pass, grouped by normalized
+ * name), sorted by debt (descending).
  */
 export const buildClientList = (jobs, fuelPrice, payments = []) => {
-  const names = [...new Set(jobs.map((j) => j.client).filter(Boolean))];
-  return names
-    .map((name) => buildClientSummary(name, jobs, fuelPrice, payments))
+  const paidByJobId = indexPaymentsByJob(payments);
+  const groups = new Map();
+  jobs.forEach((j) => {
+    const key = normalizeClientName(j.client);
+    if (!key) return;
+    if (!groups.has(key)) groups.set(key, []);
+    groups.get(key).push(j);
+  });
+  return [...groups.entries()]
+    .map(([key, clientJobs]) => summarizeClientJobs(key, clientJobs, fuelPrice, paidByJobId))
     .sort((a, b) => b.totalRemaining - a.totalRemaining);
+};
+
+/** العمليات المرتبطة بمعدة مش موجودة (بيانات يتيمة) — للعرض والتنبيه بس. */
+export const findJobsWithMissingEquipment = (jobs = [], equipment = []) => {
+  const ids = new Set(equipment.map((e) => e.id));
+  return jobs.filter((j) => !ids.has(j.equipmentId));
 };
 
 // ─── Supplier / Payable helpers ────────────────────────────────────────────
@@ -371,6 +426,43 @@ export const aggregateSupplierInvoices = (supplierInvoices = [], supplierPayment
 };
 
 /**
+ * Step 2: ملخص مورد واحد وقائمة الموردين — كانت محسوبة جوه useSuppliers.
+ * التجميع بالاسم الأصلي بالحرف (زي قبل كده) لأن renameSupplier بيطابقه.
+ */
+const summarizeSupplierInvoices = (supplierName, invoices, paidByInvoiceId) => {
+  const summary = { supplierName, ops: invoices.length, invoices: [], totalInvoiced: 0, totalPaidOut: 0, totalPayable: 0 };
+  invoices.forEach((inv) => {
+    const paid      = getInvoicePaidAmount(inv, paidByInvoiceId);
+    const remaining = calcSupplierRemaining(inv.amount, paid);
+    summary.totalInvoiced += safeNum(inv.amount);
+    summary.totalPaidOut  += paid;
+    summary.totalPayable  += remaining;
+    summary.invoices.push({ ...inv, amountPaid: paid, remainingAmount: remaining });
+  });
+  return summary;
+};
+
+export const buildSupplierSummary = (supplierName, supplierInvoices = [], supplierPayments = []) =>
+  summarizeSupplierInvoices(
+    supplierName,
+    supplierInvoices.filter((inv) => inv.supplierName === supplierName),
+    buildPaidAmountsByInvoiceId(supplierPayments)
+  );
+
+export const buildSupplierList = (supplierInvoices = [], supplierPayments = []) => {
+  const paidByInvoiceId = buildPaidAmountsByInvoiceId(supplierPayments);
+  const groups = new Map();
+  supplierInvoices.forEach((inv) => {
+    if (!inv.supplierName) return;
+    if (!groups.has(inv.supplierName)) groups.set(inv.supplierName, []);
+    groups.get(inv.supplierName).push(inv);
+  });
+  return [...groups.entries()]
+    .map(([name, invs]) => summarizeSupplierInvoices(name, invs, paidByInvoiceId))
+    .sort((a, b) => b.totalPayable - a.totalPayable);
+};
+
+/**
  * Single source of truth for "صافي الربح", used identically by the
  * dashboard, the Reports page, and the monthly/all-time PDF — so the same
  * period always shows the same number everywhere. Cash-basis on the
@@ -400,27 +492,9 @@ export const calcPercentChange = (current, previous) => {
   return ((c - p) / Math.abs(p)) * 100;
 };
 
-// ─── Payment instalments ──────────────────────────────────────────────────────
-
-/**
- * Sum all payments made for a specific job.
- */
-export const calcTotalPaidForJob = (payments, jobId) =>
-  payments
-    .filter((p) => p.jobId === jobId)
-    .reduce((s, p) => s + (safeNum(p.amount)), 0);
-
-/**
- * Derive payment status from payments list (not stored amountPaid).
- */
-export const derivePaymentStatusFromPayments = (revenue, payments, jobId) => {
-  const paid = calcTotalPaidForJob(payments, jobId);
-  return {
-    paid,
-    remaining: calcRemainingAmount(revenue, paid),
-    status: derivePaymentStatus(revenue, paid),
-  };
-};
+// (Step 2) calcTotalPaidForJob / derivePaymentStatusFromPayments اتشالوا:
+// ما كانوش مستخدمين، وكانوا بيحسبوا "المدفوع" من غير amountPaid القديم —
+// يعني معادلة موازية مختلفة عن getJobPaidAmount.
 
 // ─── Notifications ────────────────────────────────────────────────────────────
 

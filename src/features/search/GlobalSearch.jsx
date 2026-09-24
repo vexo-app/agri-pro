@@ -2,6 +2,7 @@
 import React, { useState, useRef, useEffect, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
 import { useData } from "../../contexts/DataContext";
+import { normalizeClientName } from "../../utils/calculations";
 
 const SearchIcon = () => (
   <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
@@ -66,7 +67,7 @@ const GlobalSearch = () => {
         list.push({ type:"driver", id:drv.id, label:drv.name, sub:drv.phone||"سائق", path:`/drivers/${drv.id}` });
     });
 
-    const uniqueClients = [...new Set(jobs.map(j => j.client).filter(Boolean))];
+    const uniqueClients = [...new Set(jobs.map(j => normalizeClientName(j.client)).filter(Boolean))];
     uniqueClients.forEach((client) => {
       if (client.toLowerCase().includes(q))
         list.push({ type:"client", id:client, label:client, sub:"اضغط لعرض تفاصيل العميل", path:`/clients/${encodeURIComponent(client)}` });

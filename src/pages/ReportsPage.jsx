@@ -18,9 +18,8 @@ import { TractorIcon, DriverIcon, ChartIcon, RevenueIcon, AcreIcon, FuelIcon, Re
 import { formatCurrency, formatNumber } from "../utils/formatters";
 import { TEAM_ROLE } from "../config/constants";
 import { useData }                from "../contexts/DataContext";
-import { calcTotalSalariesPaid }  from "../utils/salaryCalculations";
-import { calcTotalTaxDeductions } from "../utils/taxCalculations";
-import { aggregateSupplierInvoices, calcNetProfit } from "../utils/calculations";
+import { findJobsWithMissingEquipment } from "../utils/calculations";
+import { buildPeriodFinancials } from "../utils/financialSummary";
 import { downloadMonthlySummaryPdf } from "../utils/pdfGenerator";
 import { shortNum, truncateLabel, createAngledNameTick } from "../components/charts/chartHelpers";
 import { trackEvent } from "../config/posthog";
@@ -114,23 +113,21 @@ const ReportsPage = () => {
   const { report: equipReport, loading: eLoading } = useEquipment();
   const {
     salaryEntries = [], equipment = [], jobs = [], drivers = [], maintenance = [], equipmentFuelEntries = [],
-    taxDeductions = [], supplierInvoices = [], supplierPayments = [], settings,
+    taxDeductions = [], supplierInvoices = [], supplierPayments = [], payments = [], settings,
   } = useData();
-  // نفس قاعدة الداشبورد: راتب الشهر الحالي مستحق لكل عضو نشط حتى لو لسه
-  // مفيش قيد راتب اتسجل له. ده يمنع اختلاف رقم الرواتب وصافي الربح بين
-  // الداشبورد والتقارير لنفس البيانات.
+  // Step 2: كل أرقام الصفحة وPDF بتاعها من buildPeriodFinancials — نفس مصدر
+  // الداشبورد بالحرف. قبل كده الإيراد/الوقود/الصيانة هنا كانوا متجمعين من
+  // تقرير المعدات، فأي عملية أو صيانة مرتبطة بمعدة مش موجودة كانت بتسقط من
+  // التقارير وتفضل ظاهرة في الداشبورد (رقمين مختلفين لنفس الفترة).
+  const financialData = {
+    jobs, payments, maintenance, equipmentFuelEntries, equipment,
+    salaryEntries, drivers, taxDeductions, supplierInvoices, supplierPayments,
+    fuelPrice: settings.fuelPrice,
+  };
   const currentPeriod = resolveMonth("current");
   const currentMonthPrefix = `${currentPeriod.year}-${String(currentPeriod.month).padStart(2, "0")}`;
-  const totalSalariesPaid = calcTotalSalariesPaid(
-    salaryEntries,
-    drivers,
-    { assumeDueForMonth: currentMonthPrefix }
-  );
-  const totalTaxDeductions = calcTotalTaxDeductions(taxDeductions);
-  // نفس أسلوب الداشبورد بالظبط (cash basis): اللي بيتخصم من الربح هو
-  // الواصل فعلاً للموردين، مش المتبقي غير المدفوع — عشان "صافي الربح" هنا
-  // يتطابق مع نفس الرقم في الداشبورد لنفس الفترة (كل الوقت).
-  const totalSupplierPaidOut = aggregateSupplierInvoices(supplierInvoices, supplierPayments).totalPaidOut;
+  const allTimeFinancials = buildPeriodFinancials(financialData, { assumeSalaryDueForMonth: currentMonthPrefix });
+  const orphanJobs = findJobsWithMissingEquipment(jobs, equipment);
   const { report: driverReportAll, loading: dLoading } = useDrivers();
   // تقرير الأداء ده خاص بالعمليات الميدانية (أفدنة/عمليات/إيراد) — مالهاش
   // معنى للإداريين والمحاسبين، فبيفلتر بس السائقين الفعليين.
@@ -138,70 +135,31 @@ const ReportsPage = () => {
   const [tab, setTab] = useState("equipment");
   const [downloadMonth, setDownloadMonth] = useState("current");
 
-  // كان هنا زرار "طباعة الشهر الحالي" وزرار "طباعة تقرير شامل" — اتشالوا
-  // خالص، الصفحة دلوقتي تحميل بس. الدالة الواحدة دي بتغطي التلات اختيارات:
-  // شهر محدد (حالي/سابق) بيتفلتر بالـ monthPrefix، أو "كل الشهور" فبتستخدم
-  // إجماليات الصفحة الجاهزة (totalSalariesPaid/totalTaxDeductions) زي ما
-  // هي من غير أي فلترة، عشان تتطابق تمامًا مع الأرقام المعروضة فوق.
+  // تحميل PDF: الشهر الحالي أو السابق أو كل الشهور — نفس الأرقام اللي في
+  // الصفحة والداشبورد لنفس الفترة (buildPeriodFinancials).
   const handleDownloadMonthly = async () => {
     if (downloadMonth === "all") {
-      await downloadMonthlySummaryPdf({
-        jobs, equipment, maintenance, equipmentFuelEntries, drivers,
-        fuelPrice: settings.fuelPrice,
-        allTime: true,
-        totalSalariesPaid,
-        totalTaxDeductions,
-        totalSupplierPaidOut,
-      });
+      await downloadMonthlySummaryPdf({ jobs, equipment, allTime: true, financials: allTimeFinancials });
       trackEvent("monthly_report_downloaded", { report_period: downloadMonth });
       return;
     }
 
     const { year, month } = resolveMonth(downloadMonth);
     const monthPrefix = `${year}-${String(month).padStart(2, "0")}`;
-    const salariesForPeriod = calcTotalSalariesPaid(
-      salaryEntries.filter((e) => (e.date || "").startsWith(monthPrefix)),
-      drivers,
-      downloadMonth === "current" ? { assumeDueForMonth: monthPrefix } : undefined
-    );
-    const taxDeductionsForPeriod = taxDeductions
-      .filter((t) => (t.date || "").startsWith(monthPrefix))
-      .reduce((s, t) => s + (Number(t.amount) || 0), 0);
-    // Cash basis scoped to the period: only count supplier payments actually
-    // made during this month, same "الواصل للمورد" idea as totalSupplierPaidOut
-    // above but filtered to match the rest of this month's figures.
-    const supplierPaidOutForPeriod = aggregateSupplierInvoices(
-      supplierInvoices,
-      supplierPayments.filter((p) => (p.date || "").startsWith(monthPrefix))
-    ).totalPaidOut;
-
-    await downloadMonthlySummaryPdf({
-      jobs, equipment, maintenance, equipmentFuelEntries, drivers,
-      fuelPrice: settings.fuelPrice,
-      month, year,
-      allTime: false,
-      totalSalariesPaid: salariesForPeriod,
-      totalTaxDeductions: taxDeductionsForPeriod,
-      totalSupplierPaidOut: supplierPaidOutForPeriod,
+    const financials = buildPeriodFinancials(financialData, {
+      monthPrefix,
+      assumeSalaryDueForMonth: downloadMonth === "current" ? monthPrefix : null,
     });
+    await downloadMonthlySummaryPdf({ jobs, equipment, month, year, allTime: false, financials });
     trackEvent("monthly_report_downloaded", { report_period: downloadMonth });
   };
 
   if (eLoading || dLoading) return <LoadingScreen />;
 
-  const totalRevenue   = equipReport.reduce((s, e) => s + (e.totalRevenue  || 0), 0);
-  const totalFuelCost  = equipReport.reduce((s, e) => s + (e.totalFuelCost || 0), 0);
-  const totalMaintCost = equipReport.reduce((s, e) => s + (e.maintCost     || 0), 0);
-  // نفس الدالة المشتركة اللي بيستخدمها الداشبورد بالظبط، عشان "صافي الربح"
-  // هنا يتطابق مع نفس الرقم في الداشبورد لنفس الفترة (كل الوقت).
-  const totalProfit = calcNetProfit({
-    totalRevenue,
-    totalFuelCost,
-    totalMaintCost,
-    totalSalariesPaid,
-    totalTaxDeductions,
-    totalSupplierPaidOut,
-  });
+  const {
+    totalRevenue, totalFuelCost, totalMaintCost, netProfit: totalProfit,
+    totalSalariesPaid, totalSupplierPaidOut, totalTaxDeductions,
+  } = allTimeFinancials;
 
   const revenueVsProfit = equipReport.map((eq) => ({
     name:    eq.name,
@@ -302,6 +260,12 @@ const ReportsPage = () => {
               </div>
             ))}
           </div>
+
+          {orphanJobs.length > 0 && (
+            <p className="text-xs text-amber-400 bg-amber-500/10 border border-amber-500/20 rounded-xl px-3 py-2 mb-6">
+              ⚠ {orphanJobs.length} عملية مرتبطة بمعدة مش موجودة — داخلة في الإجماليات فوق، لكنها مش ظاهرة في تفصيل المعدات تحت.
+            </p>
+          )}
 
           {/* Chart 1 — Revenue vs Profit */}
           <ChartCard

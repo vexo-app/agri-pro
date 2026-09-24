@@ -11,6 +11,7 @@ import LoadingScreen     from "../components/ui/LoadingScreen";
 import FeatureIntroBanner from "../components/common/FeatureIntroBanner";
 import { DriverIcon, AlertIcon, RevenueIcon } from "../components/ui/Icons";
 import { formatCurrency } from "../utils/formatters";
+import { normalizeClientName } from "../utils/calculations";
 
 const ClientsPage = () => {
   const { clients, totalDebt, loading } = useClients();
@@ -29,7 +30,7 @@ const ClientsPage = () => {
 
   const handleQuickPayment = (clientName) => {
     const unpaidJobs = enrichedJobs
-      .filter((j) => j.client === clientName && (j.remainingAmount || 0) > 0)
+      .filter((j) => normalizeClientName(j.client) === normalizeClientName(clientName) && (j.remainingAmount || 0) > 0)
       .sort((a, b) => b.date.localeCompare(a.date));
     if (!unpaidJobs.length) return;
     const job = unpaidJobs[0];

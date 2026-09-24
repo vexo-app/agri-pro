@@ -20,8 +20,6 @@ import {
   groupByWorkType,
   buildClientSummary,
   buildClientList,
-  calcTotalPaidForJob,
-  derivePaymentStatusFromPayments,
   checkOverdueDebts,
   calcSupplierRemaining,
   getInvoicePaidAmount,
@@ -335,27 +333,6 @@ describe("buildClientSummary and buildClientList", () => {
   });
 });
 
-// ─── Payment instalments ──────────────────────────────────────────────────────
-
-describe("calcTotalPaidForJob", () => {
-  test("sums only the instalments for the given job", () => {
-    const payments = [
-      { jobId: "j1", amount: 100 },
-      { jobId: "j1", amount: 50 },
-      { jobId: "j2", amount: 999 },
-    ];
-    expect(calcTotalPaidForJob(payments, "j1")).toBe(150);
-  });
-});
-
-describe("derivePaymentStatusFromPayments", () => {
-  test("returns paid/remaining/status derived from the payments list", () => {
-    const payments = [{ jobId: "j1", amount: 400 }];
-    const result = derivePaymentStatusFromPayments(1000, payments, "j1");
-    expect(result).toEqual({ paid: 400, remaining: 600, status: "partial" });
-  });
-});
-
 // ─── Overdue debts ─────────────────────────────────────────────────────────────
 
 describe("checkOverdueDebts", () => {
@@ -520,7 +497,6 @@ import {
   aggregateSupplierOverpayments,
   checkOverdueDebts as _checkOverdueDebts,
   calcSupplierRemaining as _calcSupplierRemaining,
-  derivePaymentStatusFromPayments as _derivePaymentStatusFromPayments,
   aggregateJobs as _aggregateJobs,
 } from "./calculations";
 
@@ -556,7 +532,6 @@ describe("FIN-1 floating-point: full payment must be 'paid'", () => {
     const payments = [{ jobId: "j", amount: 110 }];
     expect(_checkOverdueDebts([job], 10, 30, payments)).toEqual([]);
     expect(_aggregateJobs([job], 10, payments).totalRemaining).toBe(0);
-    expect(_derivePaymentStatusFromPayments(calcRevenue(1.1, 100), payments, "j").status).toBe("paid");
   });
 
   test("supplier invoice paid by float-summed instalments has 0 remaining", () => {
