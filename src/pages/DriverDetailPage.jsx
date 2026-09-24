@@ -128,7 +128,7 @@ const DriverDetailPage = () => {
 
       {/* Driver header */}
       <div className="flex items-center gap-4 mb-6">
-        <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-brand-700 to-blue-700 flex items-center justify-center text-2xl font-extrabold text-white shadow-lg">
+        <div className="w-14 h-14 rounded-2xl bg-brand-700 flex items-center justify-center text-2xl font-extrabold text-white shadow-lg">
           {getInitial(driver.name)}
         </div>
         <div className="flex-1">

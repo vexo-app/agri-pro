@@ -11,7 +11,7 @@ jest.mock("firebase/firestore", () => ({
   where: () => undefined,
   serverTimestamp: () => "server-time",
   updateDoc: (...args) => mockUpdateDoc(...args),
-  getDocs: (...args) => mockGetDocs(...args),
+  getDocsFromServer: (...args) => mockGetDocs(...args),
   runTransaction: async (_db, callback) => {
     const transaction = {
       get: async () => ({ exists: () => true, data: () => ({ deleting: false }) }),
@@ -28,7 +28,9 @@ jest.mock("firebase/firestore", () => ({
 
 jest.mock("../config/firebase", () => ({ db: "test-db" }));
 
-import { deleteParentWithChildren } from "./cascadeDeleteService";
+import {
+  deleteParentWithChildren, isStaleDeleteLock, releaseDeleteLock, STALE_DELETE_LOCK_MS,
+} from "./cascadeDeleteService";
 
 describe("deleteParentWithChildren", () => {
   beforeEach(() => {
@@ -71,5 +73,35 @@ describe("deleteParentWithChildren", () => {
       "test-db/users/user-1/jobs/job-1",
       expect.objectContaining({ deleting: false })
     );
+  });
+});
+
+// ─── Step 3: stuck delete locks ──────────────────────────────────────────────
+describe("isStaleDeleteLock", () => {
+  const now = 1_000_000_000_000;
+  test("not locked → false", () => {
+    expect(isStaleDeleteLock({ deleting: false, updatedAt: { toMillis: () => 0 } }, now)).toBe(false);
+    expect(isStaleDeleteLock({}, now)).toBe(false);
+  });
+  test("fresh lock (another device deleting right now) → false", () => {
+    expect(isStaleDeleteLock({ deleting: true, updatedAt: { toMillis: () => now - 30_000 } }, now)).toBe(false);
+  });
+  test("lock older than threshold → stale", () => {
+    expect(isStaleDeleteLock({ deleting: true, updatedAt: { toMillis: () => now - STALE_DELETE_LOCK_MS - 1 } }, now)).toBe(true);
+    expect(isStaleDeleteLock({ deleting: true, updatedAt: { seconds: (now - 10 * 60_000) / 1000 } }, now)).toBe(true);
+  });
+  test("lock with no confirmed server timestamp → not stale (unknown age)", () => {
+    expect(isStaleDeleteLock({ deleting: true, updatedAt: null }, now)).toBe(false);
+  });
+});
+
+describe("releaseDeleteLock", () => {
+  test("writes only deleting=false (never deletes anything)", async () => {
+    await releaseDeleteLock({ userId: "u1", parentCollection: "jobs", parentId: "j1" });
+    expect(mockUpdateDoc).toHaveBeenCalledWith(
+      "test-db/users/u1/jobs/j1",
+      { deleting: false, updatedAt: "server-time" }
+    );
+    expect(mockBatchDelete).not.toHaveBeenCalled();
   });
 });

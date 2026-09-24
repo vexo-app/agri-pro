@@ -84,7 +84,7 @@ const GuestClientDetailPage = () => {
       </button>
 
       <div className="flex items-center gap-4 mb-6">
-        <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-brand-900/60 to-surface-3 border border-brand-800/30 flex items-center justify-center text-2xl font-extrabold text-brand-300">
+        <div className="w-14 h-14 rounded-2xl bg-brand-900/40 border border-brand-800/30 flex items-center justify-center text-2xl font-extrabold text-brand-300">
           {decodedName.charAt(0)}
         </div>
         <div>

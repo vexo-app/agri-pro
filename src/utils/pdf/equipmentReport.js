@@ -1,7 +1,7 @@
 // src/utils/pdf/equipmentReport.js
 // Equipment Report. Extracted from the old single pdfGenerator.js — logic unchanged.
 
-import { formatCurrency, formatNumber, formatDate } from "../formatters";
+import { formatCurrency, formatNumber, formatDate, formatProfit } from "../formatters";
 import { calcRevenue, calcFuelCost, getJobFuelPrice } from "../calculations";
 import { sortOilHistory, sortGreaseHistory } from "../serviceHistory";
 import { EQUIPMENT_CATEGORY } from "../../config/constants";
@@ -121,7 +121,7 @@ const buildEquipmentReportHtml = ({ equipment, jobs, maintenance, fuelEntries = 
         <div class="stat-box"><div class="stat-val">${formatNumber(totalAcres)} فدان</div><div class="stat-lbl">إجمالي الأفدنة</div></div>
         <div class="stat-box"><div class="stat-val">${formatCurrency(totalRevenue)}</div><div class="stat-lbl">إجمالي الإيراد</div></div>
         <div class="stat-box"><div class="stat-val">${formatNumber(totalFuel)} لتر</div><div class="stat-lbl">إجمالي الوقود</div></div>
-        <div class="stat-box"><div class="stat-val" style="color:${netProfit>=0?"#15803d":"#991b1b"}">${formatCurrency(netProfit)}</div><div class="stat-lbl">ربح المعدة (قبل المصاريف العامة)</div></div>
+        <div class="stat-box"><div class="stat-val" style="color:${netProfit>=0?"#15803d":"#991b1b"}">${formatProfit(netProfit)}</div><div class="stat-lbl">ربح المعدة (قبل المصاريف العامة)</div></div>
       </div>
 
       <div class="section">
@@ -132,7 +132,7 @@ const buildEquipmentReportHtml = ({ equipment, jobs, maintenance, fuelEntries = 
           <tr><td style="font-weight:600">تكاليف الصيانة</td><td style="color:#991b1b">${formatCurrency(otherMaintCost)}</td></tr>
           ${!isAttachment || oilCost > 0 ? `<tr><td style="font-weight:600">تكاليف غيار الزيت</td><td style="color:#991b1b">${formatCurrency(oilCost)}</td></tr>` : ""}
           <tr><td style="font-weight:700">إجمالي مصاريف المعدة (صيانة + زيت)</td><td style="color:#991b1b;font-weight:700">${formatCurrency(maintCost)}</td></tr>
-          <tr class="total-row"><td>ربح المعدة (قبل المصاريف العامة)</td><td style="color:${netProfit>=0?"#15803d":"#991b1b"}">${formatCurrency(netProfit)}</td></tr>
+          <tr class="total-row"><td>ربح المعدة (قبل المصاريف العامة)</td><td style="color:${netProfit>=0?"#15803d":"#991b1b"}">${formatProfit(netProfit)}</td></tr>
         </table>
       </div>
 

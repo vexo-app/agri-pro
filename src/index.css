@@ -93,3 +93,16 @@
   .border-white\/15 { border-color: rgba(255,255,255,0.15); }
   .border-white\/20 { border-color: rgba(255,255,255,0.20); }
 }
+
+/* Step 4: احترام إعداد "تقليل الحركة" في الجهاز — الحركات الزخرفية
+   (fade/slide/hover) بتتلغي، وأيقونات التحميل بتفضل شغالة. */
+@media (prefers-reduced-motion: reduce) {
+  *:not(.animate-spin), *:not(.animate-spin)::before, *:not(.animate-spin)::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}
+
+/* الأرقام المالية بعرض ثابت للأرقام عشان الأعمدة تتصف تحت بعض. */
+.tabular-nums { font-variant-numeric: tabular-nums; }

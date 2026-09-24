@@ -13,6 +13,7 @@ import { Card, CardHeader, CardBody, SummaryRow, EmptyState, ProgressBar, Badge 
 import LoadingScreen      from "../components/ui/LoadingScreen";
 import { formatCurrency, formatDateShort } from "../utils/formatters";
 import { calcOverpaidAmount } from "../utils/calculations";
+import { isStaleDeleteLock } from "../services/cascadeDeleteService";
 import { CalendarIcon, PlusIcon, EditIcon, PrintIcon, TrashIcon } from "../components/ui/Icons";
 import {
   printSupplierInvoice, downloadSupplierInvoicePdf,
@@ -24,7 +25,7 @@ const SupplierDetailPage = () => {
   const navigate           = useNavigate();
   const decodedName        = decodeURIComponent(supplierName);
   const { getSupplierSummary, loading } = useSuppliers();
-  const { addSupplierPayment, deleteSupplierInvoice, renameSupplier, supplierPayments = [], settings } = useData();
+  const { addSupplierPayment, deleteSupplierInvoice, releaseSupplierInvoiceDeleteLock, renameSupplier, supplierPayments = [], settings } = useData();
   const [payModal, setPayModal] = useState(null);
   const [deleteModal, setDeleteModal] = useState(null); // { invoice }
   const [renameModal, setRenameModal] = useState(false);
@@ -88,7 +89,7 @@ const SupplierDetailPage = () => {
 
       {/* Header */}
       <div className="flex items-center gap-4 mb-6">
-        <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-red-900/60 to-surface-3 border border-red-800/30 flex items-center justify-center text-2xl font-extrabold text-red-300">
+        <div className="w-14 h-14 rounded-2xl bg-red-900/40 border border-red-800/30 flex items-center justify-center text-2xl font-extrabold text-red-300">
           {decodedName.charAt(0)}
         </div>
         <div className="flex-1 min-w-0">
@@ -214,6 +215,21 @@ const SupplierDetailPage = () => {
                       </div>
                     ))}
                   </div>
+                  {inv.deleting === true && (
+                    <div className="mt-2 flex items-center justify-between gap-2 bg-amber-950/40 border border-amber-800/60 rounded-xl px-3 py-2 text-xs text-amber-300">
+                      <span className="font-bold">
+                        {isStaleDeleteLock(inv)
+                          ? "⚠ حذف الفاتورة دي ما اكتملش — مش هتقبل دفعات لحد ما تفك القفل أو تكمّل الحذف"
+                          : "جاري حذف الفاتورة دي من جهاز تاني…"}
+                      </span>
+                      {isStaleDeleteLock(inv) && (
+                        <button onClick={() => releaseSupplierInvoiceDeleteLock(inv.id)}
+                          className="flex-shrink-0 rounded-lg border border-amber-700 px-2 py-1 font-bold hover:bg-amber-900/40">
+                          فك القفل
+                        </button>
+                      )}
+                    </div>
+                  )}
                   {overpaid > 0 && (
                     <p className="text-xs font-bold text-sky-400 mt-2">
                       ⚠ مدفوع زيادة عن قيمة الفاتورة: {formatCurrency(overpaid)} (رصيد لك عند المورد)

@@ -11,6 +11,14 @@ const Modal = ({ open, onClose, title, size = "md", children }) => {
     return () => { document.body.style.overflow = ""; };
   }, [open]);
 
+  // Step 4: زرار Esc بيقفل النافذة (زي زرار الإغلاق بالظبط).
+  useEffect(() => {
+    if (!open) return undefined;
+    const onKey = (e) => { if (e.key === "Escape") onClose?.(); };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [open, onClose]);
+
   if (!open) return null;
 
   const widths = { sm: "max-w-sm", md: "max-w-xl", lg: "max-w-2xl", xl: "max-w-3xl" };
@@ -39,7 +47,7 @@ const Modal = ({ open, onClose, title, size = "md", children }) => {
           "max-h-[90vh] overflow-y-auto flex flex-col animate-slide-up",
           widths[size]
         )}>
-        <div className="sticky top-0 bg-surface z-10 flex items-center justify-between px-6 py-4 border-b border-white/10 rounded-t-3xl sm:rounded-t-2xl">
+        <div className="sticky top-0 bg-surface z-10 flex items-center justify-between px-4 sm:px-6 py-4 border-b border-white/10 rounded-t-3xl sm:rounded-t-2xl">
           <h2 id="modal-title" className="text-base font-bold text-gray-100">{title}</h2>
           <button
             onClick={onClose}
@@ -49,7 +57,7 @@ const Modal = ({ open, onClose, title, size = "md", children }) => {
             <CloseIcon size={16} />
           </button>
         </div>
-        <div className="p-6 flex-1">{children}</div>
+        <div className="p-4 sm:p-6 flex-1">{children}</div>
       </div>
     </div>
   ), document.body);

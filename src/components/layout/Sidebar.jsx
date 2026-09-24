@@ -13,7 +13,7 @@ import {
   HomeIcon, TractorIcon, ClipboardIcon,
   DriverIcon, WrenchIcon, ChartIcon,
   FuelIcon, LogoutIcon, AlertIcon, WalletIcon, ShieldIcon, BugIcon, MegaphoneIcon, DownloadIcon, ReceiptIcon, TruckIcon, SearchIcon,
-  SettingsIcon, ChevronLeftIcon,
+  SettingsIcon, ChevronLeftIcon, UsersGroupIcon,
 } from "../ui/Icons";
 import sidebarBrandBg from "../../assets/landing/sidebar-brand-bg.webp";
 
@@ -21,22 +21,30 @@ import sidebarBrandBg from "../../assets/landing/sidebar-brand-bg.webp";
 // → PLANS[].features وsrc/utils/licenseState.js) — العناصر اللي معاها
 // moduleKey بتتخفي تلقائيًا لو الباقة الحالية مش شاملة المزية دي، بنفس
 // المنطق اللي بيمنع الوصول المباشر بالرابط في RequireModule.jsx.
+// Step 4: القائمة متقسمة لمجموعات (التشغيل / المالية / عام) بدل قائمة واحدة
+// طويلة، و"العملاء والديون" ليها أيقونة خاصة بدل أيقونة التنبيهات.
 const NAV_ITEMS = [
-  { to: "/",              label: "الرئيسية",       Icon: HomeIcon      },
-  { to: "/equipment",     label: "المعدات",         Icon: TractorIcon   },
-  { to: "/jobs",          label: "سجل الشغل",       Icon: ClipboardIcon },
-  { to: "/clients",       label: "العملاء والديون", Icon: AlertIcon,    moduleKey: "clients" },
-  { to: "/suppliers",     label: "الموردين",        Icon: TruckIcon,    moduleKey: "suppliers" },
-  { to: "/drivers",       label: "فريق العمل",      Icon: DriverIcon    },
-  { to: "/maintenance",   label: "الصيانة",         Icon: WrenchIcon    },
-  { to: "/custody",       label: "العهدة",          Icon: WalletIcon,   moduleKey: "custody" },
-  { to: "/tax-deductions", label: "الضرائب والخصومات", Icon: ReceiptIcon },
-  { to: "/notifications", label: "التنبيهات",       Icon: AlertIcon, badge: true },
-  { to: "/reports",       label: "التقارير",        Icon: ChartIcon     },
+  { to: "/",              label: "الرئيسية",       Icon: HomeIcon,      group: "ops" },
+  { to: "/jobs",          label: "سجل الشغل",       Icon: ClipboardIcon, group: "ops" },
+  { to: "/equipment",     label: "المعدات",         Icon: TractorIcon,   group: "ops" },
+  { to: "/drivers",       label: "فريق العمل",      Icon: DriverIcon,    group: "ops" },
+  { to: "/maintenance",   label: "الصيانة",         Icon: WrenchIcon,    group: "ops" },
+  { to: "/clients",       label: "العملاء والديون", Icon: UsersGroupIcon, moduleKey: "clients", group: "finance" },
+  { to: "/suppliers",     label: "الموردين",        Icon: TruckIcon,    moduleKey: "suppliers", group: "finance" },
+  { to: "/custody",       label: "العهدة",          Icon: WalletIcon,   moduleKey: "custody", group: "finance" },
+  { to: "/tax-deductions", label: "الضرائب والخصومات", Icon: ReceiptIcon, group: "finance" },
+  { to: "/reports",       label: "التقارير",        Icon: ChartIcon,    group: "finance" },
+  { to: "/notifications", label: "التنبيهات",       Icon: AlertIcon, badge: true, group: "general" },
   // "الاشتراك" اتنقل جوه صفحة الملف الشخصي (تاب) بدل ما يكون عنصر منفصل
   // هنا — الرابط ده بقى بياخد لصفحة الملف الشخصي نفسها، واسمه هنا
   // "الإعدادات" بدل الاعتماد على زرار اسم المستخدم تحت بس.
-  { to: "/profile",       label: "الإعدادات",       Icon: SettingsIcon  },
+  { to: "/profile",       label: "الإعدادات",       Icon: SettingsIcon, group: "general" },
+];
+
+const NAV_GROUPS = [
+  { key: "ops",     label: "التشغيل" },
+  { key: "finance", label: "المالية" },
+  { key: "general", label: "عام" },
 ];
 
 const ADMIN_ITEMS = [
@@ -131,8 +139,8 @@ const Sidebar = ({ onClose, collapsed = false, onToggleCollapse }) => {
           collapsed ? "justify-center h-11 w-11 mx-auto" : "gap-3 px-3 py-2.5",
           isActive
             ? adminStyle
-              ? "bg-gradient-to-l from-purple-900/60 to-purple-900/20 text-purple-300 border border-purple-800/50 shadow-sm"
-              : "bg-gradient-to-l from-brand-900/60 to-brand-900/20 text-brand-300 border border-brand-800/50 shadow-sm"
+              ? "bg-purple-900/40 text-purple-300 border border-purple-800/50 shadow-sm"
+              : "bg-brand-900/40 text-brand-300 border border-brand-800/50 shadow-sm"
             : "text-gray-400 hover:text-gray-200 hover:bg-white/5"
         )
       }
@@ -142,7 +150,7 @@ const Sidebar = ({ onClose, collapsed = false, onToggleCollapse }) => {
           <Icon
             size={18}
             className={clsx(
-              "transition-transform duration-150 group-hover:scale-110 shrink-0",
+              "shrink-0",
               isActive ? (adminStyle ? "text-purple-400" : "text-brand-400") : "text-gray-500"
             )}
           />
@@ -216,10 +224,20 @@ const Sidebar = ({ onClose, collapsed = false, onToggleCollapse }) => {
 
       {/* Nav */}
       <nav className={clsx("flex-1 overflow-y-auto overflow-x-hidden py-4 space-y-1", collapsed ? "px-2" : "px-3")}>
-        {!collapsed && (
-          <p className="text-[10px] font-bold text-gray-600 uppercase tracking-widest px-2 mb-2">القائمة</p>
-        )}
-        {visibleNavItems.map(({ to, label, Icon, badge }) => renderNavLink({ to, label, Icon, badge }))}
+        {NAV_GROUPS.map((g, gi) => {
+          const items = visibleNavItems.filter((i) => i.group === g.key);
+          if (!items.length) return null;
+          return (
+            <div key={g.key} className={gi > 0 ? "pt-3" : undefined}>
+              {collapsed
+                ? (gi > 0 && <div className="border-t border-white/8 mb-2" />)
+                : <p className="text-[11px] font-bold text-gray-500 px-2 mb-1.5">{g.label}</p>}
+              <div className="space-y-1">
+                {items.map(({ to, label, Icon, badge }) => renderNavLink({ to, label, Icon, badge }))}
+              </div>
+            </div>
+          );
+        })}
 
         {isAdmin && (
           <>
@@ -272,7 +290,7 @@ const Sidebar = ({ onClose, collapsed = false, onToggleCollapse }) => {
             collapsed ? "justify-center p-1.5" : "gap-3 text-right p-1.5 -m-1.5"
           )}
         >
-          <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-brand-700 to-blue-700 flex items-center justify-center text-sm font-bold text-white flex-shrink-0">
+          <div className="w-9 h-9 rounded-xl bg-brand-700 flex items-center justify-center text-sm font-bold text-white flex-shrink-0">
             {(user?.displayName || user?.email || "م").charAt(0).toUpperCase()}
           </div>
           {!collapsed && (

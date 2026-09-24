@@ -5,6 +5,17 @@ import { usePWA } from "../../hooks/usePWA";
 import { useData } from "../../contexts/DataContext";
 import { exportService } from "../../services/exportService";
 import { ChevronUpIcon } from "./Icons";
+import { localCacheStatus, onLocalCacheStatusChange } from "../../config/firebase";
+
+// Step 3: هل الحفظ المحلي الدائم (IndexedDB) شغال على الجهاز ده؟
+const useLocalCacheMode = () => {
+  const [mode, setMode] = useState(localCacheStatus.mode);
+  useEffect(() => {
+    setMode(localCacheStatus.mode);
+    return onLocalCacheStatusChange((s) => setMode(s.mode));
+  }, []);
+  return mode;
+};
 
 // كل ما فضلت تعديلات معلّقة (مترفعتش) أكتر من الوقت ده، بنعتبرها حالة
 // "طول عليها" ونظهر تنبيه أقوى بزرار نسخة احتياطية فورية — بدل ما نسيب
@@ -67,7 +78,10 @@ const OfflineBanner = () => {
     pendingWrites, lastSyncedAt, firstPendingWriteAt, loadError, retryLoad,
     backupFailCount, retryBackupNow,
     equipment, jobs, drivers, maintenance, payments, salaryEntries, attendance, settings, custody,
+    equipmentFuelEntries, supplierInvoices, supplierPayments, taxDeductions, contacts,
   } = useData();
+  const cacheMode = useLocalCacheMode();
+  const memoryOnly = cacheMode === "memory";
 
   const [showSyncedFlash, setShowSyncedFlash] = useState(false);
   const prevPending = useRef(pendingWrites);
@@ -95,9 +109,12 @@ const OfflineBanner = () => {
 
   const handleEmergencyBackup = () => {
     try {
+      // Step 3: النسخة الطارئة كانت ناقصة (فواتير ودفعات الموردين، الضرائب،
+      // جهات الاتصال، وقود المعدات) — دلوقتي كل اللي في النسخة العادية.
       exportService.downloadBackupFile({
-        equipment, jobs, drivers, maintenance, payments, salaryEntries, attendance,
-        custodyTransactions: custody, settings,
+        equipment, jobs, drivers, maintenance, equipmentFuelEntries, payments,
+        supplierInvoices, supplierPayments, salaryEntries, attendance,
+        custodyTransactions: custody, taxDeductions, contacts, settings,
       });
       toast.success("اتنزّل ملف احتياطي على جهازك دلوقتي");
     } catch {
@@ -120,6 +137,7 @@ const OfflineBanner = () => {
   const [syncedMin, setSyncedMin]               = useAutoResetMinimize(showSyncedFlash);
   const [longPendingMin, setLongPendingMin]     = useAutoResetMinimize(isLongPending);
   const [installMin, setInstallMin]             = useAutoResetMinimize(canInstall && isOnline);
+  const [memoryMin, setMemoryMin]               = useAutoResetMinimize(memoryOnly);
 
   const showAnything =
     (loadError && !loadErrorMin) ||
@@ -128,7 +146,8 @@ const OfflineBanner = () => {
     (canInstall && !installMin) ||
     (showSyncing && !syncingMin) ||
     (showSyncedFlash && !syncedMin) ||
-    (isLongPending && !longPendingMin);
+    (isLongPending && !longPendingMin) ||
+    (memoryOnly && !memoryMin);
   if (!showAnything) return null;
 
   return (
@@ -197,11 +216,26 @@ const OfflineBanner = () => {
         </div>
       )}
 
+      {/* Step 3: الحفظ المحلي الدائم مش شغال (IndexedDB مرفوض) — مش صامت. */}
+      {memoryOnly && !memoryMin && (
+        <div className="flex items-center justify-between gap-3 bg-red-700 text-white text-xs font-bold py-2 px-4 flex-wrap">
+          <span>
+            المتصفح ده مش بيسمح بالحفظ الدائم على الجهاز (غالبًا وضع التصفح الخفي) — أي تعديل وانت أوفلاين هيضيع لو قفلت الصفحة قبل ما النت يرجع.
+            استخدم متصفح عادي للشغل أوفلاين.
+          </span>
+          <MinimizeButton onClick={() => setMemoryMin(true)} />
+        </div>
+      )}
+
       {/* Offline warning */}
       {!isOnline && !isLongPending && !offlineMin && (
         <div className="flex items-center justify-center gap-2 bg-amber-600 text-white text-xs font-bold py-2 px-4">
           <span className="w-2 h-2 rounded-full bg-white animate-pulse flex-shrink-0" />
-          <span>أنت غير متصل بالإنترنت — البيانات محفوظة على جهازك وهترفع تلقائي لما النت يرجع</span>
+          <span>
+            {memoryOnly
+              ? "أنت غير متصل بالإنترنت — التعديلات في ذاكرة الصفحة بس، ما تقفلهاش لحد ما النت يرجع"
+              : "أنت غير متصل بالإنترنت — البيانات محفوظة على جهازك وهترفع تلقائي لما النت يرجع"}
+          </span>
           <MinimizeButton onClick={() => setOfflineMin(true)} />
         </div>
       )}

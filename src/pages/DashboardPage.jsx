@@ -24,7 +24,7 @@ import {
   TractorIcon, DriverIcon, ClipboardIcon, ChartIcon,
   AlertIcon, StarIcon, WORK_TYPE_ICON_MAP, ChevronLeftIcon,
 } from "../components/ui/Icons";
-import { formatCurrency, formatNumber, formatDateShort } from "../utils/formatters";
+import { formatCurrency, formatNumber, formatDateShort, formatProfit, formatNetPosition, formatDeduction } from "../utils/formatters";
 import { enrichJob } from "../utils/calculations";
 import { shortNum, createAngledNameTick } from "../components/charts/chartHelpers";
 
@@ -135,7 +135,7 @@ const DashboardPage = () => {
           change={monthlyComparison.acres.change}/>
         <StatCard icon={<FuelIcon size={26}/>} label="إجمالي الوقود" value={`${formatNumber(totalFuel)} ل`} color="orange" sensitive
           change={monthlyComparison.fuel.change}/>
-        <StatCard icon={<ProfitIcon size={26}/>} label="صافي الربح" value={formatCurrency(netProfit)} color={netProfit>=0?"purple":"red"} sensitive
+        <StatCard icon={<ProfitIcon size={26}/>} label="صافي الربح" value={formatProfit(netProfit)} color={netProfit>=0?"purple":"red"} sensitive
           change={monthlyComparison.netProfit.change}/>
       </div>
 
@@ -200,7 +200,7 @@ const DashboardPage = () => {
                 className={`text-base font-extrabold tabular-nums flex-shrink-0 transition-[filter] duration-300 ${netPosition >= 0 ? "text-green-400" : "text-red-400"}`}
                 style={{ filter: isPrivate ? "blur(6px)" : "none", userSelect: isPrivate ? "none" : "auto" }}
               >
-                {formatCurrency(netPosition)}
+                {formatNetPosition(netPosition)}
               </span>
             </div>
           )}
@@ -323,17 +323,17 @@ const DashboardPage = () => {
         )}
 
         {/* Financial summary */}
-        <Card hover>
+        <Card>
           <CardHeader title="الملخص المالي"/>
           <CardBody>
             <SummaryRow label="إجمالي الإيراد"  value={formatCurrency(totalRevenue)}         valueColor="text-amber-400" sensitive/>
-            <SummaryRow label="تكلفة الوقود"    value={formatCurrency(totals.totalFuelCost)} valueColor="text-red-400" sensitive/>
-            <SummaryRow label="تكاليف الصيانة"  value={formatCurrency(totalMaintCost)}  valueColor="text-red-400" sensitive/>
-            <SummaryRow label="مرتبات الفريق" value={formatCurrency(totalSalaries||0)} valueColor="text-red-400" sensitive/>
-            <SummaryRow label="الواصل للمورد" value={formatCurrency(totalSupplierPaidOut||0)} valueColor="text-red-400" sensitive/>
-            <SummaryRow label="ضرائب وخصومات"   value={formatCurrency(totalTaxDeductions||0)} valueColor="text-red-400" sensitive/>
+            <SummaryRow label="تكلفة الوقود"    value={formatDeduction(totals.totalFuelCost)} valueColor="text-red-400" sensitive/>
+            <SummaryRow label="تكاليف الصيانة"  value={formatDeduction(totalMaintCost)}  valueColor="text-red-400" sensitive/>
+            <SummaryRow label="مرتبات الفريق" value={formatDeduction(totalSalaries||0)} valueColor="text-red-400" sensitive/>
+            <SummaryRow label="الواصل للمورد" value={formatDeduction(totalSupplierPaidOut||0)} valueColor="text-red-400" sensitive/>
+            <SummaryRow label="ضرائب وخصومات"   value={formatDeduction(totalTaxDeductions||0)} valueColor="text-red-400" sensitive/>
             <div className="border-t border-white/8 mt-2 pt-2">
-              <SummaryRow label="صافي الربح" value={formatCurrency(netProfit)}
+              <SummaryRow label="صافي الربح" value={formatProfit(netProfit)}
                 valueColor={netProfit>=0?"text-green-400":"text-red-400"} bold sensitive/>
             </div>
             {totalRevenue > 0 && (
@@ -343,7 +343,7 @@ const DashboardPage = () => {
                   <span className="text-xs font-bold text-brand-400">{margin.toFixed(1)}%</span>
                 </div>
                 <div className="h-1.5 bg-surface-2 rounded-full overflow-hidden">
-                  <div className="h-full rounded-full bg-gradient-to-l from-brand-500 to-brand-400 transition-all duration-700"
+                  <div className="h-full rounded-full bg-brand-500 transition-all duration-700"
                     style={{ width:`${Math.min(100,Math.max(0,margin))}%` }}/>
                 </div>
               </div>

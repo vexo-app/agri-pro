@@ -8,8 +8,9 @@ import {
   DriverIcon, AcreIcon, FuelIcon,
   WORK_TYPE_ICON_MAP, WrenchIcon,
 } from "../../components/ui/Icons";
-import { formatCurrency, formatNumber, formatDateShort } from "../../utils/formatters";
+import { formatCurrency, formatNumber, formatDateShort, formatProfit } from "../../utils/formatters";
 import { calcOverpaidAmount } from "../../utils/calculations";
+import { isStaleDeleteLock } from "../../services/cascadeDeleteService";
 import { printClientInvoice, downloadClientInvoicePdf } from "../../utils/pdfGenerator";
 import { useData } from "../../contexts/DataContext";
 import DownloadReportButton from "../../components/ui/DownloadReportButton";
@@ -36,7 +37,7 @@ const JobCard = ({
   onEdit, onDelete,
   showPrint = true,
 }) => {
-  const { payments = [], maintenance = [], settings } = useData();
+  const { payments = [], maintenance = [], settings, releaseJobDeleteLock } = useData();
   const [showPayments, setShowPayments] = useState(false);
 
   const {
@@ -139,8 +140,26 @@ const JobCard = ({
       <div className="flex gap-2 mb-2">
         <FinancialPill label="إيراد" value={formatCurrency(revenue)}  color="text-amber-400"/>
         <FinancialPill label="وقود"  value={formatCurrency(fuelCost)} color="text-red-400"/>
-        <FinancialPill label="ربح"   value={formatCurrency(profit)}   color={profit>=0?"text-green-400":"text-red-400"}/>
+        <FinancialPill label="ربح"   value={formatProfit(profit)}   color={profit>=0?"text-green-400":"text-red-400"}/>
       </div>
+
+      {/* Step 3: قفل حذف (deleting:true) — إما حذف شغال دلوقتي من جهاز تاني، أو
+          عالق لأن فك القفل فشل وقت انقطاع النت. العالق بيرفض أي دفعة جديدة. */}
+      {job.deleting === true && (
+        <div className="mb-2 flex items-center justify-between gap-2 bg-amber-950/40 border border-amber-800/60 rounded-xl px-3 py-2 text-xs text-amber-300">
+          <span className="font-bold">
+            {isStaleDeleteLock(job)
+              ? "⚠ حذف العملية دي ما اكتملش — مش هتقبل دفعات لحد ما تفك القفل أو تكمّل الحذف"
+              : "جاري حذف العملية دي من جهاز تاني…"}
+          </span>
+          {isStaleDeleteLock(job) && releaseJobDeleteLock && (
+            <button onClick={() => releaseJobDeleteLock(job.id)}
+              className="flex-shrink-0 rounded-lg border border-amber-700 px-2 py-1 font-bold hover:bg-amber-900/40">
+              فك القفل
+            </button>
+          )}
+        </div>
+      )}
 
       {/* Payment */}
       {revenue > 0 && (

@@ -15,7 +15,7 @@ import LoadingScreen       from "../components/ui/LoadingScreen";
 import DownloadReportButton from "../components/ui/DownloadReportButton";
 import FeatureIntroBanner   from "../components/common/FeatureIntroBanner";
 import { TractorIcon, DriverIcon, ChartIcon, RevenueIcon, AcreIcon, FuelIcon, ReceiptIcon } from "../components/ui/Icons";
-import { formatCurrency, formatNumber } from "../utils/formatters";
+import { formatCurrency, formatNumber, formatProfit, formatDeduction } from "../utils/formatters";
 import { TEAM_ROLE } from "../config/constants";
 import { useData }                from "../contexts/DataContext";
 import { findJobsWithMissingEquipment } from "../utils/calculations";
@@ -246,12 +246,12 @@ const ReportsPage = () => {
           <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-7 gap-3 mb-6">
             {[
               { label:"إجمالي الإيراد",  value:formatCurrency(totalRevenue),  color:"text-amber-400",  icon:<RevenueIcon size={18}/> },
-              { label:"تكلفة الوقود",    value:formatCurrency(totalFuelCost), color:"text-blue-400",   icon:<FuelIcon size={18}/> },
-              { label:"تكاليف الصيانة",   value:formatCurrency(totalMaintCost),      color:"text-purple-400", icon:<AcreIcon size={18}/> },
-              { label:"مرتبات الفريق", value:formatCurrency(totalSalariesPaid), color:"text-red-400",    icon:<DriverIcon size={18}/> },
-              { label:"الواصل للمورد", value:formatCurrency(totalSupplierPaidOut), color:"text-red-400",    icon:<ReceiptIcon size={18}/> },
-              { label:"ضرائب وخصومات",   value:formatCurrency(totalTaxDeductions), color:"text-red-400",    icon:<ReceiptIcon size={18}/> },
-              { label:"صافي الربح",      value:formatCurrency(totalProfit),   color:totalProfit>=0?"text-green-400":"text-red-400", icon:<ChartIcon size={18}/> },
+              { label:"تكلفة الوقود",    value:formatDeduction(totalFuelCost), color:"text-blue-400",   icon:<FuelIcon size={18}/> },
+              { label:"تكاليف الصيانة",   value:formatDeduction(totalMaintCost),      color:"text-purple-400", icon:<AcreIcon size={18}/> },
+              { label:"مرتبات الفريق", value:formatDeduction(totalSalariesPaid), color:"text-red-400",    icon:<DriverIcon size={18}/> },
+              { label:"الواصل للمورد", value:formatDeduction(totalSupplierPaidOut), color:"text-red-400",    icon:<ReceiptIcon size={18}/> },
+              { label:"ضرائب وخصومات",   value:formatDeduction(totalTaxDeductions), color:"text-red-400",    icon:<ReceiptIcon size={18}/> },
+              { label:"صافي الربح",      value:formatProfit(totalProfit),   color:totalProfit>=0?"text-green-400":"text-red-400", icon:<ChartIcon size={18}/> },
             ].map((s) => (
               <div key={s.label} className="bg-surface border border-white/8 rounded-2xl p-4">
                 <div className={`mb-2 ${s.color}`}>{s.icon}</div>

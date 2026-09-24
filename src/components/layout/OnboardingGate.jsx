@@ -11,7 +11,7 @@ import OnboardingFlow from "../../features/onboarding/OnboardingFlow";
 const OnboardingGate = ({ children }) => {
   const { settings, loading } = useData();
 
-  if (loading) return <LoadingScreen message="جاري التحميل..." />;
+  if (loading) return <LoadingScreen fullScreen message="جاري التحميل..." />;
   if (!settings?.onboardingCompleted) return <OnboardingFlow />;
 
   return children;

@@ -42,7 +42,7 @@ const GuestSidebar = ({ onClose }) => {
 
   return (
     <aside className="flex flex-col h-full bg-surface border-l border-white/8 w-64 select-none">
-      <div className="px-5 py-6 border-b border-white/8 bg-gradient-to-bl from-brand-900/30 to-transparent">
+      <div className="px-5 py-6 border-b border-white/8 bg-brand-900/15">
         <img src="/brand-icon.png" alt="زراعي برو" className="w-11 h-11 rounded-2xl mb-3 shadow-lg shadow-brand-900/50" />
         <p className="text-base font-extrabold text-gray-100 leading-tight">زراعي برو</p>
         <p className="text-xs text-amber-400 font-medium mt-0.5">وضع الضيف — قراءة فقط</p>
@@ -61,14 +61,14 @@ const GuestSidebar = ({ onClose }) => {
               clsx(
                 "group flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-semibold transition-all duration-150",
                 isActive
-                  ? "bg-gradient-to-l from-brand-900/60 to-brand-900/20 text-brand-300 border border-brand-800/50 shadow-sm"
+                  ? "bg-brand-900/40 text-brand-300 border border-brand-800/50 shadow-sm"
                   : "text-gray-400 hover:text-gray-200 hover:bg-white/5"
               )
             }
           >
             {({ isActive }) => (
               <>
-                <Icon size={18} className={clsx("transition-transform duration-150 group-hover:scale-110", isActive ? "text-brand-400" : "text-gray-500")} />
+                <Icon size={18} className={clsx(isActive ? "text-brand-400" : "text-gray-500")} />
                 <span className="flex-1">{label}</span>
               </>
             )}

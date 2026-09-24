@@ -3,7 +3,6 @@
 // عمليات السائقين — منقولة هنا حرفيًا من DataContext.jsx من غير أي تغيير
 // في السلوك.
 import { useCallback } from "react";
-import toast from "react-hot-toast";
 import { driverService } from "../../../services/driverService";
 import { buildSalaryHistory } from "../../../utils/salaryCalculations";
 
@@ -23,8 +22,8 @@ export function useDriverMutations({ user, dispatch, stateRef, trackWrite }) {
     trackWrite(promise, {
       rollback: () => dispatch({ type: "DELETE_DRIVER", payload: id }),
       errorMessage: "تعذر حفظ السائق، تم التراجع عن الإضافة",
+      successMessage: "تم إضافة السائق",
     });
-    toast.success("تم إضافة السائق");
     return id;
   }, [user, dispatch, trackWrite]);
 
@@ -39,8 +38,8 @@ export function useDriverMutations({ user, dispatch, stateRef, trackWrite }) {
     trackWrite(driverService.update(user.uid, id, data), {
       rollback: () => previous && dispatch({ type: "UPDATE_DRIVER", payload: previous }),
       errorMessage: "تعذر حفظ تعديل السائق، تم التراجع عن التعديل",
+      successMessage: "تم تحديث السائق",
     });
-    toast.success("تم تحديث السائق");
   }, [user, dispatch, stateRef, trackWrite]);
 
   const deleteDriver = useCallback(async (id) => {
@@ -49,8 +48,8 @@ export function useDriverMutations({ user, dispatch, stateRef, trackWrite }) {
     trackWrite(driverService.remove(user.uid, id), {
       rollback: () => previous && dispatch({ type: "ADD_DRIVER", payload: previous }),
       errorMessage: "تعذر حذف السائق، تم استرجاعه",
+      successMessage: "تم حذف السائق",
     });
-    toast.success("تم حذف السائق");
   }, [user, dispatch, stateRef, trackWrite]);
 
   return { addDriver, updateDriver, deleteDriver };

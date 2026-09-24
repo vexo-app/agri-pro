@@ -50,7 +50,7 @@ const OnboardingChecklist = () => {
   };
 
   return (
-    <Card className="p-5 border-brand-800/40 bg-gradient-to-bl from-brand-900/20 to-transparent relative overflow-visible">
+    <Card className="p-5 border-brand-800/40 bg-brand-900/10 relative overflow-visible">
       <button
         type="button"
         onClick={dismiss}
@@ -70,7 +70,7 @@ const OnboardingChecklist = () => {
 
       <div className="h-1.5 bg-surface-2 rounded-full overflow-hidden mb-4">
         <div
-          className="h-full rounded-full bg-gradient-to-l from-brand-500 to-brand-400 transition-all duration-500"
+          className="h-full rounded-full bg-brand-500 transition-all duration-500"
           style={{ width: `${(doneCount / totalSteps) * 100}%` }}
         />
       </div>

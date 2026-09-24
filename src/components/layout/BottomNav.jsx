@@ -4,7 +4,7 @@ import { NavLink } from "react-router-dom";
 import clsx from "clsx";
 import { useNotifications } from "../../hooks/useNotifications";
 import { useEntitlement } from "../../hooks/useEntitlement";
-import { HomeIcon, TractorIcon, ClipboardIcon, AlertIcon, ChartIcon } from "../ui/Icons";
+import { HomeIcon, TractorIcon, ClipboardIcon, ChartIcon, UsersGroupIcon } from "../ui/Icons";
 
 // "العملاء" هنا هي التاب الوحيدة من الخمسة المرتبطة بمزية باقة (clients —
 // راجع src/config/constants/billing.js) — بتتخفي لو الباقة الحالية مش
@@ -13,7 +13,7 @@ const ITEMS = [
   { to: "/",          label: "الرئيسية", Icon: HomeIcon      },
   { to: "/equipment", label: "المعدات",  Icon: TractorIcon   },
   { to: "/jobs",      label: "الشغل",    Icon: ClipboardIcon },
-  { to: "/clients",   label: "العملاء",  Icon: AlertIcon,    moduleKey: "clients" },
+  { to: "/clients",   label: "العملاء",  Icon: UsersGroupIcon, moduleKey: "clients" },
   { to: "/reports",   label: "تقارير",   Icon: ChartIcon     },
 ];
 

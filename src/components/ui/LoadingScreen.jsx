@@ -1,8 +1,10 @@
 // src/components/ui/LoadingScreen.jsx
 import React from "react";
 
-const LoadingScreen = ({ message = "جاري التحميل..." }) => (
-  <div className="min-h-screen bg-dark flex items-center justify-center font-arabic" dir="rtl">
+// Step 4: جوه الصفحات (fullScreen=false) بياخد جزء من الشاشة بدل ما يغطي
+// الـlayout كله؛ fullScreen للتحميل على مستوى التطبيق/التوجيه بس.
+const LoadingScreen = ({ message = "جاري التحميل...", fullScreen = false }) => (
+  <div className={`${fullScreen ? "min-h-screen bg-dark" : "min-h-[60vh]"} flex items-center justify-center font-arabic`} dir="rtl" role="status" aria-live="polite">
     <div className="text-center">
       <div className="flex justify-center mb-4">
         <img src="/brand-icon.png" alt="زراعي برو" className="w-14 h-14 rounded-2xl opacity-90" />

@@ -14,7 +14,7 @@ import ConfirmDialog          from "../components/ui/ConfirmDialog";
 import FuelEntryForm          from "../features/equipment/FuelEntryForm";
 import { useConfirm }         from "../hooks/useConfirm";
 import LoadingScreen          from "../components/ui/LoadingScreen";
-import { formatCurrency, formatNumber, formatDateShort, formatPercent } from "../utils/formatters";
+import { formatCurrency, formatNumber, formatDateShort, formatPercent, formatProfit } from "../utils/formatters";
 import { getLastOilChange, getLastGreaseDate, removeOilEntryPatch, findLinkedOilMaintenance } from "../utils/serviceHistory";
 import {
   TractorIcon, FuelIcon, AcreIcon, RevenueIcon, ProfitIcon, CalendarIcon,
@@ -137,8 +137,8 @@ const EquipmentDetailPage = () => {
   };
   const EquipIcon = EQUIP_TYPE_ICON_MAP[equipment.type] ?? TractorIcon;
   const accent = isAttachment
-    ? { iconBg: "from-orange-900/60 to-surface-3", iconBorder: "border-orange-800/30", iconColor: "text-orange-400" }
-    : { iconBg: "from-green-900/60 to-surface-3",  iconBorder: "border-green-800/30",  iconColor: "text-green-400"  };
+    ? { iconBg: "bg-orange-900/40", iconBorder: "border-orange-800/30", iconColor: "text-orange-400" }
+    : { iconBg: "bg-green-900/40",  iconBorder: "border-green-800/30",  iconColor: "text-green-400"  };
 
   const handlePrint = () => {
     printEquipmentReport({
@@ -176,7 +176,7 @@ const EquipmentDetailPage = () => {
 
       {/* Header */}
       <div className="flex items-center gap-4 mb-4">
-        <div className={`w-14 h-14 rounded-2xl bg-gradient-to-br ${accent.iconBg} border ${accent.iconBorder} flex items-center justify-center`}>
+        <div className={`w-14 h-14 rounded-2xl ${accent.iconBg} border ${accent.iconBorder} flex items-center justify-center`}>
           <EquipIcon size={28} className={accent.iconColor}/>
         </div>
         <div className="flex-1">
@@ -309,7 +309,7 @@ const EquipmentDetailPage = () => {
         <StatCard icon={<AcreIcon size={24}/>}    label="إجمالي الأفدنة" value={formatNumber(stats.totalAcres)}    color="blue"/>
         <StatCard icon={<RevenueIcon size={24}/>} label="إجمالي الإيراد" value={formatCurrency(stats.totalRevenue)} color="amber"/>
         <StatCard icon={<FuelIcon size={24}/>}    label="إجمالي الوقود"  value={`${formatNumber(stats.totalFuel)} ل`} color="orange"/>
-        <StatCard icon={<ProfitIcon size={24}/>}  label="ربح المعدة (قبل المصاريف العامة)" value={formatCurrency(netProfit)} color={netProfit>=0?"green":"red"}/>
+        <StatCard icon={<ProfitIcon size={24}/>}  label="ربح المعدة (قبل المصاريف العامة)" value={formatProfit(netProfit)} color={netProfit>=0?"green":"red"}/>
       </div>
 
       {/* P&L */}
@@ -319,7 +319,7 @@ const EquipmentDetailPage = () => {
           <SummaryRow label="إجمالي الإيراد"  value={formatCurrency(stats.totalRevenue)}   valueColor="text-amber-400"/>
           <SummaryRow label="تكلفة الوقود"    value={formatCurrency(stats.totalFuelCost)}  valueColor="text-red-400"/>
           <SummaryRow label="تكاليف الصيانة"  value={formatCurrency(maintCost)}            valueColor="text-red-400"/>
-          <SummaryRow label="ربح المعدة (قبل المصاريف العامة)" value={formatCurrency(netProfit)}            valueColor={netProfit>=0?"text-green-400":"text-red-400"} bold/>
+          <SummaryRow label="ربح المعدة (قبل المصاريف العامة)" value={formatProfit(netProfit)}            valueColor={netProfit>=0?"text-green-400":"text-red-400"} bold/>
           {stats.totalRevenue > 0 && (
             <div className="mt-4">
               <div className="flex justify-between text-xs text-gray-500 mb-1.5">
@@ -368,7 +368,7 @@ const EquipmentDetailPage = () => {
                 {[
                   { label:"أفدنة", value:`${formatNumber(job.acres)} ف`,  color:"text-blue-400"  },
                   { label:"إيراد", value:formatCurrency(job.revenue),      color:"text-amber-400" },
-                  { label:"ربح",   value:formatCurrency(job.profit),       color:job.profit>=0?"text-green-400":"text-red-400" },
+                  { label:"ربح",   value:formatProfit(job.profit),       color:job.profit>=0?"text-green-400":"text-red-400" },
                   { label:"متبقي", value:formatCurrency(job.remainingAmount||0), color:(job.remainingAmount||0)>0?"text-red-400":"text-gray-400" },
                 ].map((s) => (
                   <div key={s.label} className="bg-surface-2 rounded-xl p-2 text-center">

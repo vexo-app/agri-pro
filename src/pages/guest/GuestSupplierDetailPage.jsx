@@ -76,7 +76,7 @@ const GuestSupplierDetailPage = () => {
       </button>
 
       <div className="flex items-center gap-4 mb-6">
-        <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-red-900/60 to-surface-3 border border-red-800/30 flex items-center justify-center text-2xl font-extrabold text-red-300">
+        <div className="w-14 h-14 rounded-2xl bg-red-900/40 border border-red-800/30 flex items-center justify-center text-2xl font-extrabold text-red-300">
           {decodedName.charAt(0)}
         </div>
         <div className="flex-1 min-w-0">

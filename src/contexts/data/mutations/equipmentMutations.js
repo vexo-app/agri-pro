@@ -7,7 +7,6 @@
 // آمنة في طابور Firestore المحلي، وtrackWrite() هو اللي بيتابع نجاح
 // الكتابة في الخلفية.
 import { useCallback } from "react";
-import toast from "react-hot-toast";
 import { equipmentService } from "../../../services/equipmentService";
 import { maintenanceService } from "../../../services/maintenanceService";
 import { equipmentFuelEntryService } from "../../../services/equipmentFuelEntryService";
@@ -19,8 +18,8 @@ export function useEquipmentMutations({ user, dispatch, stateRef, trackWrite }) 
     trackWrite(promise, {
       rollback: () => dispatch({ type: "DELETE_EQUIPMENT", payload: id }),
       errorMessage: "تعذر حفظ المعدة، تم التراجع عن الإضافة",
+      successMessage: "تم إضافة المعدة",
     });
-    toast.success("تم إضافة المعدة");
     return id;
   }, [user, dispatch, trackWrite]);
 
@@ -30,8 +29,8 @@ export function useEquipmentMutations({ user, dispatch, stateRef, trackWrite }) 
     trackWrite(equipmentService.update(user.uid, id, d), {
       rollback: () => previous && dispatch({ type: "UPDATE_EQUIPMENT", payload: previous }),
       errorMessage: "تعذر حفظ تعديل المعدة، تم التراجع عن التعديل",
+      successMessage: "تم تحديث المعدة",
     });
-    toast.success("تم تحديث المعدة");
   }, [user, dispatch, stateRef, trackWrite]);
 
   const deleteEquipment = useCallback(async (id) => {
@@ -40,8 +39,8 @@ export function useEquipmentMutations({ user, dispatch, stateRef, trackWrite }) 
     trackWrite(equipmentService.remove(user.uid, id), {
       rollback: () => previous && dispatch({ type: "ADD_EQUIPMENT", payload: previous }),
       errorMessage: "تعذر حذف المعدة، تم استرجاعها",
+      successMessage: "تم حذف المعدة",
     });
-    toast.success("تم حذف المعدة");
   }, [user, dispatch, stateRef, trackWrite]);
 
   const addMaintenance = useCallback(async (d) => {
@@ -50,8 +49,8 @@ export function useEquipmentMutations({ user, dispatch, stateRef, trackWrite }) 
     trackWrite(promise, {
       rollback: () => dispatch({ type: "DELETE_MAINTENANCE", payload: id }),
       errorMessage: "تعذر حفظ سجل الصيانة، تم التراجع عن الإضافة",
+      successMessage: "تم تسجيل الصيانة",
     });
-    toast.success("تم تسجيل الصيانة");
     return id;
   }, [user, dispatch, trackWrite]);
 
@@ -61,8 +60,8 @@ export function useEquipmentMutations({ user, dispatch, stateRef, trackWrite }) 
     trackWrite(maintenanceService.update(user.uid, id, d), {
       rollback: () => previous && dispatch({ type: "UPDATE_MAINTENANCE", payload: previous }),
       errorMessage: "تعذر حفظ تعديل الصيانة، تم التراجع عن التعديل",
+      successMessage: "تم تحديث الصيانة",
     });
-    toast.success("تم تحديث الصيانة");
   }, [user, dispatch, stateRef, trackWrite]);
 
   const deleteMaintenance = useCallback(async (id) => {
@@ -71,8 +70,8 @@ export function useEquipmentMutations({ user, dispatch, stateRef, trackWrite }) 
     trackWrite(maintenanceService.remove(user.uid, id), {
       rollback: () => previous && dispatch({ type: "ADD_MAINTENANCE", payload: previous }),
       errorMessage: "تعذر حذف سجل الصيانة، تم استرجاعه",
+      successMessage: "تم حذف الصيانة",
     });
-    toast.success("تم حذف الصيانة");
   }, [user, dispatch, stateRef, trackWrite]);
 
   const addEquipmentFuelEntry = useCallback(async (d) => {
@@ -81,8 +80,8 @@ export function useEquipmentMutations({ user, dispatch, stateRef, trackWrite }) 
     trackWrite(promise, {
       rollback: () => dispatch({ type: "DELETE_EQUIPMENT_FUEL_ENTRY", payload: id }),
       errorMessage: "تعذر حفظ الوقود، تم التراجع عن الإضافة",
+      successMessage: "تم تسجيل الوقود",
     });
-    toast.success("تم تسجيل الوقود");
     return id;
   }, [user, dispatch, trackWrite]);
 
@@ -92,8 +91,8 @@ export function useEquipmentMutations({ user, dispatch, stateRef, trackWrite }) 
     trackWrite(equipmentFuelEntryService.remove(user.uid, id), {
       rollback: () => previous && dispatch({ type: "ADD_EQUIPMENT_FUEL_ENTRY", payload: previous }),
       errorMessage: "تعذر حذف سجل الوقود، تم استرجاعه",
+      successMessage: "تم حذف سجل الوقود",
     });
-    toast.success("تم حذف سجل الوقود");
   }, [user, dispatch, stateRef, trackWrite]);
 
   return {

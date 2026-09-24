@@ -3,6 +3,8 @@ import React, { useEffect, useState } from "react";
 import Modal from "../../components/ui/Modal";
 import Button from "../../components/ui/Button";
 import { useAuth } from "../../contexts/AuthContext";
+import { useOnlineStatus } from "../../hooks/useOnlineStatus";
+import { ONLINE_REQUIRED_DELETE_MESSAGE } from "../../services/cascadeDeleteService";
 import { formatCurrency } from "../../utils/formatters";
 import { TrashIcon, LockIcon, EyeIcon, EyeOffIcon, WalletIcon, AlertIcon } from "../../components/ui/Icons";
 
@@ -11,6 +13,8 @@ import { TrashIcon, LockIcon, EyeIcon, EyeOffIcon, WalletIcon, AlertIcon } from 
 // الأدمن وتتحقق منه فعليًا (Firebase reauthenticate) قبل ما تنفذ الحذف.
 const DeleteJobDialog = ({ open, onClose, onConfirm, paymentsCount = 0, paymentsTotal = 0 }) => {
   const { reauthenticate } = useAuth();
+  // Step 3: الحذف محتاج إنترنت — بنقول ده قبل ما المستخدم يأكد، مش بعد.
+  const online = useOnlineStatus();
   const [password, setPassword] = useState("");
   const [visible, setVisible]   = useState(false);
   const [error, setError]       = useState("");
@@ -23,6 +27,7 @@ const DeleteJobDialog = ({ open, onClose, onConfirm, paymentsCount = 0, payments
   const hasPayments = paymentsCount > 0;
 
   const handleConfirm = async () => {
+    if (!online) { setError(ONLINE_REQUIRED_DELETE_MESSAGE); return; }
     if (!password) { setError("اكتب كلمة المرور"); return; }
     setChecking(true);
     setError("");
@@ -47,6 +52,11 @@ const DeleteJobDialog = ({ open, onClose, onConfirm, paymentsCount = 0, payments
   return (
     <Modal open={open} onClose={() => !checking && onClose()} title="تأكيد حذف العملية" size="sm">
       <div className="space-y-4">
+        {!online && (
+          <div className="bg-amber-950/40 border border-amber-800/60 rounded-xl p-3 text-xs font-bold text-amber-300 leading-relaxed">
+            ⚠ أنت غير متصل بالإنترنت. {ONLINE_REQUIRED_DELETE_MESSAGE}
+          </div>
+        )}
         <p className="text-sm text-gray-400 leading-relaxed">
           هل تريد حذف هذه العملية؟ لا يمكن التراجع عن هذا الإجراء.
         </p>
@@ -100,7 +110,7 @@ const DeleteJobDialog = ({ open, onClose, onConfirm, paymentsCount = 0, payments
 
         <div className="flex gap-3 justify-end pt-1">
           <Button variant="ghost" size="sm" disabled={checking} onClick={onClose}>إلغاء</Button>
-          <Button variant="danger" size="sm" loading={checking} icon={<TrashIcon size={14} />} onClick={handleConfirm}>
+          <Button variant="danger" size="sm" loading={checking} disabled={!online} icon={<TrashIcon size={14} />} onClick={handleConfirm}>
             تأكيد الحذف
           </Button>
         </div>

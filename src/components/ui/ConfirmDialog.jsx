@@ -13,7 +13,8 @@ const ConfirmDialog = ({
       {message || "هل أنت متأكد من تنفيذ هذا الإجراء؟ لا يمكن التراجع عنه."}
     </p>
     <div className="flex gap-3 justify-end">
-      <Button variant="ghost" size="sm" onClick={onClose}>إلغاء</Button>
+      {/* Step 4: التركيز الافتراضي على "إلغاء" — Enter بالغلط ما يمسحش حاجة. */}
+      <Button variant="ghost" size="sm" onClick={onClose} autoFocus>إلغاء</Button>
       <Button variant={confirmVariant} size="sm" onClick={() => { onConfirm(); onClose(); }}
         icon={confirmIcon || <TrashIcon size={14} />}>{confirmLabel}</Button>
     </div>

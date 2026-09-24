@@ -6,7 +6,7 @@ import Button from "../../components/ui/Button";
 import { SummaryRow } from "../../components/ui/Card";
 import { WORK_TYPES, MAX_MONEY_VALUE, DEFAULT_FUEL_PRICE } from "../../config/constants";
 import { calcRevenue, calcFuelCost, calcRemainingAmount, normalizeClientName } from "../../utils/calculations";
-import { formatCurrency, todayISO } from "../../utils/formatters";
+import { formatCurrency, todayISO, formatProfit } from "../../utils/formatters";
 
 const JobForm = ({ mode = "add", initial, equipment, drivers, fuelPrice, onSave, onClose }) => {
   // `initial` may only pre-fill equipment/driver for a new quick job. The
@@ -290,7 +290,7 @@ const JobForm = ({ mode = "add", initial, equipment, drivers, fuelPrice, onSave,
           <SummaryRow label="تكلفة الوقود" value={formatCurrency(fuelCost)} valueColor="text-red-400" />
           <SummaryRow
             label="ربح العملية (الإيراد − الوقود)"
-            value={formatCurrency(profit)}
+            value={formatProfit(profit)}
             valueColor={profit >= 0 ? "text-green-400" : "text-red-400"}
             bold
           />

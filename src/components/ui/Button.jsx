@@ -3,10 +3,10 @@ import React from "react";
 import clsx from "clsx";
 
 const VARIANTS = {
-  primary:   "bg-brand-600 hover:bg-brand-500 text-white shadow-lg shadow-brand-900/40",
+  primary:   "bg-brand-600 hover:bg-brand-500 text-white",
   secondary: "bg-surface-2 hover:bg-surface-3 text-gray-200 border border-white/10",
   danger:    "bg-red-700 hover:bg-red-600 text-white",
-  info:      "bg-blue-600 hover:bg-blue-500 text-white shadow-lg shadow-blue-900/40",
+  info:      "bg-blue-600 hover:bg-blue-500 text-white",
   ghost:     "bg-transparent hover:bg-surface-2 text-gray-400 hover:text-gray-200 border border-white/10",
   outline:   "bg-transparent border border-brand-700 text-brand-400 hover:bg-brand-900/30",
 };
@@ -33,8 +33,10 @@ const Button = ({
       {...props}
       disabled={disabled || loading}
       className={clsx(
-        "inline-flex items-center justify-center font-semibold transition-all duration-200",
-        "disabled:opacity-50 disabled:cursor-not-allowed active:scale-95",
+        // Step 4: من غير ظل ملوّن ولا تصغير عند الضغط — بس حلقة تركيز واضحة للكيبورد.
+        "inline-flex items-center justify-center font-semibold transition-colors duration-150",
+        "disabled:opacity-50 disabled:cursor-not-allowed",
+        "focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-500/60 focus-visible:ring-offset-0",
         VARIANTS[variant],
         SIZES[size],
         className

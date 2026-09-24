@@ -34,6 +34,7 @@ jest.mock("../config/constants", () => ({
   COLLECTIONS: { BACKUPS: "backups" },
   MAX_BACKUPS_KEPT: 7,
   BACKUP_CHUNK_BYTES: 900000,
+  MAX_MONEY_VALUE: 1000000000,
 }));
 
 import { backupService } from "./backupService";
@@ -159,5 +160,21 @@ describe("backupService.prepareRestore", () => {
       getSpy.mockRestore();
       createSpy.mockRestore();
     }
+  });
+});
+
+// ─── Step 3: transient delete lock is never restored ─────────────────────────
+describe("backupService.restoreSnapshot — deleting flag", () => {
+  beforeEach(() => {
+    jest.clearAllMocks();
+    mockGetDocs.mockResolvedValue({ docs: [] });
+    mockBatchCommit.mockResolvedValue(undefined);
+  });
+  test("strips `deleting` from restored docs, keeps every other field", async () => {
+    const snapshot = emptySnapshot();
+    snapshot.jobs = [{ id: "j1", client: "x", acres: 2, date: "2026-01-01", deleting: true }];
+    await backupService.restoreSnapshot("user-1", snapshot);
+    const jobWrite = mockBatchSet.mock.calls.find(([ref]) => String(ref).includes("/jobs/j1"));
+    expect(jobWrite[1]).toEqual({ client: "x", acres: 2, date: "2026-01-01" });
   });
 });

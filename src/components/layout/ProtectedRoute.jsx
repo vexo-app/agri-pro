@@ -27,7 +27,7 @@ const ProtectedRoute = ({ children }) => {
   const { user, loading } = useAuth();
   const location = useLocation();
 
-  if (loading) return <LoadingScreen message="جاري التحقق من تسجيل الدخول..." />;
+  if (loading) return <LoadingScreen fullScreen message="جاري التحقق من تسجيل الدخول..." />;
   // مستخدم anonymous (Phase 2 — الوصول للضيوف) مش مالك حساب حقيقي — لازم
   // يتعامل معاه هنا زي غير مسجل دخول خالص، وإلا هيدخل هنا بـuid بتاعه
   // هو (مفيش users/{uid} ليه أصلاً) بدل uid صاحب الحساب اللي المفروض
@@ -37,7 +37,7 @@ const ProtectedRoute = ({ children }) => {
   if (!user || user.isAnonymous) {
     if (location.pathname === "/") {
       return (
-        <Suspense fallback={<LoadingScreen message="جاري التحميل..." />}>
+        <Suspense fallback={<LoadingScreen fullScreen message="جاري التحميل..." />}>
           <LandingPage />
         </Suspense>
       );

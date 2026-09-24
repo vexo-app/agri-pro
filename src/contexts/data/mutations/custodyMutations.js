@@ -3,7 +3,6 @@
 // عمليات العهدة والخصومات الضريبية — منقولة هنا حرفيًا من DataContext.jsx
 // من غير أي تغيير في السلوك.
 import { useCallback } from "react";
-import toast from "react-hot-toast";
 import { custodyService } from "../../../services/custodyService";
 import { taxDeductionService } from "../../../services/taxDeductionService";
 
@@ -18,8 +17,8 @@ export function useCustodyMutations({ user, dispatch, stateRef, trackWrite }) {
     trackWrite(promise, {
       rollback: () => dispatch({ type: "DELETE_CUSTODY", payload: id }),
       errorMessage: "تعذر حفظ الحركة، تم التراجع عنها",
+      successMessage: d.type === "expense" ? "تم تسجيل الصرف" : "تم تسجيل الإضافة",
     });
-    toast.success(d.type === "expense" ? "تم تسجيل الصرف" : "تم تسجيل الإضافة");
     return id;
   }, [user, dispatch, trackWrite]);
 
@@ -29,8 +28,8 @@ export function useCustodyMutations({ user, dispatch, stateRef, trackWrite }) {
     trackWrite(custodyService.update(user.uid, id, d), {
       rollback: () => previous && dispatch({ type: "UPDATE_CUSTODY", payload: previous }),
       errorMessage: "تعذر حفظ تعديل الحركة، تم التراجع عنه",
+      successMessage: "تم تحديث السجل",
     });
-    toast.success("تم تحديث السجل");
   }, [user, dispatch, stateRef, trackWrite]);
 
   const deleteCustody = useCallback(async (id) => {
@@ -39,8 +38,8 @@ export function useCustodyMutations({ user, dispatch, stateRef, trackWrite }) {
     trackWrite(custodyService.remove(user.uid, id), {
       rollback: () => previous && dispatch({ type: "ADD_CUSTODY", payload: previous }),
       errorMessage: "تعذر حذف الحركة، تم استرجاعها",
+      successMessage: "تم حذف السجل",
     });
-    toast.success("تم حذف السجل");
   }, [user, dispatch, stateRef, trackWrite]);
 
   const addTaxDeduction = useCallback(async (d) => {
@@ -49,8 +48,8 @@ export function useCustodyMutations({ user, dispatch, stateRef, trackWrite }) {
     trackWrite(promise, {
       rollback: () => dispatch({ type: "DELETE_TAX_DEDUCTION", payload: id }),
       errorMessage: "تعذر حفظ الحركة، تم التراجع عنها",
+      successMessage: "تم تسجيل الحركة",
     });
-    toast.success("تم تسجيل الحركة");
     return id;
   }, [user, dispatch, trackWrite]);
 
@@ -60,8 +59,8 @@ export function useCustodyMutations({ user, dispatch, stateRef, trackWrite }) {
     trackWrite(taxDeductionService.update(user.uid, id, d), {
       rollback: () => previous && dispatch({ type: "UPDATE_TAX_DEDUCTION", payload: previous }),
       errorMessage: "تعذر حفظ تعديل الحركة، تم التراجع عنه",
+      successMessage: "تم تحديث السجل",
     });
-    toast.success("تم تحديث السجل");
   }, [user, dispatch, stateRef, trackWrite]);
 
   const deleteTaxDeduction = useCallback(async (id) => {
@@ -70,8 +69,8 @@ export function useCustodyMutations({ user, dispatch, stateRef, trackWrite }) {
     trackWrite(taxDeductionService.remove(user.uid, id), {
       rollback: () => previous && dispatch({ type: "ADD_TAX_DEDUCTION", payload: previous }),
       errorMessage: "تعذر حذف الحركة، تم استرجاعها",
+      successMessage: "تم حذف السجل",
     });
-    toast.success("تم حذف السجل");
   }, [user, dispatch, stateRef, trackWrite]);
 
   return {

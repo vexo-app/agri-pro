@@ -88,7 +88,9 @@ const restoreCollection = async (subName, userId, items, { onBatchCommitted } = 
     if (!snapshotIds.has(d.id)) ops.push({ type: "delete", ref: d.ref });
   });
   items.forEach((item) => {
-    const { id, userId: _drop, ...rest } = item; // userId no longer stored on the doc itself
+    // Step 3: `deleting` قفل مؤقت لحذف كان شغال وقت أخذ النسخة — لو رجع مع
+    // الاسترجاع، السجل هيفضل مقفول ويرفض أي دفعة. مش بيانات حقيقية، فمش بيترجع.
+    const { id, userId: _drop, deleting: _transientLock, ...rest } = item; // userId no longer stored on the doc itself
     const ref = id ? doc(colRef, id) : doc(colRef);
     ops.push({ type: "set", ref, data: reviveTimestamps(rest) });
   });

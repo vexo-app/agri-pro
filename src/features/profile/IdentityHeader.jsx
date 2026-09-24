@@ -37,7 +37,7 @@ const IdentityHeader = ({ open }) => {
 
   return (
     <div className="flex items-center gap-4">
-      <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-brand-700 to-blue-700 flex items-center justify-center text-2xl font-bold text-white flex-shrink-0">
+      <div className="w-16 h-16 rounded-2xl bg-brand-700 flex items-center justify-center text-2xl font-bold text-white flex-shrink-0">
         {(user?.displayName || user?.email || "م").charAt(0).toUpperCase()}
       </div>
       <div className="flex-1 min-w-0">

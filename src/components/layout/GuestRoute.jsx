@@ -13,14 +13,14 @@ import LoadingScreen from "../ui/LoadingScreen";
  */
 const GuestRouteInner = ({ children }) => {
   const { loading, status } = useGuest();
-  if (loading) return <LoadingScreen message="جاري التحقق من صلاحية الوصول..." />;
+  if (loading) return <LoadingScreen fullScreen message="جاري التحقق من صلاحية الوصول..." />;
   if (status !== "active") return <Navigate to="/guest" replace />;
   return children;
 };
 
 const GuestRoute = ({ children }) => {
   const { user, loading } = useAuth();
-  if (loading) return <LoadingScreen message="جاري التحقق..." />;
+  if (loading) return <LoadingScreen fullScreen message="جاري التحقق..." />;
   if (!user || !user.isAnonymous) return <Navigate to="/guest" replace />;
 
   return (

@@ -3,7 +3,7 @@
 // buildMonthlySummaryHtml() holds all the markup/calculations for the
 // downloadable PDF (current month / previous month / all time).
 
-import { formatCurrency, formatNumber } from "../formatters";
+import { formatCurrency, formatNumber, formatProfit } from "../formatters";
 import { calcRevenue } from "../calculations";
 import { escapeHtml, downloadReportPdf } from "./core";
 
@@ -53,7 +53,7 @@ const buildMonthlySummaryHtml = ({ jobs, equipment, month, year, allTime = false
         <div class="stat-box"><div class="stat-val">${monthJobs.length} عملية</div><div class="stat-lbl">عدد العمليات</div></div>
         <div class="stat-box"><div class="stat-val">${formatNumber(totalAcres)} فدان</div><div class="stat-lbl">إجمالي الأفدنة</div></div>
         <div class="stat-box"><div class="stat-val">${formatCurrency(totalRevenue)}</div><div class="stat-lbl">إجمالي الإيراد</div></div>
-        <div class="stat-box"><div class="stat-val" style="color:${netProfit>=0?"#15803d":"#991b1b"}">${formatCurrency(netProfit)}</div><div class="stat-lbl">صافي الربح</div></div>
+        <div class="stat-box"><div class="stat-val" style="color:${netProfit>=0?"#15803d":"#991b1b"}">${formatProfit(netProfit)}</div><div class="stat-lbl">صافي الربح</div></div>
       </div>
 
       <div class="section">
@@ -79,7 +79,7 @@ const buildMonthlySummaryHtml = ({ jobs, equipment, month, year, allTime = false
           ${totalSalariesPaid ? `<tr><td style="font-weight:600">مرتبات الفريق</td><td>${formatCurrency(totalSalariesPaid)}</td></tr>` : ""}
           ${totalSupplierPaidOut ? `<tr><td style="font-weight:600">الواصل للمورد</td><td>${formatCurrency(totalSupplierPaidOut)}</td></tr>` : ""}
           ${totalTaxDeductions ? `<tr><td style="font-weight:600">ضرائب وخصومات</td><td>${formatCurrency(totalTaxDeductions)}</td></tr>` : ""}
-          <tr class="total-row"><td>صافي الربح</td><td style="color:${netProfit>=0?"#15803d":"#991b1b"}">${formatCurrency(netProfit)}</td></tr>
+          <tr class="total-row"><td>صافي الربح</td><td style="color:${netProfit>=0?"#15803d":"#991b1b"}">${formatProfit(netProfit)}</td></tr>
         </table>
       </div>
 

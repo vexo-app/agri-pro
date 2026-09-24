@@ -51,7 +51,7 @@ const DriverCard = ({ driver, onEdit, onDelete, onPaySalary, onCancelPaySalary }
     <Card hover className={isInactive ? "opacity-60" : ""}>
       <div className="p-5">
         <div className="flex gap-4 items-start">
-          <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-brand-700 to-blue-700 flex items-center justify-center text-xl font-extrabold text-white flex-shrink-0 shadow-lg">
+          <div className="w-12 h-12 rounded-2xl bg-brand-700 flex items-center justify-center text-xl font-extrabold text-white flex-shrink-0 shadow-lg">
             {getInitial(name)}
           </div>
 

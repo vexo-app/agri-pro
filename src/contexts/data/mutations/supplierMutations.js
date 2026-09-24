@@ -10,7 +10,9 @@ import { doc, writeBatch, serverTimestamp } from "firebase/firestore";
 import { db } from "../../../config/firebase";
 import { supplierInvoiceService } from "../../../services/supplierInvoiceService";
 import { supplierPaymentService } from "../../../services/supplierPaymentService";
-import { deleteParentWithChildren } from "../../../services/cascadeDeleteService";
+import {
+  deleteParentWithChildren, isOnlineNow, releaseDeleteLock, ONLINE_REQUIRED_DELETE_MESSAGE,
+} from "../../../services/cascadeDeleteService";
 
 export function useSupplierMutations({ user, dispatch, stateRef, trackWrite }) {
   const addSupplierInvoice = useCallback(async (d) => {
@@ -19,8 +21,8 @@ export function useSupplierMutations({ user, dispatch, stateRef, trackWrite }) {
     trackWrite(promise, {
       rollback: () => dispatch({ type: "DELETE_SUPPLIER_INVOICE", payload: id }),
       errorMessage: "تعذر حفظ فاتورة المورد، تم التراجع عن التسجيل",
+      successMessage: "تم تسجيل الفاتورة",
     });
-    toast.success("تم تسجيل الفاتورة");
     return { id, promise };
   }, [user, dispatch, trackWrite]);
 
@@ -30,11 +32,16 @@ export function useSupplierMutations({ user, dispatch, stateRef, trackWrite }) {
     trackWrite(supplierInvoiceService.update(user.uid, id, d), {
       rollback: () => previous && dispatch({ type: "UPDATE_SUPPLIER_INVOICE", payload: previous }),
       errorMessage: "تعذر حفظ تعديل الفاتورة، تم التراجع عن التعديل",
+      successMessage: "تم تحديث الفاتورة",
     });
-    toast.success("تم تحديث الفاتورة");
   }, [user, dispatch, stateRef, trackWrite]);
 
   const deleteSupplierInvoice = useCallback(async (id) => {
+    // Step 3: الحذف محتاج سيرفر — نرفضه قبل أي تغيير في الشاشة لو أوفلاين.
+    if (!isOnlineNow()) {
+      toast.error(ONLINE_REQUIRED_DELETE_MESSAGE);
+      return false;
+    }
     // نفس منطق deleteJob بالظبط: حذف الفاتورة بيمسح معاه كل الدفعات
     // المرتبطة بيها في batch واحد atomic، عشان الشاشة والسيرفر ميختلفوش
     // لو النت اتقطع نص الطريق.
@@ -58,24 +65,40 @@ export function useSupplierMutations({ user, dispatch, stateRef, trackWrite }) {
         previousInvoice && dispatch({ type: "ADD_SUPPLIER_INVOICE", payload: previousInvoice });
       },
       errorMessage: "تعذر حذف الفاتورة، تم استرجاعها",
-    });
-    toast.success(
-      relatedPayments.length > 0
+      successMessage: relatedPayments.length > 0
         ? `تم حذف الفاتورة و${relatedPayments.length} دفعة مرتبطة بها`
-        : "تم حذف الفاتورة"
-    );
+        : "تم حذف الفاتورة",
+      requiresServer: true,
+    });
+    return true;
   }, [user, dispatch, stateRef, trackWrite]);
 
+  // Step 3: فك قفل حذف عالق على فاتورة مورد.
+  const releaseSupplierInvoiceDeleteLock = useCallback(async (id) => {
+    if (!isOnlineNow()) { toast.error("فك القفل محتاج اتصال بالإنترنت"); return; }
+    dispatch({ type: "UPDATE_SUPPLIER_INVOICE", payload: { id, deleting: false } });
+    trackWrite(releaseDeleteLock({ userId: user.uid, parentCollection: "supplierInvoices", parentId: id }), {
+      errorMessage: "تعذر فك القفل",
+      successMessage: "تم فك القفل — الفاتورة رجعت طبيعية",
+      requiresServer: true,
+    });
+  }, [user, dispatch, trackWrite]);
+
   const addSupplierPayment = useCallback(async (d) => {
+    const parentInvoice = stateRef.current.supplierInvoices.find((i) => i.id === d.supplierInvoiceId);
+    if (parentInvoice?.deleting === true) {
+      toast.error("الفاتورة دي عليها حذف مش مكتمل — كمّل الحذف أو فك القفل الأول");
+      return null;
+    }
     const { id, promise } = supplierPaymentService.add(user.uid, d);
     dispatch({ type: "ADD_SUPPLIER_PAYMENT", payload: { id, ...d } });
     trackWrite(promise, {
       rollback: () => dispatch({ type: "DELETE_SUPPLIER_PAYMENT", payload: id }),
       errorMessage: "تعذر حفظ الدفعة، تم التراجع عن التسجيل",
+      successMessage: "تم تسجيل الدفعة",
     });
-    toast.success("تم تسجيل الدفعة");
     return id;
-  }, [user, dispatch, trackWrite]);
+  }, [user, dispatch, stateRef, trackWrite]);
 
   const updateSupplierPayment = useCallback(async (id, d) => {
     const previous = stateRef.current.supplierPayments.find((p) => p.id === id);
@@ -83,8 +106,8 @@ export function useSupplierMutations({ user, dispatch, stateRef, trackWrite }) {
     trackWrite(supplierPaymentService.update(user.uid, id, d), {
       rollback: () => previous && dispatch({ type: "UPDATE_SUPPLIER_PAYMENT", payload: previous }),
       errorMessage: "تعذر حفظ تعديل الدفعة، تم التراجع عن التعديل",
+      successMessage: "تم تحديث الدفعة",
     });
-    toast.success("تم تحديث الدفعة");
   }, [user, dispatch, stateRef, trackWrite]);
 
   const deleteSupplierPayment = useCallback(async (id) => {
@@ -93,8 +116,8 @@ export function useSupplierMutations({ user, dispatch, stateRef, trackWrite }) {
     trackWrite(supplierPaymentService.remove(user.uid, id), {
       rollback: () => previous && dispatch({ type: "ADD_SUPPLIER_PAYMENT", payload: previous }),
       errorMessage: "تعذر حذف الدفعة، تم استرجاعها",
+      successMessage: "تم حذف الدفعة",
     });
-    toast.success("تم حذف الدفعة");
   }, [user, dispatch, stateRef, trackWrite]);
 
   // مفيش "مورد" حقيقي بـ id خاص بيه — هو بس اسم متكرر في كل فاتورة (زي
@@ -134,12 +157,12 @@ export function useSupplierMutations({ user, dispatch, stateRef, trackWrite }) {
         );
       },
       errorMessage: "تعذر تعديل اسم المورد، تم التراجع عن التغيير",
+      successMessage: `تم تغيير الاسم إلى "${trimmedNewName}" في ${affectedInvoices.length} فاتورة`,
     });
-    toast.success(`تم تغيير الاسم إلى "${trimmedNewName}" في ${affectedInvoices.length} فاتورة`);
   }, [user, dispatch, stateRef, trackWrite]);
 
   return {
-    addSupplierInvoice, updateSupplierInvoice, deleteSupplierInvoice, renameSupplier,
+    addSupplierInvoice, updateSupplierInvoice, deleteSupplierInvoice, releaseSupplierInvoiceDeleteLock, renameSupplier,
     addSupplierPayment, updateSupplierPayment, deleteSupplierPayment,
   };
 }

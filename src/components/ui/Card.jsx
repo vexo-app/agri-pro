@@ -8,7 +8,7 @@ import { formatPercent } from "../../utils/formatters";
 export const Card = ({ children, className, hover = false, ...props }) => (
   <div className={clsx(
     "bg-surface border border-white/8 rounded-2xl",
-    hover && "transition-all duration-200 hover:border-white/20 hover:-translate-y-0.5 hover:shadow-xl hover:shadow-black/30",
+    hover && "transition-colors duration-150 hover:border-white/20",
     className
   )} {...props}>{children}</div>
 );
@@ -68,42 +68,42 @@ const ChangeBadge = ({ change, invert = false }) => {
 // ── StatCard ──────────────────────────────────────────────
 const STAT_ACCENTS = {
   green:  {
-    bar:    "from-green-500 to-emerald-400",
+    bar:    "bg-green-500",
     value:  "text-green-400",
     icon:   "text-green-400",
     glow:   "bg-green-500/10",
     border: "border-green-500/20",
   },
   amber:  {
-    bar:    "from-amber-500 to-yellow-400",
+    bar:    "bg-amber-500",
     value:  "text-amber-400",
     icon:   "text-amber-400",
     glow:   "bg-amber-500/10",
     border: "border-amber-500/20",
   },
   blue:   {
-    bar:    "from-blue-500 to-cyan-400",
+    bar:    "bg-blue-500",
     value:  "text-blue-400",
     icon:   "text-blue-400",
     glow:   "bg-blue-500/10",
     border: "border-blue-500/20",
   },
   orange: {
-    bar:    "from-orange-500 to-amber-400",
+    bar:    "bg-orange-500",
     value:  "text-orange-400",
     icon:   "text-orange-400",
     glow:   "bg-orange-500/10",
     border: "border-orange-500/20",
   },
   red:    {
-    bar:    "from-red-500 to-rose-400",
+    bar:    "bg-red-500",
     value:  "text-red-400",
     icon:   "text-red-400",
     glow:   "bg-red-500/10",
     border: "border-red-500/20",
   },
   purple: {
-    bar:    "from-purple-500 to-violet-400",
+    bar:    "bg-purple-500",
     value:  "text-purple-400",
     icon:   "text-purple-400",
     glow:   "bg-purple-500/10",
@@ -118,15 +118,12 @@ export const StatCard = ({ icon, label, value, color = "green", sensitive = fals
 
   return (
     <div className={clsx(
-      // (تجديد بصري خفيف) hover lift بسيط بـ CSS transform/shadow بس —
-      // مفيش أي مكتبة animation جديدة، فمش بيضيف أي وزن على حجم الباندل،
-      // وسلس (GPU-accelerated transform) بدل ما يأثر على أي layout تاني.
+      // Step 4: شكل ثابت وبسيط — من غير حركة hover ولا تدرّج لوني.
       "relative bg-surface border rounded-2xl p-5 overflow-hidden flex flex-col items-center text-center gap-3",
-      "transition-all duration-200 hover:-translate-y-0.5 hover:shadow-lg hover:shadow-black/20",
       accent.border
     )}>
-      {/* Top gradient bar */}
-      <div className={clsx("absolute top-0 inset-x-0 h-0.5 bg-gradient-to-l", accent.bar)} />
+      {/* Top accent bar (solid) */}
+      <div className={clsx("absolute top-0 inset-x-0 h-0.5", accent.bar)} />
 
       {/* Icon with glow bg */}
       <div className={clsx(
@@ -181,7 +178,7 @@ export const SummaryRow = ({ label, value, valueColor = "text-gray-200", bold = 
       <span className="text-sm text-gray-400">{label}</span>
       <span className="flex items-center gap-2">
         <span
-          className={clsx("text-sm font-bold transition-[filter] duration-300", valueColor, bold && "text-base")}
+          className={clsx("text-sm font-bold tabular-nums transition-[filter] duration-300", valueColor, bold && "text-base")}
           style={{ filter: hidden ? "blur(6px)" : "none", userSelect: hidden ? "none" : "auto" }}
         >
           {value}

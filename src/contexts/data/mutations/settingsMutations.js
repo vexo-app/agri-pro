@@ -3,7 +3,6 @@
 // حفظ الإعدادات (سعر السولار...) — منقول هنا حرفيًا من DataContext.jsx
 // من غير أي تغيير في السلوك.
 import { useCallback } from "react";
-import toast from "react-hot-toast";
 import { settingsService } from "../../../services/settingsService";
 
 export function useSettingsMutations({ user, dispatch, stateRef, trackWrite }) {
@@ -13,8 +12,8 @@ export function useSettingsMutations({ user, dispatch, stateRef, trackWrite }) {
     trackWrite(settingsService.save(user.uid, d), {
       rollback: () => dispatch({ type: "UPDATE_SETTINGS", payload: previous }),
       errorMessage: "تعذر حفظ الإعدادات، تم التراجع عن التغيير",
+      successMessage: "تم حفظ الإعدادات",
     });
-    toast.success("تم حفظ الإعدادات");
   }, [user, dispatch, stateRef, trackWrite]);
 
   return { saveSettings };

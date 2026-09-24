@@ -12,7 +12,7 @@ import {
   calcSupplierRemaining, getInvoicePaidAmount,
   calcRevenue, calcFuelCost, calcRemainingAmount, derivePaymentStatus, getJobPaidAmount,
 } from "../../utils/calculations";
-import { formatCurrency, formatNumber, formatDateShort, getInitial } from "../../utils/formatters";
+import { formatCurrency, formatNumber, formatDateShort, getInitial, formatProfit } from "../../utils/formatters";
 import { GUEST_SECTIONS } from "./guestSectionsConfig";
 import { Card, Badge, ProgressBar, EmptyState } from "../../components/ui/Card";
 import LoadingScreen from "../../components/ui/LoadingScreen";
@@ -196,7 +196,7 @@ const GuestJobCard = ({ job, equipmentName, driverName, delay }) => {
       <div className="flex gap-2 mb-2">
         <FinancialPill label="إيراد" value={formatCurrency(revenue)}  color="text-amber-400"/>
         <FinancialPill label="وقود"  value={formatCurrency(fuelCost)} color="text-red-400"/>
-        <FinancialPill label="ربح"   value={formatCurrency(profit)}   color={profit>=0?"text-green-400":"text-red-400"}/>
+        <FinancialPill label="ربح"   value={formatProfit(profit)}   color={profit>=0?"text-green-400":"text-red-400"}/>
       </div>
 
       {revenue > 0 && (

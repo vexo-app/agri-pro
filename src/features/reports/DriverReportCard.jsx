@@ -1,7 +1,7 @@
 // src/features/reports/DriverReportCard.jsx
 import React from "react";
 import { Card } from "../../components/ui/Card";
-import { formatCurrency, formatNumber, getInitial } from "../../utils/formatters";
+import { formatCurrency, formatNumber, getInitial, formatProfit } from "../../utils/formatters";
 
 const DriverReportCard = ({ report, maxAcres = 1 }) => {
   const { name, phone, salary, totalRevenue, totalAcres, netProfit, ops } = report;
@@ -19,7 +19,7 @@ const DriverReportCard = ({ report, maxAcres = 1 }) => {
 
         {/* Header */}
         <div className="flex items-center gap-3 mb-5">
-          <div className="w-11 h-11 rounded-2xl bg-gradient-to-br from-brand-700 to-blue-700 flex items-center justify-center text-base font-extrabold text-white flex-shrink-0 shadow-lg">
+          <div className="w-11 h-11 rounded-2xl bg-brand-700 flex items-center justify-center text-base font-extrabold text-white flex-shrink-0 shadow-lg">
             {getInitial(name)}
           </div>
           <div className="flex-1 min-w-0">
@@ -39,7 +39,7 @@ const DriverReportCard = ({ report, maxAcres = 1 }) => {
           {[
             { label:"أفدنة",    value: formatNumber(totalAcres),  color:"text-blue-400"  },
             { label:"عمليات",   value: ops,                       color:"text-gray-300"  },
-            { label:"ربح التشغيل", value: formatCurrency(netProfit), color: isProfit?"text-green-400":"text-red-400" },
+            { label:"ربح التشغيل", value: formatProfit(netProfit), color: isProfit?"text-green-400":"text-red-400" },
             { label:"هامش",     value: `${profitPct.toFixed(0)}%`, color: isProfit?"text-brand-400":"text-red-400" },
           ].map((s) => (
             <div key={s.label} className="bg-surface-2 rounded-xl p-2.5 text-center">
@@ -64,7 +64,7 @@ const DriverReportCard = ({ report, maxAcres = 1 }) => {
               className="h-full rounded-full transition-all duration-700"
               style={{
                 width: `${acresPct}%`,
-                background: `linear-gradient(90deg, ${barColor}88, ${barColor})`,
+                background: barColor,
               }}
             />
           </div>

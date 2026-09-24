@@ -2,18 +2,42 @@
 
 /**
  * Format a number with comma separators (Arabic locale).
+ * Step 4: من غير `decimals` صريح بيعرض الكسور لحد رقمين بس لو موجودة
+ * (1.5 فدان تظهر ١٫٥ مش ٢، و1000 تفضل ١٬٠٠٠) — عرض بس، مفيش أي حساب اتغير.
  */
-export const formatNumber = (value, decimals = 0) =>
-  Number(value || 0).toLocaleString("ar-EG", {
-    minimumFractionDigits: decimals,
-    maximumFractionDigits: decimals,
-  });
+export const formatNumber = (value, decimals) =>
+  (Number(value) || 0).toLocaleString("ar-EG", decimals === undefined
+    ? { minimumFractionDigits: 0, maximumFractionDigits: 2 }
+    : { minimumFractionDigits: decimals, maximumFractionDigits: decimals });
 
 /**
- * Format a number as Egyptian Pounds.
+ * Format a number as Egyptian Pounds (piasters shown only when present).
  */
 export const formatCurrency = (value) =>
   `${formatNumber(value)} ج.م`;
+
+/**
+ * Step 4: ربح/خسارة من غير الاعتماد على اللون بس — الخسارة مكتوبة صراحة
+ * بكلمة "خسارة" وسهم لتحت، والربح بسهم لفوق. القيمة نفسها زي ما هي.
+ */
+export const formatProfit = (value) => {
+  const n = Number(value) || 0;
+  if (Math.abs(n) < 0.005) return formatCurrency(0);
+  return n > 0 ? `▲ ${formatCurrency(n)}` : `▼ خسارة ${formatCurrency(Math.abs(n))}`;
+};
+
+/** بند بيتخصم (تكلفة) — بعلامة "−" صريحة بدل الاعتماد على اللون الأحمر بس. */
+export const formatDeduction = (value) => {
+  const n = Math.abs(Number(value) || 0);
+  return n < 0.005 ? formatCurrency(0) : `− ${formatCurrency(n)}`;
+};
+
+/** صافي المركز المالي: "ليك" (موجب) أو "عليك" (سالب) بدل رقم سالب ولون بس. */
+export const formatNetPosition = (value) => {
+  const n = Number(value) || 0;
+  if (Math.abs(n) < 0.005) return formatCurrency(0);
+  return n > 0 ? `ليك ${formatCurrency(n)}` : `عليك ${formatCurrency(Math.abs(n))}`;
+};
 
 /**
  * Format a value into a full Arabic date + time.

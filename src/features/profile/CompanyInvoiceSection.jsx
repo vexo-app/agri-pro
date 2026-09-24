@@ -89,7 +89,7 @@ const CompanyInvoiceSection = ({ user, settings, saveSettings }) => {
       // الشعار بيتحفظ فورًا (من غير ما نستنى زرار "حفظ") زي أي رفع صورة عادي
       await saveSettings({ company: { ...form, logo: dataUrl } });
       setForm((s) => ({ ...s, logo: dataUrl }));
-      toast.success("تم حفظ شعار الشركة");
+      // رسالة النجاح (أو "تم الحفظ على الجهاز") بتيجي من saveSettings نفسه (Step 3)
     } catch (err) {
       toast.error(err.message || "تعذر رفع الشعار");
     } finally {
@@ -102,7 +102,6 @@ const CompanyInvoiceSection = ({ user, settings, saveSettings }) => {
     try {
       await saveSettings({ company: { ...form, logo: "" } });
       setForm((s) => ({ ...s, logo: "" }));
-      toast.success("تم حذف الشعار");
     } catch (err) {
       toast.error("تعذر حذف الشعار");
     } finally {

@@ -3,7 +3,6 @@
 // عمليات جهات اتصال العملاء/الموردين (اسم + نوع + رقم تليفون) — نفس نمط
 // driverMutations.js بالظبط.
 import { useCallback } from "react";
-import toast from "react-hot-toast";
 import { contactService } from "../../../services/contactService";
 
 export function useContactMutations({ user, dispatch, stateRef, trackWrite }) {
@@ -13,8 +12,8 @@ export function useContactMutations({ user, dispatch, stateRef, trackWrite }) {
     trackWrite(promise, {
       rollback: () => dispatch({ type: "DELETE_CONTACT", payload: id }),
       errorMessage: "تعذر حفظ رقم التواصل، تم التراجع عن الإضافة",
+      successMessage: "تم حفظ رقم التواصل",
     });
-    toast.success("تم حفظ رقم التواصل");
     return id;
   }, [user, dispatch, trackWrite]);
 
@@ -24,8 +23,8 @@ export function useContactMutations({ user, dispatch, stateRef, trackWrite }) {
     trackWrite(contactService.update(user.uid, id, c), {
       rollback: () => previous && dispatch({ type: "UPDATE_CONTACT", payload: previous }),
       errorMessage: "تعذر حفظ تعديل رقم التواصل، تم التراجع عن التعديل",
+      successMessage: "تم تحديث رقم التواصل",
     });
-    toast.success("تم تحديث رقم التواصل");
   }, [user, dispatch, stateRef, trackWrite]);
 
   const deleteContact = useCallback(async (id) => {
@@ -34,8 +33,8 @@ export function useContactMutations({ user, dispatch, stateRef, trackWrite }) {
     trackWrite(contactService.remove(user.uid, id), {
       rollback: () => previous && dispatch({ type: "ADD_CONTACT", payload: previous }),
       errorMessage: "تعذر حذف رقم التواصل، تم استرجاعه",
+      successMessage: "تم حذف رقم التواصل",
     });
-    toast.success("تم حذف رقم التواصل");
   }, [user, dispatch, stateRef, trackWrite]);
 
   return { addContact, updateContact, deleteContact };

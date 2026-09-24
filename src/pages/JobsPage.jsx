@@ -13,7 +13,7 @@ import Button           from "../components/ui/Button";
 import { EmptyState }   from "../components/ui/Card";
 import LoadingScreen    from "../components/ui/LoadingScreen";
 import { PlusIcon, ClipboardIcon, RevenueIcon, FuelIcon, WrenchIcon, ProfitIcon, AcreIcon } from "../components/ui/Icons";
-import { formatCurrency, formatNumber } from "../utils/formatters";
+import { formatCurrency, formatNumber, formatProfit } from "../utils/formatters";
 import { TEAM_ROLE } from "../config/constants";
 import { trackEvent } from "../config/posthog";
 
@@ -85,7 +85,7 @@ const JobsPage = () => {
           <SummaryBadge Icon={RevenueIcon} label="إجمالي الإيراد"  value={formatCurrency(totals.totalRevenue)}   color="text-amber-400" />
           <SummaryBadge Icon={FuelIcon}    label="تكلفة الوقود"    value={formatCurrency(totals.totalFuelCost)}  color="text-red-400" />
           <SummaryBadge Icon={WrenchIcon}  label="تكلفة الصيانة"   value={formatCurrency(totalMaintCost)}        color="text-red-400" />
-          <SummaryBadge Icon={ProfitIcon}  label="ربح التشغيل (قبل الرواتب والمصاريف العامة)" value={formatCurrency(netProfit)}             color={netProfit >= 0 ? "text-green-400" : "text-red-400"} />
+          <SummaryBadge Icon={ProfitIcon}  label="ربح التشغيل (قبل الرواتب والمصاريف العامة)" value={formatProfit(netProfit)}             color={netProfit >= 0 ? "text-green-400" : "text-red-400"} />
           <SummaryBadge Icon={AcreIcon}    label="إجمالي الأفدنة"  value={`${formatNumber(totals.totalAcres)} فدان`} color="text-blue-400" />
         </div>
       )}
