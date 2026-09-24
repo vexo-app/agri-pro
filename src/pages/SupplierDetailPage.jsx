@@ -12,6 +12,7 @@ import { Input }           from "../components/ui/Input";
 import { Card, CardHeader, CardBody, SummaryRow, EmptyState, ProgressBar, Badge } from "../components/ui/Card";
 import LoadingScreen      from "../components/ui/LoadingScreen";
 import { formatCurrency, formatDateShort } from "../utils/formatters";
+import { calcOverpaidAmount } from "../utils/calculations";
 import { CalendarIcon, PlusIcon, EditIcon, PrintIcon, TrashIcon } from "../components/ui/Icons";
 import {
   printSupplierInvoice, downloadSupplierInvoicePdf,
@@ -162,6 +163,8 @@ const SupplierDetailPage = () => {
             .map((inv) => {
               const remaining = inv.remainingAmount;
               const isPaid    = remaining <= 0;
+              // audit FIN-4: مدفوع للمورد أكتر من قيمة الفاتورة
+              const overpaid  = calcOverpaidAmount(inv.amount, inv.amountPaid);
               // نفس فكرة الفاتورة اللي بتتطبع/تتحمل لكل عملية في JobCard.jsx
               // بالظبط — فاتورة المورد هنا عملية واحدة بمبلغ وتاريخ محددين،
               // فطبيعي يكون ليها فاتورة زي أي عملية تانية في التطبيق، مش
@@ -211,6 +214,11 @@ const SupplierDetailPage = () => {
                       </div>
                     ))}
                   </div>
+                  {overpaid > 0 && (
+                    <p className="text-xs font-bold text-sky-400 mt-2">
+                      ⚠ مدفوع زيادة عن قيمة الفاتورة: {formatCurrency(overpaid)} (رصيد لك عند المورد)
+                    </p>
+                  )}
 
                   {remaining > 0 && (
                     <button

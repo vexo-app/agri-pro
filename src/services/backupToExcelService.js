@@ -171,7 +171,7 @@ const convert = (backupData, meta = {}) => {
       "الإيراد (ج.م)": revenue,
       "الوقود المستخدم (لتر)": num(j.fuelUsed),
       "تكلفة الوقود (ج.م)": fuelCost,
-      "صافي الربح (ج.م)": revenue - fuelCost,
+      "ربح العملية - الإيراد ناقص الوقود (ج.م)": revenue - fuelCost,
       "دفعة أولى عند التسجيل (ج.م)": num(j.amountPaid),
       "إجمالي المدفوع فعليًا (ج.م)": paidActual,
       "المتبقي (ج.م)": remaining,

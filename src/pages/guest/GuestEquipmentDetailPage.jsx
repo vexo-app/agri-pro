@@ -200,7 +200,7 @@ const GuestEquipmentDetailPage = () => {
             <StatCard icon={<AcreIcon size={24}/>}    label="إجمالي الأفدنة" value={formatNumber(stats.totalAcres)}    color="blue"/>
             <StatCard icon={<RevenueIcon size={24}/>} label="إجمالي الإيراد" value={formatCurrency(stats.totalRevenue)} color="amber"/>
             <StatCard icon={<FuelIcon size={24}/>}    label="إجمالي الوقود"  value={`${formatNumber(stats.totalFuel)} ل`} color="orange"/>
-            <StatCard icon={<ProfitIcon size={24}/>}  label="صافي الربح"     value={formatCurrency(netProfit)} color={netProfit>=0?"green":"red"}/>
+            <StatCard icon={<ProfitIcon size={24}/>}  label="ربح المعدة (قبل المصاريف العامة)" value={formatCurrency(netProfit)} color={netProfit>=0?"green":"red"}/>
           </div>
 
           <Card className="mb-5">
@@ -213,7 +213,7 @@ const GuestEquipmentDetailPage = () => {
                 value={maintenanceOpen ? formatCurrency(maintCost) : "غير متاحة"}
                 valueColor={maintenanceOpen ? "text-red-400" : "text-gray-500"}
               />
-              <SummaryRow label="صافي الربح"      value={formatCurrency(netProfit)}            valueColor={netProfit>=0?"text-green-400":"text-red-400"} bold/>
+              <SummaryRow label="ربح المعدة (قبل المصاريف العامة)" value={formatCurrency(netProfit)}            valueColor={netProfit>=0?"text-green-400":"text-red-400"} bold/>
               {!maintenanceOpen && (
                 <p className="text-[10px] text-gray-600 mt-2">* الربح هنا قبل خصم تكلفة الصيانة — قسم الصيانة مقفول ليك.</p>
               )}

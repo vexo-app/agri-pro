@@ -306,13 +306,13 @@ const ReportsPage = () => {
           {/* Chart 1 — Revenue vs Profit */}
           <ChartCard
             className="mb-5"
-            title="الإيراد مقابل الربح الصافي لكل معدة"
+            title="الإيراد مقابل ربح كل معدة (قبل المصاريف العامة)"
             height={260}
             expandedHeight={460}
             footer={
               <Legend items={[
                 { color:"#f59e0b", label:"الإيراد" },
-                { color:"#22c55e", label:"الربح الصافي" },
+                { color:"#22c55e", label:"ربح المعدة" },
                 { color:"#ef4444", label:"الخسارة" },
               ]}/>
             }
@@ -348,7 +348,7 @@ const ReportsPage = () => {
                   <Bar dataKey="revenue" name="الإيراد" radius={[6,6,0,0]} maxBarSize={48}>
                     {revenueVsProfit.map((_, i) => <Cell key={i} fill={`url(#rv${i})`}/>)}
                   </Bar>
-                  <Bar dataKey="profit" name="الربح الصافي" radius={[6,6,0,0]} maxBarSize={48}>
+                  <Bar dataKey="profit" name="ربح المعدة" radius={[6,6,0,0]} maxBarSize={48}>
                     {revenueVsProfit.map((_, i) => <Cell key={i} fill={`url(#pv${i})`}/>)}
                   </Bar>
                   <Bar dataKey="loss" name="الخسارة" radius={[6,6,0,0]} maxBarSize={48}>

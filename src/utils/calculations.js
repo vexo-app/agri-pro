@@ -9,6 +9,20 @@ const safeNum = (value) => {
   return Number.isFinite(n) ? n : 0;
 };
 
+// ─── Money precision (audit FIN-1) ───────────────────────────────────────────
+// الجنيه بيتحسب لأقرب قرش (0.01). ضرب زي 1.1 × 100 في JavaScript بيطلع
+// 110.00000000000001 مش 110، فعملية اتدفعت بالكامل كانت بتفضل "جزئي"
+// بباقي 0.00000000000001. التقريب ده بيتطبق بس في مقارنات السداد والمتبقي
+// (مش على الإيراد أو المجاميع المعروضة)، فمعنى أي رقم ما بيتغيرش.
+export const roundMoney = (value) => {
+  const n = safeNum(value);
+  return Math.round((n + Math.sign(n) * Number.EPSILON) * 100) / 100;
+};
+
+/** المبلغ المدفوع الزيادة عن الإجمالي (audit FIN-4) — 0 لو مفيش زيادة. */
+export const calcOverpaidAmount = (total, paid) =>
+  Math.max(0, roundMoney(safeNum(paid) - safeNum(total)));
+
 // ─── Job-level ────────────────────────────────────────────────────────────────
 
 export const calcRevenue = (acres, pricePerAcre) =>
@@ -45,7 +59,7 @@ export const calcJobProfit = calcJobNetProfit;
  * amountPaid is stored; remainingAmount is always derived — never stored.
  */
 export const calcRemainingAmount = (revenue, amountPaid) =>
-  Math.max(0, revenue - (safeNum(amountPaid)));
+  Math.max(0, roundMoney(safeNum(revenue) - safeNum(amountPaid)));
 
 /**
  * Builds a jobId → total-paid Map in a single O(payments) pass. Used by
@@ -60,6 +74,19 @@ const buildPaidAmountsByJobId = (payments = []) => {
   }
   return map;
 };
+
+/**
+ * audit FIN-2: `job.amountPaid` القديم (قبل نظام الدفعات) بيتجمع مع الدفعات
+ * بدل ما يتجاهل أول ما تتسجل أول دفعة. مراجعة تاريخ git الكامل (من أول
+ * commit 2026-03-24) أثبتت إن مفيش أي مسار في الكود كتب دفعة في `payments`
+ * بتمثل نفس فلوس `job.amountPaid`: قبل 2026-08-14 الدفع كان بيتسجل في
+ * amountPaid بس، وبعدها JobsPage بقت تشيل amountPaid من العملية وتعمل دفعة
+ * بداله، وشاشة "تسجيل شغل سريع" في المعدات كانت بتكتب amountPaid بس (من غير
+ * دفعة) لحد 2026-09-21. يعني الجمع مفيهوش تكرار. البيانات اللي فيها الاتنين
+ * بتظهر في findLegacyPaidWithPayments وفي scripts/integrityScanReadOnly.mjs
+ * للمراجعة. لو احتجت ترجع للسلوك القديم: خلي الثابت ده false.
+ */
+export const LEGACY_PAID_IS_ADDITIVE = true;
 
 /**
  * Single source of truth for "how much has this job been paid so far".
@@ -78,13 +105,42 @@ const buildPaidAmountsByJobId = (payments = []) => {
 export const getJobPaidAmount = (job, payments = []) => {
   const paidByJobId = payments instanceof Map ? payments : buildPaidAmountsByJobId(payments);
   const total = paidByJobId.get(job.id);
-  return total !== undefined ? total : safeNum(job.amountPaid); // legacy fallback
+  const legacy = safeNum(job.amountPaid);
+  if (total === undefined) return legacy; // legacy-only job
+  return LEGACY_PAID_IS_ADDITIVE ? legacy + total : total;
+};
+
+/**
+ * audit FIN-2 (detection، read-only): العمليات اللي فيها amountPaid قديم
+ * ومعاها دفعات. `sameAmountInstalment` = فيه دفعة بنفس قيمة المبلغ القديم
+ * بالظبط — مش دليل تكرار (ممكن تكون دفعة تانية بنفس القيمة)، بس تستاهل
+ * مراجعة يدوية.
+ */
+export const findLegacyPaidWithPayments = (jobs = [], payments = []) => {
+  const byJob = new Map();
+  for (const p of payments) {
+    if (!p || !p.jobId) continue;
+    if (!byJob.has(p.jobId)) byJob.set(p.jobId, []);
+    byJob.get(p.jobId).push(safeNum(p.amount));
+  }
+  return jobs
+    .filter((j) => safeNum(j.amountPaid) > 0 && byJob.has(j.id))
+    .map((j) => {
+      const legacy = safeNum(j.amountPaid);
+      const amounts = byJob.get(j.id);
+      return {
+        jobId: j.id,
+        legacyAmountPaid: legacy,
+        instalmentsTotal: amounts.reduce((s, a) => s + a, 0),
+        sameAmountInstalment: amounts.some((a) => roundMoney(a) === roundMoney(legacy)),
+      };
+    });
 };
 
 export const derivePaymentStatus = (revenue, amountPaid) => {
-  const paid = safeNum(amountPaid);
-  if (paid <= 0)           return "unpaid";
-  if (paid >= revenue)     return "paid";
+  const paid = roundMoney(amountPaid);
+  if (paid <= 0)                  return "unpaid";
+  if (paid >= roundMoney(revenue)) return "paid";
   return "partial";
 };
 
@@ -262,7 +318,33 @@ export const getInvoicePaidAmount = (invoice, supplierPayments = []) => {
  * calcRemainingAmount(revenue, amountPaid) for jobs.
  */
 export const calcSupplierRemaining = (invoiceAmount, amountPaid) =>
-  Math.max(0, safeNum(invoiceAmount) - safeNum(amountPaid));
+  Math.max(0, roundMoney(safeNum(invoiceAmount) - safeNum(amountPaid)));
+
+/**
+ * audit FIN-4: إجمالي المدفوع الزيادة (العملاء على العمليات، أو إحنا
+ * للموردين على الفواتير) — للعرض والتنبيه بس، مش بيدخل في أي معادلة ربح.
+ */
+export const aggregateJobOverpayments = (jobs = [], payments = []) => {
+  const paidByJobId = buildPaidAmountsByJobId(payments);
+  const items = jobs
+    .map((j) => ({
+      id: j.id,
+      overpaid: calcOverpaidAmount(calcRevenue(j.acres, j.pricePerAcre), getJobPaidAmount(j, paidByJobId)),
+    }))
+    .filter((x) => x.overpaid > 0);
+  return { totalOverpaid: items.reduce((s, x) => s + x.overpaid, 0), items };
+};
+
+export const aggregateSupplierOverpayments = (supplierInvoices = [], supplierPayments = []) => {
+  const paidByInvoiceId = buildPaidAmountsByInvoiceId(supplierPayments);
+  const items = supplierInvoices
+    .map((inv) => ({
+      id: inv.id,
+      overpaid: calcOverpaidAmount(inv.amount, getInvoicePaidAmount(inv, paidByInvoiceId)),
+    }))
+    .filter((x) => x.overpaid > 0);
+  return { totalOverpaid: items.reduce((s, x) => s + x.overpaid, 0), items };
+};
 
 /**
  * Aggregate stats across ALL supplier invoices.
@@ -335,7 +417,7 @@ export const derivePaymentStatusFromPayments = (revenue, payments, jobId) => {
   const paid = calcTotalPaidForJob(payments, jobId);
   return {
     paid,
-    remaining: Math.max(0, revenue - paid),
+    remaining: calcRemainingAmount(revenue, paid),
     status: derivePaymentStatus(revenue, paid),
   };
 };

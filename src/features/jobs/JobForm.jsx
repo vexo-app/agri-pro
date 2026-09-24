@@ -289,7 +289,7 @@ const JobForm = ({ mode = "add", initial, equipment, drivers, fuelPrice, onSave,
           <SummaryRow label="الإيراد"      value={formatCurrency(revenue)}  valueColor="text-amber-400" />
           <SummaryRow label="تكلفة الوقود" value={formatCurrency(fuelCost)} valueColor="text-red-400" />
           <SummaryRow
-            label="صافي الربح"
+            label="ربح العملية (الإيراد − الوقود)"
             value={formatCurrency(profit)}
             valueColor={profit >= 0 ? "text-green-400" : "text-red-400"}
             bold

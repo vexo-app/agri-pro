@@ -9,6 +9,7 @@ import {
   WORK_TYPE_ICON_MAP, WrenchIcon,
 } from "../../components/ui/Icons";
 import { formatCurrency, formatNumber, formatDateShort } from "../../utils/formatters";
+import { calcOverpaidAmount } from "../../utils/calculations";
 import { printClientInvoice, downloadClientInvoicePdf } from "../../utils/pdfGenerator";
 import { useData } from "../../contexts/DataContext";
 import DownloadReportButton from "../../components/ui/DownloadReportButton";
@@ -148,6 +149,12 @@ const JobCard = ({
             <FinancialPill label="مدفوع" value={formatCurrency(amountPaid||0)}     color="text-green-400"/>
             <FinancialPill label="متبقي" value={formatCurrency(remainingAmount||0)} color={remainingAmount>0?"text-amber-400":"text-gray-500"}/>
           </div>
+          {/* audit FIN-4: الزيادة عن قيمة العملية كانت بتختفي من غير ما تظهر */}
+          {calcOverpaidAmount(revenue, amountPaid) > 0 && (
+            <p className="text-xs font-bold text-sky-400 mb-1">
+              ⚠ مدفوع زيادة عن قيمة العملية: {formatCurrency(calcOverpaidAmount(revenue, amountPaid))} (رصيد للعميل)
+            </p>
+          )}
 
           {jobPayments.length > 0 && (
             <button

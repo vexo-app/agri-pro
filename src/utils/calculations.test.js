@@ -95,13 +95,24 @@ describe("calcRemainingAmount", () => {
 
 describe("getJobPaidAmount", () => {
   test("sums instalments from the payments collection when present", () => {
-    const job = { id: "job1", amountPaid: 999 }; // legacy field should be ignored
+    const job = { id: "job1" };
     const payments = [
       { jobId: "job1", amount: 200 },
       { jobId: "job1", amount: 150 },
       { jobId: "job2", amount: 500 }, // unrelated job, must not be counted
     ];
     expect(getJobPaidAmount(job, payments)).toBe(350);
+  });
+
+  // audit FIN-2: قبل الإصلاح كانت بترجع 350 وتضيّع الـ999 القديمة.
+  test("adds legacy job.amountPaid to later instalments (FIN-2)", () => {
+    const job = { id: "job1", amountPaid: 999 };
+    const payments = [
+      { jobId: "job1", amount: 200 },
+      { jobId: "job1", amount: 150 },
+      { jobId: "job2", amount: 500 },
+    ];
+    expect(getJobPaidAmount(job, payments)).toBe(1349);
   });
 
   test("falls back to legacy job.amountPaid when no instalments exist", () => {
@@ -497,5 +508,130 @@ describe("aggregateSupplierInvoices", () => {
     const payments = [{ supplierInvoiceId: "inv1", amount: 10000 }];
     const stats = aggregateSupplierInvoices(invoices, payments);
     expect(stats.totalPayable).toBe(4000); // only inv2 left
+  });
+});
+
+// ─── Step 1 financial fixes (audit FIN-1 / FIN-2 / FIN-4) ─────────────────────
+import {
+  roundMoney,
+  calcOverpaidAmount,
+  findLegacyPaidWithPayments,
+  aggregateJobOverpayments,
+  aggregateSupplierOverpayments,
+  checkOverdueDebts as _checkOverdueDebts,
+  calcSupplierRemaining as _calcSupplierRemaining,
+  derivePaymentStatusFromPayments as _derivePaymentStatusFromPayments,
+  aggregateJobs as _aggregateJobs,
+} from "./calculations";
+
+describe("FIN-1 floating-point: full payment must be 'paid'", () => {
+  test("1.1 acres × 100 paid 110 → paid, remaining 0", () => {
+    const revenue = calcRevenue(1.1, 100); // 110.00000000000001 in raw JS
+    expect(revenue).not.toBe(110);          // documents the root cause
+    expect(derivePaymentStatus(revenue, 110)).toBe("paid");
+    expect(calcRemainingAmount(revenue, 110)).toBe(0);
+  });
+
+  test("brute force: paying the exact 2-dp amount always gives 'paid'", () => {
+    for (let a = 1; a <= 1000; a++) {
+      for (let p = 50; p <= 3000; p += 50) {
+        const revenue = calcRevenue(a / 10, p);
+        const typed = Number(revenue.toFixed(2));
+        expect(derivePaymentStatus(revenue, typed)).toBe("paid");
+        expect(calcRemainingAmount(revenue, typed)).toBe(0);
+      }
+    }
+  });
+
+  test("real partial payments are unchanged", () => {
+    expect(derivePaymentStatus(832.5, 832.49)).toBe("partial");
+    expect(calcRemainingAmount(832.5, 832.49)).toBe(0.01);
+    expect(derivePaymentStatus(1000, 400)).toBe("partial");
+    expect(calcRemainingAmount(1000, 400)).toBe(600);
+    expect(derivePaymentStatus(1000, 0)).toBe("unpaid");
+  });
+
+  test("job no longer shows up as overdue debt or in totalRemaining", () => {
+    const job = { id: "j", acres: 1.1, pricePerAcre: 100, date: "2020-01-01" };
+    const payments = [{ jobId: "j", amount: 110 }];
+    expect(_checkOverdueDebts([job], 10, 30, payments)).toEqual([]);
+    expect(_aggregateJobs([job], 10, payments).totalRemaining).toBe(0);
+    expect(_derivePaymentStatusFromPayments(calcRevenue(1.1, 100), payments, "j").status).toBe("paid");
+  });
+
+  test("supplier invoice paid by float-summed instalments has 0 remaining", () => {
+    expect(0.7 + 0.2 + 0.1).not.toBe(1);
+    expect(_calcSupplierRemaining(1, 0.7 + 0.2 + 0.1)).toBe(0);
+  });
+
+  test("roundMoney rounds to piasters", () => {
+    expect(roundMoney(110.00000000000001)).toBe(110);
+    expect(roundMoney(1.005)).toBe(1.01);
+    expect(roundMoney("abc")).toBe(0);
+    expect(roundMoney(-2.345)).toBe(-2.35);
+  });
+});
+
+describe("FIN-2 legacy amountPaid", () => {
+  test("legacy-only job still reads amountPaid", () => {
+    expect(getJobPaidAmount({ id: "j", amountPaid: 300 }, [])).toBe(300);
+  });
+
+  test("legacy 300 + new instalment 100 = 400 everywhere", () => {
+    const job = { id: "j", acres: 10, pricePerAcre: 100, amountPaid: 300 };
+    const payments = [{ jobId: "j", amount: 100 }];
+    expect(getJobPaidAmount(job, payments)).toBe(400);
+    const t = _aggregateJobs([job], 10, payments);
+    expect(t.totalPaid).toBe(400);
+    expect(t.totalRemaining).toBe(600);
+  });
+
+  test("detection lists legacy+instalment jobs and flags equal amounts for review", () => {
+    const jobs = [
+      { id: "a", amountPaid: 300 },
+      { id: "b", amountPaid: 500 },
+      { id: "c" },
+      { id: "d", amountPaid: 200 }, // legacy only → not listed
+    ];
+    const payments = [
+      { jobId: "a", amount: 100 },
+      { jobId: "b", amount: 500 },
+      { jobId: "c", amount: 50 },
+    ];
+    expect(findLegacyPaidWithPayments(jobs, payments)).toEqual([
+      { jobId: "a", legacyAmountPaid: 300, instalmentsTotal: 100, sameAmountInstalment: false },
+      { jobId: "b", legacyAmountPaid: 500, instalmentsTotal: 500, sameAmountInstalment: true },
+    ]);
+  });
+});
+
+describe("FIN-4 overpayments are visible", () => {
+  test("calcOverpaidAmount", () => {
+    expect(calcOverpaidAmount(1000, 1200)).toBe(200);
+    expect(calcOverpaidAmount(1000, 1000)).toBe(0);
+    expect(calcOverpaidAmount(1000, 400)).toBe(0);
+    expect(calcOverpaidAmount(calcRevenue(1.1, 100), 110)).toBe(0); // float noise ≠ overpayment
+  });
+
+  test("client overpayment aggregated per job", () => {
+    const jobs = [
+      { id: "j1", acres: 10, pricePerAcre: 100 },
+      { id: "j2", acres: 1, pricePerAcre: 100 },
+    ];
+    const payments = [
+      { jobId: "j1", amount: 600 }, { jobId: "j1", amount: 600 },
+      { jobId: "j2", amount: 50 },
+    ];
+    expect(aggregateJobOverpayments(jobs, payments)).toEqual({
+      totalOverpaid: 200, items: [{ id: "j1", overpaid: 200 }],
+    });
+  });
+
+  test("supplier overpayment aggregated per invoice", () => {
+    const invoices = [{ id: "i1", amount: 500 }, { id: "i2", amount: 300 }];
+    const sp = [{ supplierInvoiceId: "i1", amount: 700 }, { supplierInvoiceId: "i2", amount: 100 }];
+    expect(aggregateSupplierOverpayments(invoices, sp)).toEqual({
+      totalOverpaid: 200, items: [{ id: "i1", overpaid: 200 }],
+    });
   });
 });

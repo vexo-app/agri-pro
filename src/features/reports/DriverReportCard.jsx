@@ -39,7 +39,7 @@ const DriverReportCard = ({ report, maxAcres = 1 }) => {
           {[
             { label:"أفدنة",    value: formatNumber(totalAcres),  color:"text-blue-400"  },
             { label:"عمليات",   value: ops,                       color:"text-gray-300"  },
-            { label:"ربح صافي", value: formatCurrency(netProfit), color: isProfit?"text-green-400":"text-red-400" },
+            { label:"ربح التشغيل", value: formatCurrency(netProfit), color: isProfit?"text-green-400":"text-red-400" },
             { label:"هامش",     value: `${profitPct.toFixed(0)}%`, color: isProfit?"text-brand-400":"text-red-400" },
           ].map((s) => (
             <div key={s.label} className="bg-surface-2 rounded-xl p-2.5 text-center">

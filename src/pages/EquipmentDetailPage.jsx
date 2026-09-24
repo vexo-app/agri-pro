@@ -309,7 +309,7 @@ const EquipmentDetailPage = () => {
         <StatCard icon={<AcreIcon size={24}/>}    label="إجمالي الأفدنة" value={formatNumber(stats.totalAcres)}    color="blue"/>
         <StatCard icon={<RevenueIcon size={24}/>} label="إجمالي الإيراد" value={formatCurrency(stats.totalRevenue)} color="amber"/>
         <StatCard icon={<FuelIcon size={24}/>}    label="إجمالي الوقود"  value={`${formatNumber(stats.totalFuel)} ل`} color="orange"/>
-        <StatCard icon={<ProfitIcon size={24}/>}  label="صافي الربح"     value={formatCurrency(netProfit)} color={netProfit>=0?"green":"red"}/>
+        <StatCard icon={<ProfitIcon size={24}/>}  label="ربح المعدة (قبل المصاريف العامة)" value={formatCurrency(netProfit)} color={netProfit>=0?"green":"red"}/>
       </div>
 
       {/* P&L */}
@@ -319,7 +319,7 @@ const EquipmentDetailPage = () => {
           <SummaryRow label="إجمالي الإيراد"  value={formatCurrency(stats.totalRevenue)}   valueColor="text-amber-400"/>
           <SummaryRow label="تكلفة الوقود"    value={formatCurrency(stats.totalFuelCost)}  valueColor="text-red-400"/>
           <SummaryRow label="تكاليف الصيانة"  value={formatCurrency(maintCost)}            valueColor="text-red-400"/>
-          <SummaryRow label="صافي الربح"      value={formatCurrency(netProfit)}            valueColor={netProfit>=0?"text-green-400":"text-red-400"} bold/>
+          <SummaryRow label="ربح المعدة (قبل المصاريف العامة)" value={formatCurrency(netProfit)}            valueColor={netProfit>=0?"text-green-400":"text-red-400"} bold/>
           {stats.totalRevenue > 0 && (
             <div className="mt-4">
               <div className="flex justify-between text-xs text-gray-500 mb-1.5">

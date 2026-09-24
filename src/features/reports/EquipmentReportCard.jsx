@@ -39,7 +39,7 @@ const EquipmentReportCard = ({ report }) => {
           { label: "إجمالي الوقود",   value: `${formatNumber(totalFuel)} لتر`,     color: "text-gray-300"  },
           { label: "تكلفة الوقود",    value: formatCurrency(totalFuelCost),         color: "text-red-400"   },
           { label: "تكاليف الصيانة",  value: formatCurrency(maintCost),            color: "text-red-400"   },
-          { label: "صافي الربح",      value: formatCurrency(netProfit),            color: isProfit ? "text-green-400" : "text-red-400" },
+          { label: "ربح المعدة (قبل المصاريف العامة)", value: formatCurrency(netProfit),            color: isProfit ? "text-green-400" : "text-red-400" },
         ].map((s) => (
           <div key={s.label} className="bg-surface-2 rounded-xl p-3">
             <p className={`text-sm font-extrabold tabular-nums ${s.color}`}>{s.value}</p>
@@ -52,7 +52,7 @@ const EquipmentReportCard = ({ report }) => {
       {totalRevenue > 0 && (
         <div className="px-5 py-4">
           <div className="flex justify-between mb-1.5">
-            <span className="text-xs text-gray-500">هامش الربح الصافي</span>
+            <span className="text-xs text-gray-500">هامش ربح المعدة</span>
             <span className={`text-xs font-bold ${isProfit ? "text-green-400" : "text-red-400"}`}>
               {margin.toFixed(1)}%
             </span>
