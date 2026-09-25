@@ -18,7 +18,7 @@ import { driverService } from "../../services/driverService";
 import { salaryService } from "../../services/salaryService";
 import { attendanceService } from "../../services/attendanceService";
 import {
-  calcMonthlySalary, getMonthEntries, calcAttendanceSummary, getSalaryForMonth,
+  calcMemberMonthSummary, getMonthEntries, calcAttendanceSummary,
 } from "../../utils/salaryCalculations";
 import { Card, CardHeader, CardBody, StatCard, Badge, EmptyState } from "../../components/ui/Card";
 import LoadingScreen from "../../components/ui/LoadingScreen";
@@ -101,11 +101,9 @@ const GuestDriverDetailPage = () => {
   if (loading) return <LoadingScreen />;
   if (!driver) return <div className="p-6 text-center text-gray-400">العضو غير موجود</div>;
 
-  const monthlySummary = { ...calcMonthlySalary(
-    getMonthEntries(salaryEntries, driverId, selectedMonth),
-    getSalaryForMonth(driver, selectedMonth)
-  ) };
-  const monthEntries = getMonthEntries(salaryEntries, driverId, selectedMonth);
+  const monthlySummary = calcMemberMonthSummary(salaryEntries, { ...driver, id: driverId }, selectedMonth);
+  const monthEntries = getMonthEntries(salaryEntries, driverId, selectedMonth)
+    .filter((e) => e.type !== SALARY_ENTRY_TYPES.CARRYOVER);
   const attendSummary = calcAttendanceSummary(attendance, driverId, selectedMonth);
   const monthAttend = attendance.filter((r) => r.driverId === driverId && (r.date || "").startsWith(selectedMonth)).sort((a, b) => b.date.localeCompare(a.date));
 
@@ -161,6 +159,8 @@ const GuestDriverDetailPage = () => {
               { label:"الحوافز والزيادات", value:formatCurrency(monthlySummary.bonuses),          color:"text-green-400" },
               { label:"الإجمالي",         value:formatCurrency(monthlySummary.gross),            color:"text-amber-400" },
               { label:"الخصومات",         value:formatCurrency(monthlySummary.deductions),       color:"text-red-400"   },
+              ...(monthlySummary.penalties > 0 ? [{ label:"الجزاءات", value:formatCurrency(monthlySummary.penalties), color:"text-orange-400" }] : []),
+              ...(monthlySummary.carriedDeduction > 0 ? [{ label:"خصم مرحّل من الشهر اللي فات", value:formatCurrency(monthlySummary.carriedDeduction), color:"text-purple-400" }] : []),
               { label:"صافي الراتب",      value:formatCurrency(monthlySummary.net),              color: monthlySummary.net >= 0 ? "text-green-400" : "text-red-400" },
             ].map((s) => (
               <div key={s.label} className="bg-surface-2 rounded-xl p-3">
@@ -197,9 +197,10 @@ const GuestDriverDetailPage = () => {
                     </div>
                   </div>
                   <span className={`text-sm font-bold tabular-nums flex-shrink-0 ${
-                    e.type === SALARY_ENTRY_TYPES.DEDUCTION ? "text-red-400" : "text-green-400"
+                    e.type === SALARY_ENTRY_TYPES.DEDUCTION ? "text-red-400"
+                      : e.type === SALARY_ENTRY_TYPES.PENALTY ? "text-orange-400" : "text-green-400"
                   }`}>
-                    {e.type === SALARY_ENTRY_TYPES.DEDUCTION
+                    {e.type === SALARY_ENTRY_TYPES.DEDUCTION || e.type === SALARY_ENTRY_TYPES.PENALTY
                       ? `- ${formatCurrency(e.amount)}`
                       : `+ ${formatCurrency(e.amount)}`
                     }

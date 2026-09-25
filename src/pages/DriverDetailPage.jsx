@@ -5,6 +5,7 @@ import { useSalary }       from "../hooks/useSalary";
 import { useDrivers }      from "../hooks/useDrivers";
 import { useConfirm }      from "../hooks/useConfirm";
 import SalaryEntryForm     from "../features/salary/SalaryEntryForm";
+import CarryOverEditForm   from "../features/salary/CarryOverEditForm";
 import AttendanceForm      from "../features/attendance/AttendanceForm";
 import Modal               from "../components/ui/Modal";
 import ConfirmDialog       from "../components/ui/ConfirmDialog";
@@ -53,7 +54,7 @@ const DriverDetailPage = () => {
   const {
     getMonthSummary, getDriverEntries,
     getDriverAttendance, getAttendanceSummary,
-    addSalaryEntry, deleteSalaryEntry,
+    addSalaryEntry, updateSalaryEntry, deleteSalaryEntry,
     addAttendance,  deleteAttendance,
     loading,
   } = useSalary();
@@ -77,7 +78,28 @@ const DriverDetailPage = () => {
   const attendSummary    = getAttendanceSummary(driverId, selectedMonth);
 
   // Filter entries for selected month
-  const monthEntries = allEntries.filter((e) => (e.date || "").startsWith(selectedMonth));
+  const monthEntries = allEntries.filter((e) =>
+    (e.date || "").startsWith(selectedMonth) && e.type !== SALARY_ENTRY_TYPES.CARRYOVER
+  );
+  const carryEntries = allEntries.filter((e) =>
+    (e.date || "").startsWith(selectedMonth) && e.type === SALARY_ENTRY_TYPES.CARRYOVER
+  );
+  const showCarryRow = monthlySummary.carriedDeduction > 0 || carryEntries.length > 0;
+
+  // تعديل الخصم المرحّل: قيد carryover واحد في الشهر (بيتعدل لو موجود)
+  const handleSaveCarry = async (amount) => {
+    const [first, ...extra] = carryEntries;
+    if (first) {
+      await updateSalaryEntry(first.id, { amount });
+      extra.forEach((e) => deleteSalaryEntry(e.id));
+    } else {
+      await addSalaryEntry({
+        driverId, type: SALARY_ENTRY_TYPES.CARRYOVER, amount,
+        date: `${selectedMonth}-01`, reason: "تعديل يدوي", notes: "", paid: true,
+      });
+    }
+  };
+  const handleResetCarry = async () => { carryEntries.forEach((e) => deleteSalaryEntry(e.id)); };
   const monthAttend  = attendanceRecs.filter((r) => (r.date || "").startsWith(selectedMonth));
 
   const handleSaveEntry = async (data) => {
@@ -188,6 +210,8 @@ const DriverDetailPage = () => {
               { label:"الحوافز والزيادات", value:formatCurrency(monthlySummary.bonuses),          color:"text-green-400" },
               { label:"الإجمالي",         value:formatCurrency(monthlySummary.gross),            color:"text-amber-400" },
               { label:"الخصومات",         value:formatCurrency(monthlySummary.deductions),       color:"text-red-400"   },
+              ...(monthlySummary.penalties > 0 ? [{ label:"الجزاءات", value:formatCurrency(monthlySummary.penalties), color:"text-orange-400" }] : []),
+              ...(monthlySummary.carriedDeduction > 0 ? [{ label:"خصم مرحّل", value:formatCurrency(monthlySummary.carriedDeduction), color:"text-purple-400" }] : []),
               { label:"صافي الراتب",      value:formatCurrency(monthlySummary.net),              color: monthlySummary.net >= 0 ? "text-green-400" : "text-red-400" },
             ].map((s) => (
               <div key={s.label} className="bg-surface-2 rounded-xl p-3">
@@ -196,6 +220,23 @@ const DriverDetailPage = () => {
               </div>
             ))}
           </div>
+
+          {/* الخصم المرحّل من الشهر اللي فات — لون مختلف وقابل للتعديل */}
+          {showCarryRow && (
+            <div className="flex items-center gap-3 bg-purple-500/10 border border-purple-500/30 rounded-xl px-4 py-2.5 mb-2">
+              <div className="flex-1 min-w-0">
+                <span className="text-sm font-semibold text-purple-400">{SALARY_ENTRY_LABELS.carryover}</span>
+                <p className="text-xs text-gray-500 mt-0.5">
+                  {monthlySummary.carryEdited ? "المبلغ متعدل يدوي" : "محسوب تلقائي من سالب الشهر اللي فات"}
+                </p>
+              </div>
+              <span className="text-sm font-bold tabular-nums flex-shrink-0 text-purple-400">
+                - {formatCurrency(monthlySummary.carriedDeduction)}
+              </span>
+              <Button variant="ghost" size="xs" className="px-2 flex-shrink-0"
+                onClick={() => setModal({ type: "carry" })}>تعديل</Button>
+            </div>
+          )}
 
           {/* Entries list */}
           {monthEntries.length === 0 ? (
@@ -225,9 +266,10 @@ const DriverDetailPage = () => {
                     </div>
                   </div>
                   <span className={`text-sm font-bold tabular-nums flex-shrink-0 ${
-                    e.type === SALARY_ENTRY_TYPES.DEDUCTION ? "text-red-400" : "text-green-400"
+                    e.type === SALARY_ENTRY_TYPES.DEDUCTION ? "text-red-400"
+                      : e.type === SALARY_ENTRY_TYPES.PENALTY ? "text-orange-400" : "text-green-400"
                   }`}>
-                    {e.type === SALARY_ENTRY_TYPES.DEDUCTION
+                    {e.type === SALARY_ENTRY_TYPES.DEDUCTION || e.type === SALARY_ENTRY_TYPES.PENALTY
                       ? `- ${formatCurrency(e.amount)}`
                       : `+ ${formatCurrency(e.amount)}`
                     }
@@ -293,6 +335,20 @@ const DriverDetailPage = () => {
             driverId={driverId}
             driverName={driver.name}
             onSave={handleSaveEntry}
+            onClose={() => setModal(null)}
+          />
+        )}
+      </Modal>
+
+      <Modal open={modal?.type === "carry"} onClose={() => setModal(null)}
+        title="تعديل الخصم المرحّل">
+        {modal?.type === "carry" && (
+          <CarryOverEditForm
+            currentAmount={monthlySummary.carriedDeduction}
+            autoAmount={monthlySummary.carryAuto}
+            isEdited={monthlySummary.carryEdited}
+            onSave={handleSaveCarry}
+            onReset={handleResetCarry}
             onClose={() => setModal(null)}
           />
         )}

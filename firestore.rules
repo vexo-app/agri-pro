@@ -118,7 +118,7 @@ service cloud.firestore {
     function isValidSalaryEntry(data) {
       return
         (!('amount' in data)   || isMoney(data.amount)) &&
-        (!('type' in data)     || data.type in ['base', 'bonus', 'deduction', 'advance', 'advance_repay']) &&
+        (!('type' in data)     || data.type in ['base', 'bonus', 'deduction', 'penalty', 'carryover', 'advance', 'advance_repay']) &&
         (!('driverId' in data) || isShortStr(data.driverId)) &&
         (!('reason' in data)   || isShortStr(data.reason)) &&
         (!('date' in data)     || isDateStr(data.date)) &&

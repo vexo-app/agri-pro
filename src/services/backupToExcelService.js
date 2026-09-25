@@ -39,6 +39,8 @@ const SALARY_ENTRY_LABELS = {
   base: "راتب أساسي",
   bonus: "حافز / مكافأة",
   deduction: "خصم",
+  penalty: "جزاء",
+  carryover: "خصم مرحّل (تعديل يدوي)",
   advance: "سلفة",
   advance_repay: "سداد سلفة",
 };

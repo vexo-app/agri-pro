@@ -2,11 +2,9 @@
 import { useMemo, useCallback } from "react";
 import { useData } from "../contexts/DataContext";
 import {
-  calcMonthlySalary,
   calcTotalSalariesPaid,
-  getMonthEntries,
   calcAttendanceSummary,
-  getSalaryForMonth,
+  calcMemberMonthSummary,
 } from "../utils/salaryCalculations";
 
 export const useSalary = () => {
@@ -28,9 +26,8 @@ export const useSalary = () => {
 
   const getMonthSummary = useCallback(
     (driverId, yearMonth) => {
-      const entries = getMonthEntries(salaryEntries, driverId, yearMonth);
-      const driver  = drivers.find((d) => d.id === driverId);
-      return { ...calcMonthlySalary(entries, getSalaryForMonth(driver, yearMonth)), entries };
+      const driver  = drivers.find((d) => d.id === driverId) || { id: driverId };
+      return calcMemberMonthSummary(salaryEntries, driver, yearMonth);
     },
     [salaryEntries, drivers]
   );

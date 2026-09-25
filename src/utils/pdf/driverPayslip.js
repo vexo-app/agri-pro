@@ -8,10 +8,18 @@ const buildDriverPayslipHtml = ({ driver, month, summary, entries, attendance })
   const today      = new Date().toLocaleDateString("ar-EG");
   const monthLabel = new Date(month + "-01").toLocaleDateString("ar-EG", { month:"long", year:"numeric" });
 
-  const entryRows = entries.map((e) => {
-    const isDeduct = e.type === "deduction" || e.type === "advance_repay";
+  const carried = Number(summary.carriedDeduction) || 0;
+  const carryRow = carried > 0 ? `<tr>
+      <td>—</td>
+      <td style="color:#6b21a8;font-weight:700">خصم مرحّل من الشهر اللي فات</td>
+      <td>—</td>
+      <td style="color:#6b21a8;font-weight:700">- ${formatCurrency(carried)}</td>
+    </tr>` : "";
+
+  const entryRows = carryRow + entries.filter((e) => e.type !== "carryover").map((e) => {
+    const isDeduct = e.type === "deduction" || e.type === "penalty" || e.type === "advance_repay";
     const typeLabels = {
-      base:"راتب أساسي", bonus:"حافز", deduction:"خصم",
+      base:"راتب أساسي", bonus:"حافز", deduction:"خصم", penalty:"جزاء",
       advance:"سلفة", advance_repay:"سداد سلفة",
     };
     return `<tr>
@@ -52,6 +60,8 @@ const buildDriverPayslipHtml = ({ driver, month, summary, entries, attendance })
         <div class="stat-box"><div class="stat-val">${formatCurrency(summary.base)}</div><div class="stat-lbl">الراتب الأساسي</div></div>
         <div class="stat-box"><div class="stat-val" style="color:#1d4ed8">${formatCurrency(summary.bonuses)}</div><div class="stat-lbl">الحوافز والزيادات</div></div>
         <div class="stat-box"><div class="stat-val" style="color:#991b1b">${formatCurrency(summary.deductions)}</div><div class="stat-lbl">الخصومات</div></div>
+        ${Number(summary.penalties) > 0 ? `<div class="stat-box"><div class="stat-val" style="color:#9a3412">${formatCurrency(summary.penalties)}</div><div class="stat-lbl">الجزاءات</div></div>` : ""}
+        ${carried > 0 ? `<div class="stat-box"><div class="stat-val" style="color:#6b21a8">${formatCurrency(carried)}</div><div class="stat-lbl">خصم مرحّل</div></div>` : ""}
         <div class="stat-box"><div class="stat-val" style="color:${summary.net>=0?"#15803d":"#991b1b"}">${formatCurrency(summary.net)}</div><div class="stat-lbl">صافي الراتب</div></div>
       </div>
 

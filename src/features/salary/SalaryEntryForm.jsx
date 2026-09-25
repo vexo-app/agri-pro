@@ -10,7 +10,13 @@ import { todayISO } from "../../utils/formatters";
 const TYPE_OPTIONS = [
   { value: SALARY_ENTRY_TYPES.DEDUCTION, label: SALARY_ENTRY_LABELS.deduction },
   { value: SALARY_ENTRY_TYPES.BONUS,     label: SALARY_ENTRY_LABELS.bonus },
+  { value: SALARY_ENTRY_TYPES.PENALTY,   label: SALARY_ENTRY_LABELS.penalty },
 ];
+
+const TYPE_HINTS = {
+  [SALARY_ENTRY_TYPES.DEDUCTION]: "خصم = فلوس خدها العامل فعلًا (سحب، إيجار...). بتتخصم من مرتبه.",
+  [SALARY_ENTRY_TYPES.PENALTY]:   "جزاء = مبلغ بيتخصم من العامل وهو ما خدش فلوس. بيقلل مصروف المرتبات.",
+};
 
 const SalaryEntryForm = ({ driverId, driverName, onSave, onClose }) => {
   const {
@@ -29,6 +35,7 @@ const SalaryEntryForm = ({ driverId, driverName, onSave, onClose }) => {
 
   const type = watch("type");
   const isBonus = type === SALARY_ENTRY_TYPES.BONUS;
+  const isPenalty = type === SALARY_ENTRY_TYPES.PENALTY;
 
   const onSubmit = async (data) => {
     await onSave({
@@ -72,10 +79,14 @@ const SalaryEntryForm = ({ driverId, driverName, onSave, onClose }) => {
           )}
         />
 
+        {TYPE_HINTS[type] && (
+          <p className="sm:col-span-2 text-xs text-gray-400 -mt-2">{TYPE_HINTS[type]}</p>
+        )}
+
         <div className="sm:col-span-2">
           <Input
-            label={isBonus ? "نوع الحافز" : "نوع الخصم"}
-            placeholder={isBonus ? "مثلاً: حافز أداء، بدل وقود..." : "مثلاً: غياب، تأخير..."}
+            label={isBonus ? "نوع الحافز" : isPenalty ? "سبب الجزاء" : "نوع الخصم"}
+            placeholder={isBonus ? "مثلاً: حافز أداء، بدل وقود..." : isPenalty ? "مثلاً: غياب، تأخير..." : "مثلاً: شخصي، إيجار..."}
             {...register("reason")}
           />
         </div>

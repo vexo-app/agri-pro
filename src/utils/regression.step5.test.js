@@ -71,14 +71,14 @@ describe("FINANCIAL — hand-checked", () => {
     expect(aggregateSupplierOverpayments(supplierInvoices, supplierPayments).totalOverpaid).toBe(49.75);
   });
   test("salaries: full accrual, inactive stops future only", () => {
-    // d1: Jul 3000, Aug 3200, Sep 3000 · d2: Jul 1850, Aug 2000, Sep inactive
-    expect(calcSalaryExpense(salaryEntries, drivers, { toMonth: AS_OF })).toBe(3000 + 3200 + 3000 + 1850 + 2000);
+    // d1: Jul 3000, Aug 3200, Sep 3000 · d2: Jul 2000 (الخصم 150 = فلوس اتصرفت، مش بيقلل المصروف), Aug 2000, Sep inactive
+    expect(calcSalaryExpense(salaryEntries, drivers, { toMonth: AS_OF })).toBe(3000 + 3200 + 3000 + 2000 + 2000);
   });
   test("expenses + tax + profit", () => {
     const f = buildPeriodFinancials(data, { asOfMonth: AS_OF });
     expect(f.totalMaintCost).toBe(calcTotalMaintenanceCost(maintenance));
     expect(f.totalTaxDeductions).toBe(calcTotalTaxDeductions(taxDeductions));
-    expect(f.netProfit).toBeCloseTo(7790 - 2847.5 - 900 - 13050 - 200.5 - 1350, 6);
+    expect(f.netProfit).toBeCloseTo(7790 - 2847.5 - 900 - 13200 - 200.5 - 1350, 6);
     expect(f.netProfit).toBe(calcNetProfit(f));
   });
   test("large values stay exact to the piaster", () => {

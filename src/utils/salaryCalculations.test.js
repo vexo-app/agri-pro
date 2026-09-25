@@ -156,11 +156,18 @@ describe("getMonthEntries", () => {
 // ─── calcTotalSalariesPaid ────────────────────────────────────────────────────
 
 describe("calcTotalSalariesPaid", () => {
-  test("nets BASE/BONUS against DEDUCTION", () => {
+  test("DEDUCTION (خصم = فلوس خرجت للعامل) does NOT reduce the salary cost", () => {
+    const entries = [
+      { driverId: "d1", type: SALARY_ENTRY_TYPES.DEDUCTION, amount: 300, date: "2026-06-05" },
+    ];
+    expect(calcTotalSalariesPaid(entries, [{ id: "d1", salary: 3000 }])).toBe(3000);
+  });
+
+  test("nets BASE/BONUS against PENALTY (جزاء)", () => {
     const entries = [
       { driverId: "d1", type: SALARY_ENTRY_TYPES.BASE, amount: 3000 },
       { driverId: "d2", type: SALARY_ENTRY_TYPES.BONUS, amount: 500 },
-      { driverId: "d1", type: SALARY_ENTRY_TYPES.DEDUCTION, amount: 200 },
+      { driverId: "d1", type: SALARY_ENTRY_TYPES.PENALTY, amount: 200 },
     ];
     // 3000 + 500 - 200 = 3300
     expect(calcTotalSalariesPaid(entries)).toBe(3300);
@@ -181,7 +188,7 @@ describe("calcTotalSalariesPaid", () => {
     // month. Without grouping + default-base fallback, this used to sum to
     // -300 for d1 alone, flipping the sign and inflating "net profit".
     const entries = [
-      { driverId: "d1", type: SALARY_ENTRY_TYPES.DEDUCTION, amount: 300, date: "2026-06-05" },
+      { driverId: "d1", type: SALARY_ENTRY_TYPES.PENALTY, amount: 300, date: "2026-06-05" },
     ];
     const drivers = [{ id: "d1", salary: 3000 }];
     // 3000 (default base) - 300 (deduction) = 2700, never negative.
@@ -190,7 +197,7 @@ describe("calcTotalSalariesPaid", () => {
 
   test("without a drivers list, falls back to raw entries (defaultBase 0) — same as before", () => {
     const entries = [
-      { driverId: "d1", type: SALARY_ENTRY_TYPES.DEDUCTION, amount: 300, date: "2026-06-05" },
+      { driverId: "d1", type: SALARY_ENTRY_TYPES.PENALTY, amount: 300, date: "2026-06-05" },
     ];
     expect(calcTotalSalariesPaid(entries)).toBe(-300);
   });
@@ -198,7 +205,7 @@ describe("calcTotalSalariesPaid", () => {
   test("keeps different drivers/months in separate buckets", () => {
     const entries = [
       { driverId: "d1", type: SALARY_ENTRY_TYPES.BASE, amount: 3000, date: "2026-05-01" },
-      { driverId: "d1", type: SALARY_ENTRY_TYPES.DEDUCTION, amount: 300, date: "2026-06-05" }, // different month, no BASE
+      { driverId: "d1", type: SALARY_ENTRY_TYPES.PENALTY, amount: 300, date: "2026-06-05" }, // different month, no BASE
     ];
     const drivers = [{ id: "d1", salary: 3000 }];
     // May: 3000 (explicit BASE). June: 3000 (default) - 300 = 2700.
@@ -207,7 +214,7 @@ describe("calcTotalSalariesPaid", () => {
 
   test("uses the salary rate for each entry month instead of the driver's current salary", () => {
     const entries = [
-      { driverId: "d1", type: SALARY_ENTRY_TYPES.DEDUCTION, amount: 100, date: "2026-08-05" },
+      { driverId: "d1", type: SALARY_ENTRY_TYPES.PENALTY, amount: 100, date: "2026-08-05" },
     ];
     const drivers = [{
       id: "d1",

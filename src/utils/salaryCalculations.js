@@ -1,5 +1,5 @@
 // src/utils/salaryCalculations.js
-import { SALARY_ENTRY_TYPES, DRIVER_STATUS } from "../config/constants";
+import { SALARY_ENTRY_TYPES, DRIVER_STATUS, SALARY_CARRYOVER_START_MONTH } from "../config/constants";
 
 const monthPrefixOf = (date = new Date()) =>
   `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}`;
@@ -41,11 +41,21 @@ export const buildSalaryHistory = (driver, nextSalary, effectiveFrom = monthPref
 /**
  * Calculate net salary for a driver in a specific month.
  * entries = all salary entries for that driver in that month
+ *
+ * قرار المالك:
+ * - "خصم" = فلوس خرجت للعامل فعلًا → بتقلل الصافي (الباقي له) بس، مش مصروف الشركة.
+ * - "جزاء" = فلوس العامل ما خدهاش → بتقلل الصافي وبتقلل مصروف الشركة.
+ * - "خصم مرحّل" = سالب الشهر اللي فات → بيقلل الصافي بس (اتحسب مصروف وقت ما خرج).
+ *   `carryIn` هو المبلغ المحسوب تلقائي؛ لو فيه قيد carryover في الشهر، مبلغه
+ *   هو اللي بيتاخد بدل المحسوب (تعديل يدوي من المالك).
+ * - expense = الراتب + الحوافز − الجزاءات: ده اللي بيدخل في مصروف المرتبات.
  */
-export const calcMonthlySalary = (entries, defaultBase = 0) => {
+export const calcMonthlySalary = (entries, defaultBase = 0, carryIn = 0) => {
   let base      = 0;
   let bonuses   = 0;
   let deductions = 0;
+  let penalties = 0;
+  let carryOverride = null;
   let hasBaseEntry = false;
 
   entries.forEach((e) => {
@@ -54,6 +64,8 @@ export const calcMonthlySalary = (entries, defaultBase = 0) => {
       case SALARY_ENTRY_TYPES.BASE:          base += amount; hasBaseEntry = true; break;
       case SALARY_ENTRY_TYPES.BONUS:         bonuses          += amount; break;
       case SALARY_ENTRY_TYPES.DEDUCTION:     deductions       += amount; break;
+      case SALARY_ENTRY_TYPES.PENALTY:       penalties        += amount; break;
+      case SALARY_ENTRY_TYPES.CARRYOVER:     carryOverride = (carryOverride || 0) + amount; break;
       default: break; // e.g. legacy "advance"/"advance_repay" entries — ignored, not deleted
     }
   });
@@ -63,10 +75,54 @@ export const calcMonthlySalary = (entries, defaultBase = 0) => {
   // "الراتب الأساسي" فوق وميظهرش صفر.
   if (!hasBaseEntry) base = Number(defaultBase) || 0;
 
-  const gross = base + bonuses;
-  const net   = gross - deductions;
+  const carriedDeduction = carryOverride !== null ? carryOverride : Math.max(0, Number(carryIn) || 0);
+  const gross   = base + bonuses;
+  const net     = gross - deductions - penalties - carriedDeduction;
+  const expense = gross - penalties;
 
-  return { base, bonuses, deductions, gross, net };
+  return {
+    base, bonuses, deductions, penalties,
+    carriedDeduction, carryAuto: Math.max(0, Number(carryIn) || 0), carryEdited: carryOverride !== null,
+    gross, net, expense,
+  };
+};
+
+const prevMonthOf = (ym) => {
+  const [y, m] = ym.split("-").map(Number);
+  return m === 1 ? `${y - 1}-12` : `${y}-${String(m - 1).padStart(2, "0")}`;
+};
+
+/**
+ * ملخص شهر لعضو مع "الخصم المرحّل": لو صافي الشهر اللي فات (من
+ * SALARY_CARRYOVER_START_MONTH وبعده) طلع بالسالب، قيمته بتتخصم من الشهر ده.
+ * بيتحسب تلقائي من القيود — مفيش حاجة بتتكتب في البيانات.
+ */
+export const calcMemberMonthSummary = (allEntries = [], driver, yearMonth) => {
+  const driverId = driver?.id;
+  const byMonth = new Map();
+  allEntries.forEach((e) => {
+    if (e.driverId !== driverId) return;
+    const ym = (e.date || "").slice(0, 7);
+    if (!byMonth.has(ym)) byMonth.set(ym, []);
+    byMonth.get(ym).push(e);
+  });
+
+  // سلسلة الشهور من شهر بداية الترحيل لحد الشهر المطلوب
+  const chain = [];
+  let cur = yearMonth;
+  while (/^\d{4}-\d{2}$/.test(cur) && cur > SALARY_CARRYOVER_START_MONTH && chain.length < 600) {
+    cur = prevMonthOf(cur);
+    chain.unshift(cur);
+  }
+
+  let carryIn = 0;
+  chain.forEach((ym) => {
+    const r = calcMonthlySalary(byMonth.get(ym) || [], getSalaryForMonth(driver, ym), carryIn);
+    carryIn = r.net < 0 ? -r.net : 0;
+  });
+
+  const entries = byMonth.get(yearMonth) || [];
+  return { ...calcMonthlySalary(entries, getSalaryForMonth(driver, yearMonth), carryIn), entries };
 };
 
 /**
@@ -79,7 +135,7 @@ export const getMonthEntries = (allEntries, driverId, yearMonth) =>
 
 /**
  * Total salary paid to ALL drivers (for profit deduction).
- * Net cost = base + bonus - deductions, computed the SAME way as
+ * Cost = base + bonus - penalties (calcMonthlySalary().expense). "خصم" (money already handed to the worker) does NOT reduce the cost; computed the SAME way as
  * calcMonthlySalary (grouped per driver per month, applying each driver's
  * default base salary when a month has no explicit BASE entry). Without
  * this grouping, a driver whose base is never logged explicitly but who
@@ -114,6 +170,7 @@ export const calcTotalSalariesPaid = (allEntries, drivers = [], options = {}) =>
   // Group entries by driver + month, same unit calcMonthlySalary works on.
   const groups = new Map();
   allEntries.forEach((e) => {
+    if (e.type === SALARY_ENTRY_TYPES.CARRYOVER) return; // الترحيل مش مصروف
     const yearMonth = (e.date || "").slice(0, 7) || "_nodate";
     const key = `${e.driverId}|${yearMonth}`;
     if (!groups.has(key)) groups.set(key, []);
@@ -139,7 +196,7 @@ export const calcTotalSalariesPaid = (allEntries, drivers = [], options = {}) =>
   groups.forEach((entries, key) => {
     const [driverId, yearMonth] = key.split("|");
     const defaultBase = getSalaryForMonth(driverById.get(driverId), yearMonth);
-    total += calcMonthlySalary(entries, defaultBase).net;
+    total += calcMonthlySalary(entries, defaultBase).expense;
   });
   return total;
 };
@@ -161,7 +218,7 @@ export const calcAttendanceSummary = (attendanceRecords, driverId, yearMonth) =>
 // ─── مصروف الرواتب المستحق (قرار المالك: "المستحق الكامل") ────────────────
 //
 // كل عضو فريق له راتب بيتحسب له راتب كل شهر من أول شهر ليه في البرنامج
-// لحد الشهر الحالي، + الحوافز − الخصومات، سواء اتصرف أو لأ. قيد "راتب
+// لحد الشهر الحالي، + الحوافز − الجزاءات (الخصم = فلوس خرجت للعامل، مش بيقلل المصروف). قيد "راتب
 // أساسي" متسجل في شهر بيحل محل الراتب الافتراضي للشهر ده (نفس
 // calcMonthlySalary بالظبط، ونفس ملخص الشهر في صفحة العضو).
 //
@@ -250,6 +307,7 @@ export const calcSalaryExpense = (allEntries = [], drivers = [], { fromMonth = n
   const lastEntry = new Map();
 
   allEntries.forEach((e) => {
+    if (e.type === SALARY_ENTRY_TYPES.CARRYOVER) return; // الترحيل مش مصروف
     const ym = (e.date || "").slice(0, 7);
     if (YM_RE.test(ym)) {
       if (!firstEntry.has(e.driverId) || ym < firstEntry.get(e.driverId)) firstEntry.set(e.driverId, ym);
@@ -280,7 +338,7 @@ export const calcSalaryExpense = (allEntries = [], drivers = [], { fromMonth = n
     // شهر كان فيه العضو موقوف: القيود المتسجلة بتتحسب زي ما هي، بس من غير
     // ما نفترض راتب أساسي افتراضي للشهر ده.
     const due = !YM_RE.test(yearMonth) || !driver || isMemberDueInMonth(driver, yearMonth, lastEntry.get(driverId) || null);
-    total += calcMonthlySalary(entries, due ? getSalaryForMonth(driver, yearMonth) : 0).net;
+    total += calcMonthlySalary(entries, due ? getSalaryForMonth(driver, yearMonth) : 0).expense;
   });
   return total;
 };

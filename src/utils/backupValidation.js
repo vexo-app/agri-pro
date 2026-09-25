@@ -57,7 +57,7 @@ const fieldRules = {
   },
   salaryEntries: {
     amount: money,
-    type: enumOf("base", "bonus", "deduction", "advance", "advance_repay"),
+    type: enumOf("base", "bonus", "deduction", "penalty", "carryover", "advance", "advance_repay"),
     driverId: shortString, reason: shortString, date: validDate, notes: longString, paid: boolean,
   },
   attendance: {

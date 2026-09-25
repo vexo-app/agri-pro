@@ -182,7 +182,7 @@ describe("dashboard pipeline: job creation -> payment -> debt/profit", () => {
     // No BASE entry for d1 this month — only a deduction. calcMonthlySalary
     // must fall back to the driver's configured `salary` (3000) as the base.
     const salaryEntries = [
-      { driverId: "d1", type: SALARY_ENTRY_TYPES.DEDUCTION, amount: 200, date: "2026-02-05" },
+      { driverId: "d1", type: SALARY_ENTRY_TYPES.PENALTY, amount: 200, date: "2026-02-05" },
     ];
 
     const result = computeDashboardTotals({
@@ -190,7 +190,7 @@ describe("dashboard pipeline: job creation -> payment -> debt/profit", () => {
       supplierInvoices: [], supplierPayments: [], fuelPrice: 15,
     });
 
-    // base(3000, from the driver fallback) + bonuses(0) - deductions(200) = 2800
+    // base(3000, from the driver fallback) + bonuses(0) - penalties(200) = 2800
     expect(result.totalSalaries).toBe(2800);
     expect(result.netProfit).toBe(5000 - 2800);
 

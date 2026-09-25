@@ -25,10 +25,22 @@ describe("calcSalaryExpense — full accrual", () => {
     expect(calcSalaryExpense(entries, [d], { toMonth: "2026-08" })).toBe(2500);
   });
 
-  test("deductions reduce the month", () => {
+  test("penalties (جزاء) reduce the month", () => {
+    const d = { id: "d1", salary: 3000, createdAt: ts(2026, 8) };
+    const entries = [{ driverId: "d1", type: "penalty", amount: 400, date: "2026-08-05" }];
+    expect(calcSalaryExpense(entries, [d], { toMonth: "2026-08" })).toBe(2600);
+  });
+
+  test("deductions (خصم = فلوس خرجت للعامل) do NOT reduce the month", () => {
     const d = { id: "d1", salary: 3000, createdAt: ts(2026, 8) };
     const entries = [{ driverId: "d1", type: "deduction", amount: 400, date: "2026-08-05" }];
-    expect(calcSalaryExpense(entries, [d], { toMonth: "2026-08" })).toBe(2600);
+    expect(calcSalaryExpense(entries, [d], { toMonth: "2026-08" })).toBe(3000);
+  });
+
+  test("carryover entries never touch the expense", () => {
+    const d = { id: "d1", salary: 3000, createdAt: ts(2026, 8) };
+    const entries = [{ driverId: "d1", type: "carryover", amount: 900, date: "2026-08-01" }];
+    expect(calcSalaryExpense(entries, [d], { toMonth: "2026-08" })).toBe(3000);
   });
 
   test("nothing before the member was added", () => {

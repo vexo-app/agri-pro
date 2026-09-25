@@ -86,13 +86,16 @@ const DriversPage = () => {
       )
       .reduce((s, e) => s + (Number(e.amount) || 0), 0);
 
+    // الخصم والجزاء الاتنين بيقللوا اللي هيتصرف للعامل، والخصم المرحّل من
+    // الشهر اللي فات كمان (نفس صافي صفحة العضو: getMonthSummary).
     const deductionsThisMonth = salaryEntries
       .filter((e) =>
-        e.type === SALARY_ENTRY_TYPES.DEDUCTION &&
+        (e.type === SALARY_ENTRY_TYPES.DEDUCTION || e.type === SALARY_ENTRY_TYPES.PENALTY) &&
         tabMemberIds.has(e.driverId) &&
         (e.date || "").startsWith(currentMonth)
       )
-      .reduce((s, e) => s + (Number(e.amount) || 0), 0);
+      .reduce((s, e) => s + (Number(e.amount) || 0), 0)
+      + tabReport.reduce((s, d) => s + (getMonthSummary(d.id, currentMonth).carriedDeduction || 0), 0);
 
     const due = Math.max(0, baseDue + bonusesThisMonth - deductionsThisMonth);
 
@@ -111,7 +114,7 @@ const DriversPage = () => {
     // بيتعرض في كارت "إجمالي رواتب الشهر المستحقة" عشان يفضل رقم ثابت كل شهر
     // (المالك المفروض يدفع كام). "المتبقي" لسه محسوب من due زي ما هو.
     return { baseDue, due, paid, remaining, deductionsThisMonth };
-  }, [tabReport, tabMemberIds, salaryEntries, currentMonth]);
+  }, [tabReport, tabMemberIds, salaryEntries, currentMonth, getMonthSummary]);
 
   const visibleDrivers = useMemo(() => {
     const q = search.trim().toLowerCase();

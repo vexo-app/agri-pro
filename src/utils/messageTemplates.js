@@ -20,7 +20,7 @@ const signature = (companyName) => (companyName ? `\n\n${SEP}\n${companyName}` :
 const entryLines = (entries, type) =>
   (entries || [])
     .filter((e) => e.type === type)
-    .map((e) => `• ${formatDayMonth(e.date)} — ${e.reason || e.notes || (type === "deduction" ? "خصم" : "حافز")}: *${formatCurrency(e.amount)}*`)
+    .map((e) => `• ${formatDayMonth(e.date)} — ${e.reason || e.notes || (type === "deduction" ? "خصم" : type === "penalty" ? "جزاء" : "حافز")}: *${formatCurrency(e.amount)}*`)
     .join("\n");
 
 // ─── قوالب العامل ────────────────────────────────────────────────────────
@@ -33,8 +33,11 @@ const entryLines = (entries, type) =>
  */
 export const buildDriverStatementText = ({ driverName, summary, yearMonth, isPaid, companyName }) => {
   const { base, bonuses, deductions, net, entries } = summary;
+  const penalties = Number(summary.penalties) || 0;
+  const carried = Number(summary.carriedDeduction) || 0;
   const bonusLines = entryLines(entries, "bonus");
   const deductionLines = entryLines(entries, "deduction");
+  const penaltyLines = entryLines(entries, "penalty");
 
   let text = `*كشف حساب — ${driverName}*\nالفترة: ${monthLabel(yearMonth)}\n\nالراتب الأساسي: *${formatCurrency(base)}*`;
 
@@ -43,6 +46,12 @@ export const buildDriverStatementText = ({ driverName, summary, yearMonth, isPai
   }
   if (deductionLines) {
     text += `\n\nالخصومات:\n${deductionLines}\nإجمالي الخصومات: *${formatCurrency(deductions)}*`;
+  }
+  if (penaltyLines) {
+    text += `\n\nالجزاءات:\n${penaltyLines}\nإجمالي الجزاءات: *${formatCurrency(penalties)}*`;
+  }
+  if (carried > 0) {
+    text += `\n\nخصم مرحّل من الشهر اللي فات: *${formatCurrency(carried)}*`;
   }
 
   text += `\n\nالصافي المستحق: *${formatCurrency(net)}*\n${isPaid ? "✅ تم الصرف" : "⚠️ لسه ماتصرفش"}`;

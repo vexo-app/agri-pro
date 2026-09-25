@@ -11,19 +11,29 @@
 export const SALARY_ENTRY_TYPES = {
   BASE:      "base",       // الراتب الأساسي
   BONUS:     "bonus",      // حافز / زيادة
-  DEDUCTION: "deduction",  // خصم
+  DEDUCTION: "deduction",  // خصم — فلوس خرجت للعامل فعلًا (سحب/إيجار...): بتقلل الباقي له، مش مصروف الشركة
+  PENALTY:   "penalty",    // جزاء — العامل ما خدش الفلوس دي: بتقلل الباقي له وبتقلل مصروف المرتبات
+  CARRYOVER: "carryover",  // تعديل يدوي لمبلغ "خصم مرحّل من الشهر اللي فات" (لو مش موجود بيتحسب تلقائي)
 };
+
+// سالب أي شهر من الشهر ده وبعده بيترحّل خصم على الشهر اللي بعده. الشهور
+// اللي قبله ما بيترحّلش منها حاجة (قرار المالك: الترحيل للجاي بس).
+export const SALARY_CARRYOVER_START_MONTH = "2026-09";
 
 export const SALARY_ENTRY_LABELS = {
   base:           "راتب أساسي",
   bonus:          "حافز / مكافأة",
   deduction:      "خصم",
+  penalty:        "جزاء",
+  carryover:      "خصم مرحّل من الشهر اللي فات",
 };
 
 export const SALARY_ENTRY_COLORS = {
   base:           "text-green-400",
   bonus:          "text-blue-400",
   deduction:      "text-red-400",
+  penalty:        "text-orange-400",
+  carryover:      "text-purple-400",
 };
 
 export const DEDUCTION_REASONS = [
