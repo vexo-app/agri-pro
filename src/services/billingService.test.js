@@ -1,3 +1,5 @@
+// jest.mock() calls must precede the imports they mock (babel-jest hoists them).
+/* eslint-disable import/first */
 jest.mock("firebase/firestore", () => ({
   doc: jest.fn((...parts) => parts.slice(1).join("/")), getDoc: jest.fn(), getDocs: jest.fn(), setDoc: jest.fn(),
   addDoc: jest.fn(), updateDoc: jest.fn(), collection: jest.fn(), query: jest.fn(),

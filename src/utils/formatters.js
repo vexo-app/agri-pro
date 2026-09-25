@@ -112,12 +112,6 @@ export const formatPercent = (value, decimals = 1) =>
   `${Number(value || 0).toFixed(decimals)}%`;
 
 /**
- * Tailwind color class based on profit sign.
- */
-export const profitColor = (value) =>
-  Number(value) >= 0 ? "text-green-400" : "text-red-400";
-
-/**
  * Add thousand separators as the user types.
  * Strips all non-digit characters, formats with commas.
  * Returns the raw numeric string for storage.

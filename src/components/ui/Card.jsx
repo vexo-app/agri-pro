@@ -178,10 +178,6 @@ export const EmptyState = ({ icon, title, description, action }) => {
   );
 };
 
-export const Divider = ({ className }) => (
-  <hr className={clsx("border-0 border-t border-white/8", className)} />
-);
-
 export const SummaryRow = ({ label, value, valueColor = "text-gray-200", bold = false, sensitive = false, change, changeInvert = false }) => {
   const { isPrivate } = usePrivacy();
   const hidden = sensitive && isPrivate;

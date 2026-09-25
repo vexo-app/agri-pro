@@ -31,7 +31,6 @@ const salaryEntries = arr("salaryEntries"), attendance = arr("attendance");
 const custody = arr("custodyTransactions").length ? arr("custodyTransactions") : arr("custody");
 const taxes = arr("taxDeductions");
 const fuelPrice = d.settings?.fuelPrice;
-const EPS = 0.005;
 const num = (v) => (Number.isFinite(Number(v)) ? Number(v) : 0);
 
 const ids = (xs) => xs.map((x) => x.id ?? "(no-id)");
@@ -53,15 +52,11 @@ add("FIN2_legacyAmountPaidWithPayments", legacyRows.map((r) => ({ id: r.jobId })
 add("FIN2_reviewSameAmountInstalment", legacyRows.filter((r) => r.sameAmountInstalment).map((r) => ({ id: r.jobId })));
 add("legacyAmountPaidOnly_info", jobs.filter((j) => num(j.amountPaid) > 0 && !payByJob.has(j.id)));
 
-// 2/3. overpayments (FIN-4)
-const clientOver = jobs.filter((j) => calc.getJobPaidAmount(j, payments) - calc.calcRevenue(j.acres, j.pricePerAcre) > EPS);
-add("FIN4_clientOverpaidJobs", clientOver, {
-  excessTotal: clientOver.reduce((s, j) => s + calc.getJobPaidAmount(j, payments) - calc.calcRevenue(j.acres, j.pricePerAcre), 0),
-});
-const supOver = invoices.filter((i) => calc.getInvoicePaidAmount(i, supPays) - num(i.amount) > EPS);
-add("FIN4_supplierOverpaidInvoices", supOver, {
-  excessTotal: supOver.reduce((s, i) => s + calc.getInvoicePaidAmount(i, supPays) - num(i.amount), 0),
-});
+// 2/3. overpayments (FIN-4) — same central functions the app uses
+const jobOver = calc.aggregateJobOverpayments(jobs, payments);
+add("FIN4_clientOverpaidJobs", jobOver.items, { excessTotal: jobOver.totalOverpaid });
+const supOver = calc.aggregateSupplierOverpayments(invoices, supPays);
+add("FIN4_supplierOverpaidInvoices", supOver.items, { excessTotal: supOver.totalOverpaid });
 
 // 4. partial but remaining < 0.01 (FIN-1)
 add("FIN1_partialWithTinyRemaining", jobs.filter((j) => {

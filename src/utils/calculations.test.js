@@ -9,7 +9,6 @@ import {
   calcRevenue,
   calcFuelCost,
   calcJobNetProfit,
-  calcJobProfit,
   calcRemainingAmount,
   getJobPaidAmount,
   derivePaymentStatus,
@@ -78,9 +77,6 @@ describe("calcJobNetProfit", () => {
     expect(calcJobNetProfit(10, 150, 20, 12)).toBe(1260);
   });
 
-  test("calcJobProfit is an alias of calcJobNetProfit", () => {
-    expect(calcJobProfit).toBe(calcJobNetProfit);
-  });
 });
 
 // ─── Remaining amount ───────────────────────────────────────────────────────

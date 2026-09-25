@@ -145,12 +145,6 @@ export const calcTotalSalariesPaid = (allEntries, drivers = [], options = {}) =>
 };
 
 /**
- * Absence deduction per day based on base salary and working days.
- */
-export const calcDailyRate = (monthlySalary, workingDaysPerMonth = 26) =>
-  monthlySalary / workingDaysPerMonth;
-
-/**
  * Attendance summary for a driver in a month.
  */
 export const calcAttendanceSummary = (attendanceRecords, driverId, yearMonth) => {

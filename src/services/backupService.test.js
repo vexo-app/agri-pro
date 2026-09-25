@@ -1,3 +1,5 @@
+// jest.mock() calls must precede the imports they mock (babel-jest hoists them).
+/* eslint-disable import/first */
 const mockGetDocs = jest.fn();
 const mockSetDoc = jest.fn();
 const mockBatchCommit = jest.fn();

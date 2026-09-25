@@ -50,9 +50,6 @@ export const calcJobNetProfit = (acres, pricePerAcre, fuelUsed, fuelPrice, maint
   return revenue - fuelCost - (safeNum(maintCostShare));
 };
 
-// kept for backward-compat with existing callers
-export const calcJobProfit = calcJobNetProfit;
-
 // ─── Payment helpers ──────────────────────────────────────────────────────────
 
 /**

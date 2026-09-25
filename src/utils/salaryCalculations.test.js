@@ -3,7 +3,6 @@ import {
   calcMonthlySalary,
   getMonthEntries,
   calcTotalSalariesPaid,
-  calcDailyRate,
   calcAttendanceSummary,
   getSalaryForMonth,
   buildSalaryHistory,
@@ -283,18 +282,6 @@ describe("calcTotalSalariesPaid", () => {
       assumeDueForMonth: "2026-09",
     });
     expect(sharedTotal).toBe(5500);
-  });
-});
-
-// ─── calcDailyRate ────────────────────────────────────────────────────────────
-
-describe("calcDailyRate", () => {
-  test("divides monthly salary by working days (default 26)", () => {
-    expect(calcDailyRate(2600)).toBe(100);
-  });
-
-  test("respects a custom working-days count", () => {
-    expect(calcDailyRate(3000, 30)).toBe(100);
   });
 });
 

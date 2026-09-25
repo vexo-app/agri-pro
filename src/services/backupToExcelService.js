@@ -12,6 +12,10 @@
 // ─────────────────────────────────────────────────────────
 
 import * as XLSX from "xlsx";
+import {
+  calcRevenue, calcFuelCost, getJobFuelPrice, getJobPaidAmount, calcRemainingAmount,
+  getInvoicePaidAmount, calcSupplierRemaining,
+} from "../utils/calculations";
 
 // ─── Labels (نفس القيم في src/config/constants.js) ─────────────────────────
 
@@ -128,6 +132,9 @@ const convert = (backupData, meta = {}) => {
   const attendance = arr(data.attendance);
   const contacts = arr(data.contacts);
   const custody = arr(data.custodyTransactions || data.custody);
+  const supplierInvoices = arr(data.supplierInvoices);
+  const supplierPayments = arr(data.supplierPayments);
+  const taxDeductions = arr(data.taxDeductions);
   const settings = data.settings || {};
 
   // ── خرائط بحث سريعة (id → اسم) ─────────────────────────────────────────
@@ -145,21 +152,16 @@ const convert = (backupData, meta = {}) => {
 
   const jobById = (id) => jobs.find((j) => j.id === id) || null;
 
-  // ── دفعات كل عملية، عشان نحسب "المدفوع فعليًا" من مصدر الحقيقة
-  //    (شيت الدفعات) بدل ما نعتمد على حقل قديم على العملية نفسها ───────
-  const paidByJobId = {};
-  payments.forEach((p) => {
-    if (!p.jobId) return;
-    paidByJobId[p.jobId] = (paidByJobId[p.jobId] || 0) + num(p.amount);
-  });
 
   // ═══════════════════════ 1) شيت العمليات ═══════════════════════════════
+  // Step 5: نفس دوال البرنامج بالظبط (كانت نسخة موازية: بتتجاهل المدفوع
+  // القديم على العملية، والمتبقي كان بيطلع بالسالب لو فيه دفع زيادة).
   const fuelPrice = num(settings.fuelPrice) || 12;
   const jobRows = jobs.map((j) => {
-    const revenue = num(j.acres) * num(j.pricePerAcre);
-    const fuelCost = num(j.fuelUsed) * (num(j.fuelPriceAtJob) || fuelPrice);
-    const paidActual = paidByJobId[j.id] || 0;
-    const remaining = revenue - paidActual;
+    const revenue = calcRevenue(j.acres, j.pricePerAcre);
+    const fuelCost = calcFuelCost(j.fuelUsed, getJobFuelPrice(j, fuelPrice));
+    const paidActual = getJobPaidAmount(j, payments);
+    const remaining = calcRemainingAmount(revenue, paidActual);
     return {
       "التاريخ": formatDate(j.date),
       "العميل / الأرض": orDash(j.client),
@@ -322,7 +324,7 @@ const convert = (backupData, meta = {}) => {
   // ═══════════════════════ 0) شيت الملخص (بيتحط أول شيت) ══════════════════
   const totalRevenue = jobRows.reduce((sum, r) => sum + r["الإيراد (ج.م)"], 0);
   const totalPaid = jobRows.reduce((sum, r) => sum + r["إجمالي المدفوع فعليًا (ج.م)"], 0);
-  const totalRemaining = totalRevenue - totalPaid;
+  const totalRemaining = jobRows.reduce((sum, r) => sum + r["المتبقي (ج.م)"], 0);
   const totalMaintenanceCost = maintenanceRows.reduce((sum, r) => sum + r["التكلفة (ج.م)"], 0);
   const totalFuelCost = jobRows.reduce((sum, r) => sum + r["تكلفة الوقود (ج.م)"], 0)
     + fuelEntryRows.reduce((sum, r) => sum + r["الإجمالي (ج.م)"], 0);
@@ -368,6 +370,38 @@ const convert = (backupData, meta = {}) => {
   addSheet(attendanceRows, "الحضور");
   addSheet(contactRows, "جهات الاتصال");
   addSheet(custodyRows, "العهدة");
+  // Step 5: الأرشيف المالي كان ناقصه الموردين والضرائب (موجودين في النسخة).
+  const supplierInvoiceRows = supplierInvoices.map((inv) => {
+    const paid = getInvoicePaidAmount(inv, supplierPayments);
+    return {
+      "التاريخ": formatDate(inv.date),
+      "المورد": orDash(inv.supplierName),
+      "البيان": orDash(inv.description),
+      "قيمة الفاتورة (ج.م)": num(inv.amount),
+      "المدفوع (ج.م)": paid,
+      "المتبقي (ج.م)": calcSupplierRemaining(inv.amount, paid),
+      "ملاحظات": orDash(inv.notes),
+      "معرف": inv.id,
+    };
+  });
+  const supplierPaymentRows = supplierPayments.map((p) => ({
+    "التاريخ": formatDate(p.date),
+    "المورد": orDash(supplierInvoices.find((i) => i.id === p.supplierInvoiceId)?.supplierName),
+    "المبلغ (ج.م)": num(p.amount),
+    "ملاحظات": orDash(p.notes),
+    "معرف الفاتورة": orDash(p.supplierInvoiceId),
+    "معرف": p.id,
+  }));
+  const taxRows = taxDeductions.map((t) => ({
+    "التاريخ": formatDate(t.date),
+    "النوع": orDash(t.type),
+    "المبلغ (ج.م)": num(t.amount),
+    "ملاحظات": orDash(t.notes),
+    "معرف": t.id,
+  }));
+  addSheet(supplierInvoiceRows, "فواتير الموردين");
+  addSheet(supplierPaymentRows, "دفعات الموردين");
+  addSheet(taxRows, "الضرائب والخصومات");
   addSheet(settingsRows, "الإعدادات");
 
   return wb;

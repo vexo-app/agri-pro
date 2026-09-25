@@ -83,7 +83,6 @@ export const ExpandIcon = (p) => <Icon {...p} d={[
   "M3 16v3a2 2 0 002 2h3",
 ]} />;
 
-export const FilterIcon = (p) => <Icon {...p} d="M22 3H2l8 9.46V19l4 2v-8.54L22 3z" />;
 
 export const ClearIcon = (p) => <Icon {...p} d={[
   "M20 5H9l-7 7 7 7h11a2 2 0 002-2V7a2 2 0 00-2-2z",
