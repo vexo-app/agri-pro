@@ -98,7 +98,7 @@ const buildCustodyReportHtml = ({
       <td>${desc}${linkedName ? ` · ${escapeHtml(linkedName)}` : ""}</td>
       <td>${escapeHtml(t.notes) || "—"}</td>
       <td style="color:#991b1b;font-weight:700">
-        - ${formatCurrency(t.amount)}
+        ${formatCurrency(t.amount)}
       </td>
     </tr>`;
   }).join("");
@@ -119,8 +119,11 @@ const buildCustodyReportHtml = ({
   ].filter(Boolean).join(" · ");
 
   const html = `
-    <style>${INVOICE_CSS}</style>
-    <div class="page inv-page">
+    <style>${INVOICE_CSS}
+      /* تقرير العهدة بس: خط فاصل أوضح بين كل بند والتاني */
+      .custody-report td { border-bottom:1.5px solid #6b7280; }
+    </style>
+    <div class="page inv-page custody-report">
       <div class="inv-watermark">معتمد</div>
 
       <div class="inv-header">
