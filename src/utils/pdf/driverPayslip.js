@@ -32,6 +32,9 @@ const buildDriverPayslipHtml = ({ driver, month, summary, entries, attendance })
     </tr>`;
   }).join("");
 
+  // الغياب الصريح بس (نص اليوم والتأخير مش بيتحسبوا)
+  const absentDays = attendance.filter((r) => r.status === "absent").length;
+
   const attendRows = attendance.map((r) => {
     const labels = { present:"حضر", absent:"غياب", late:"تأخير", half:"نصف يوم" };
     const colors  = { present:"#15803d", absent:"#991b1b", late:"#92400e", half:"#1d4ed8" };
@@ -84,6 +87,10 @@ const buildDriverPayslipHtml = ({ driver, month, summary, entries, attendance })
         <table>
           <thead><tr><th>التاريخ</th><th>الحالة</th><th>ملاحظات</th></tr></thead>
           <tbody>${attendRows}</tbody>
+          <tr class="total-row">
+            <td colspan="2">إجمالي أيام الغياب</td>
+            <td style="color:#991b1b">${absentDays} يوم</td>
+          </tr>
         </table>
       </div>` : ""}
 
