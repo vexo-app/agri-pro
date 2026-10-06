@@ -1,5 +1,6 @@
 // src/pages/DriverDetailPage.jsx
 import React, { useState, useMemo } from "react";
+import { useMarkReturnTarget } from "../utils/returnHighlight";
 import { useParams, useNavigate } from "react-router-dom";
 import { useSalary }       from "../hooks/useSalary";
 import { useDrivers }      from "../hooks/useDrivers";
@@ -49,6 +50,7 @@ const ATTENDANCE_COLORS = {
 // ── DriverDetailPage ──────────────────────────────────────────────────────────
 const DriverDetailPage = () => {
   const { driverId }  = useParams();
+  useMarkReturnTarget("driver", driverId);
   const navigate      = useNavigate();
   const { report }    = useDrivers();
   const {

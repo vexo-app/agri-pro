@@ -106,3 +106,10 @@
 
 /* الأرقام المالية بعرض ثابت للأرقام عشان الأعمدة تتصف تحت بعض. */
 .tabular-nums { font-variant-numeric: tabular-nums; }
+
+/* هايلايت الرجوع لعنصر (utils/returnHighlight.js) */
+.return-highlight {
+  border-radius: 1rem;
+  box-shadow: 0 0 0 3px rgba(74, 222, 128, 0.85), 0 0 18px rgba(74, 222, 128, 0.35);
+  transition: box-shadow 0.3s ease;
+}

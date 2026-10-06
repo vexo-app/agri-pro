@@ -1,5 +1,6 @@
 // src/pages/DriversPage.jsx
 import React, { useState, useMemo } from "react";
+import { useReturnHighlight, highlightItem, returnAttr, sortByName } from "../utils/returnHighlight";
 import { useNavigate } from "react-router-dom";
 import toast from "react-hot-toast";
 import { useDrivers }     from "../hooks/useDrivers";
@@ -118,12 +119,16 @@ const DriversPage = () => {
 
   const visibleDrivers = useMemo(() => {
     const q = search.trim().toLowerCase();
-    return tabReport.filter((d) => {
+    const list = tabReport.filter((d) => {
       if (!showInactive && d.status === DRIVER_STATUS.INACTIVE) return false;
       if (!q) return true;
       return d.name?.toLowerCase().includes(q) || d.phone?.toLowerCase().includes(q);
     });
+    // النشطين أبجدي، وغير النشطين برا الترتيب في الآخر زي ما هما
+    const active = sortByName(list.filter((d) => d.status !== DRIVER_STATUS.INACTIVE));
+    return [...active, ...list.filter((d) => d.status === DRIVER_STATUS.INACTIVE)];
   }, [tabReport, search, showInactive]);
+  useReturnHighlight("driver", !loading);
 
   const handleSaveDriver = async (data) => {
     if (modal.mode === "add") {
@@ -131,6 +136,7 @@ const DriversPage = () => {
       trackEvent("team_member_created", { team_role: data.role || activeTab });
     } else {
       await updateDriver(modal.data.id, data);
+      highlightItem("driver", modal.data.id);
       trackEvent("team_member_updated", { team_role: data.role || activeTab });
     }
     setModal(null);
@@ -304,14 +310,15 @@ const DriversPage = () => {
       ) : (
         <div className="space-y-3">
           {visibleDrivers.map((drv) => (
+            <div key={drv.id} {...returnAttr("driver", drv.id)}>
             <DriverCard
-              key={drv.id}
               driver={drv}
               onEdit={() => setModal({ mode:"edit", data:drv })}
               onDelete={() => handleDeleteDriver(drv)}
               onPaySalary={(d) => setPayTarget(d)}
               onCancelPaySalary={(d) => setCancelTarget(d)}
             />
+            </div>
           ))}
         </div>
       )}

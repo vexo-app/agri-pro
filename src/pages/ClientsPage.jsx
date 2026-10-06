@@ -1,5 +1,6 @@
 // src/pages/ClientsPage.jsx
 import React, { useState } from "react";
+import { useReturnHighlight, highlightItem, returnAttr, sortByName } from "../utils/returnHighlight";
 import { useClients }    from "../hooks/useClients";
 import { useJobs }       from "../hooks/useJobs";
 import { useData }       from "../contexts/DataContext";
@@ -20,11 +21,13 @@ const ClientsPage = () => {
   const [search,   setSearch]   = useState("");
   const [payModal, setPayModal] = useState(null);
 
+  useReturnHighlight("client", !loading);
+
   if (loading) return <LoadingScreen />;
 
-  const filtered     = clients.filter((c) =>
+  const filtered     = sortByName(clients.filter((c) =>
     c.client.toLowerCase().includes(search.toLowerCase())
-  );
+  ), (c) => c.client);
   const totalRevenue = clients.reduce((s, c) => s + c.totalRevenue, 0);
   const totalPaid    = clients.reduce((s, c) => s + c.totalPaid,    0);
 
@@ -34,7 +37,7 @@ const ClientsPage = () => {
       .sort((a, b) => b.date.localeCompare(a.date));
     if (!unpaidJobs.length) return;
     const job = unpaidJobs[0];
-    setPayModal({ job, jobRevenue: job.revenue, alreadyPaid: job.amountPaid || 0 });
+    setPayModal({ job, jobRevenue: job.revenue, alreadyPaid: job.amountPaid || 0, clientName });
   };
 
   // يسجّل دفعة كسجل مستقل في payments collection (نفس المصدر اللي
@@ -47,6 +50,7 @@ const ClientsPage = () => {
       date:   data.date,
       notes:  data.notes,
     });
+    highlightItem("client", payModal.clientName);
     setPayModal(null);
   };
 
@@ -91,8 +95,10 @@ const ClientsPage = () => {
       ) : (
         <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-4">
           {filtered.map((c) => (
-            <ClientCard key={c.client} client={c}
+            <div key={c.client} {...returnAttr("client", c.client)}>
+            <ClientCard client={c}
               onQuickPayment={() => handleQuickPayment(c.client)}/>
+            </div>
           ))}
         </div>
       )}

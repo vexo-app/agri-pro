@@ -1,5 +1,6 @@
 // src/pages/SupplierDetailPage.jsx
 import React, { useState } from "react";
+import { useMarkReturnTarget } from "../utils/returnHighlight";
 import { useParams, useNavigate } from "react-router-dom";
 import { useSuppliers }  from "../hooks/useSuppliers";
 import { useData }       from "../contexts/DataContext";
@@ -22,6 +23,7 @@ import {
 
 const SupplierDetailPage = () => {
   const { supplierName }  = useParams();
+  useMarkReturnTarget("supplier", supplierName);
   const navigate           = useNavigate();
   const decodedName        = decodeURIComponent(supplierName);
   const { getSupplierSummary, loading } = useSuppliers();

@@ -1,5 +1,6 @@
 // src/pages/SuppliersPage.jsx
 import React, { useState } from "react";
+import { useReturnHighlight, highlightItem, returnAttr, sortByName } from "../utils/returnHighlight";
 import { useSuppliers }    from "../hooks/useSuppliers";
 import { useData }         from "../contexts/DataContext";
 import SupplierCard        from "../features/suppliers/SupplierCard";
@@ -21,11 +22,13 @@ const SuppliersPage = () => {
   const [invoiceModal, setInvoiceModal] = useState(false);
   const [payModal,    setPayModal]    = useState(null);
 
+  useReturnHighlight("supplier", !loading);
+
   if (loading) return <LoadingScreen />;
 
-  const filtered      = suppliers.filter((s) =>
+  const filtered      = sortByName(suppliers.filter((s) =>
     s.supplierName.toLowerCase().includes(search.toLowerCase())
-  );
+  ), (s) => s.supplierName);
   const totalInvoiced = suppliers.reduce((s, sup) => s + sup.totalInvoiced, 0);
   const totalPaidOut  = suppliers.reduce((s, sup) => s + sup.totalPaidOut,  0);
 
@@ -85,8 +88,10 @@ const SuppliersPage = () => {
       ) : (
         <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-4">
           {filtered.map((s) => (
-            <SupplierCard key={s.supplierName} supplier={s}
+            <div key={s.supplierName} {...returnAttr("supplier", s.supplierName)}>
+            <SupplierCard supplier={s}
               onQuickPayment={() => handleQuickPayment(s.supplierName)}/>
+            </div>
           ))}
         </div>
       )}
@@ -106,7 +111,7 @@ const SuppliersPage = () => {
         {payModal && (
           <SupplierPaymentQuickPay
             supplierName={payModal.supplierName}
-            onSave={addSupplierPayment}
+            onSave={async (d) => { const r = await addSupplierPayment(d); highlightItem("supplier", payModal.supplierName); return r; }}
             onClose={() => setPayModal(null)}
           />
         )}

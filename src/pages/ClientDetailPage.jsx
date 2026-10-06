@@ -1,5 +1,6 @@
 // src/pages/ClientDetailPage.jsx
 import React, { useState } from "react";
+import { useMarkReturnTarget } from "../utils/returnHighlight";
 import { useParams, useNavigate } from "react-router-dom";
 import { useClients }    from "../hooks/useClients";
 import { useData }       from "../contexts/DataContext";
@@ -15,6 +16,7 @@ import { AcreIcon, CalendarIcon, TractorIcon, PlusIcon } from "../components/ui/
 
 const ClientDetailPage = () => {
   const { clientName }  = useParams();
+  useMarkReturnTarget("client", clientName);
   const navigate        = useNavigate();
   const decodedName     = decodeURIComponent(clientName);
   const { getClientSummary, loading } = useClients();

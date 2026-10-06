@@ -1,5 +1,6 @@
 // src/pages/EquipmentDetailPage.jsx
 import React, { useState } from "react";
+import { useMarkReturnTarget } from "../utils/returnHighlight";
 import { useParams, useNavigate } from "react-router-dom";
 import { useEquipmentDetail } from "../hooks/useEquipmentDetail";
 import { useData }            from "../contexts/DataContext";
@@ -35,6 +36,7 @@ const PrintSVG = () => (
 
 const EquipmentDetailPage = () => {
   const { equipmentId } = useParams();
+  useMarkReturnTarget("equipment", equipmentId);
   const navigate        = useNavigate();
   const { drivers, equipment: allEquipment, updateEquipment, addEquipmentFuelEntry, deleteEquipmentFuelEntry, addMaintenance, deleteMaintenance } = useData();
   const {

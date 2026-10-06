@@ -1,5 +1,6 @@
 // src/features/maintenance/MaintenanceGroupCard.jsx
 import React, { useState } from "react";
+import { returnAttr } from "../../utils/returnHighlight";
 import { Card } from "../../components/ui/Card";
 import Button from "../../components/ui/Button";
 import { EditIcon, TrashIcon, CalendarIcon, WrenchIcon, EQUIP_TYPE_ICON_MAP } from "../../components/ui/Icons";
@@ -30,7 +31,7 @@ const MaintenanceGroupCard = ({ group, onEdit, onDelete }) => {
 
       {open && <div className="divide-y divide-white/8">
         {records.map((record) => (
-          <div key={record.id} className="flex items-center gap-3 px-5 py-3.5">
+          <div key={record.id} {...returnAttr("maintenance", record.id)} className="flex items-center gap-3 px-5 py-3.5">
             <div className="w-7 h-7 rounded-lg bg-surface-2 flex items-center justify-center flex-shrink-0">
               <WrenchIcon size={13} className="text-gray-400" />
             </div>

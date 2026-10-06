@@ -1,5 +1,6 @@
 // src/pages/MaintenancePage.jsx
 import React, { useState } from "react";
+import { highlightItem, sortByName } from "../utils/returnHighlight";
 import { useMaintenance }       from "../hooks/useMaintenance";
 import { useData }              from "../contexts/DataContext";
 import { useConfirm }           from "../hooks/useConfirm";
@@ -47,6 +48,7 @@ const MaintenancePage = () => {
         return;
       }
       await updateMaintenance(record.id, formData);
+      highlightItem("maintenance", record.id);
       // تغيير التاريخ يتنقل لسجل الغيار كمان.
       const link = formData.date ? findLinkedOilEntry(record) : null;
       if (link && link.entry.date !== formData.date) {
@@ -101,7 +103,7 @@ const MaintenancePage = () => {
         />
       ) : (
         <div className="space-y-4">
-          {byEquipment.map((group) => (
+          {sortByName(byEquipment, (g) => g.equipment?.name).map((group) => (
             <MaintenanceGroupCard key={group.equipment.id} group={group}
               onEdit={openEdit} onDelete={handleDelete} />
           ))}

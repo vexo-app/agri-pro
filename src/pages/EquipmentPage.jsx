@@ -1,5 +1,6 @@
 // src/pages/EquipmentPage.jsx
 import React, { useMemo } from "react";
+import { useReturnHighlight, highlightItem, returnAttr, sortByName } from "../utils/returnHighlight";
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import toast from "react-hot-toast";
@@ -45,13 +46,14 @@ const EquipmentPage = () => {
   const [blockedDeleteTarget, setBlockedDeleteTarget] = useState(null);
 
   const baseList = useMemo(
-    () => report.filter((eq) => (eq.category || EQUIPMENT_CATEGORY.BASE) === EQUIPMENT_CATEGORY.BASE),
+    () => sortByName(report.filter((eq) => (eq.category || EQUIPMENT_CATEGORY.BASE) === EQUIPMENT_CATEGORY.BASE)),
     [report]
   );
   const attachmentList = useMemo(
-    () => report.filter((eq) => eq.category === EQUIPMENT_CATEGORY.ATTACHMENT),
+    () => sortByName(report.filter((eq) => eq.category === EQUIPMENT_CATEGORY.ATTACHMENT)),
     [report]
   );
+  useReturnHighlight("equipment", !loading);
 
   const getDriver = (driverId) => driverReport.find((d) => d.id === driverId);
   const getParent = (parentId) => report.find((eq) => eq.id === parentId);
@@ -73,6 +75,7 @@ const EquipmentPage = () => {
       trackEvent("equipment_created", { equipment_category: formData.category || EQUIPMENT_CATEGORY.BASE });
     } else {
       await updateEquipment(modal.data.id, formData);
+      highlightItem("equipment", modal.data.id);
       trackEvent("equipment_updated", { equipment_category: formData.category || EQUIPMENT_CATEGORY.BASE });
     }
     setModal(null);
@@ -153,12 +156,12 @@ const EquipmentPage = () => {
           ) : (
             <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-4 mb-8">
               {baseList.map((eq) => (
-                <EquipmentCard key={eq.id} equipment={eq}
+                <div key={eq.id} {...returnAttr("equipment", eq.id)}><EquipmentCard equipment={eq}
                   driver={getDriver(eq.driverId)}
                   onEdit={()       => setModal({ mode:"edit", data:eq })}
                   onDelete={()     => handleDelete(eq.id)}
                   onQuickJob={()   => setModal({ mode:"quickJob", equipmentId:eq.id, driverId:eq.driverId })}
-                />
+                /></div>
               ))}
             </div>
           )}
@@ -180,13 +183,13 @@ const EquipmentPage = () => {
           ) : (
             <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-4">
               {attachmentList.map((eq) => (
-                <EquipmentCard key={eq.id} equipment={eq}
+                <div key={eq.id} {...returnAttr("equipment", eq.id)}><EquipmentCard equipment={eq}
                   driver={getDriver(eq.driverId)}
                   parent={getParent(eq.parentEquipmentId)}
                   onEdit={()       => setModal({ mode:"edit", data:eq })}
                   onDelete={()     => handleDelete(eq.id)}
                   onQuickJob={()   => setModal({ mode:"quickJob", equipmentId:eq.id, driverId:eq.driverId })}
-                />
+                /></div>
               ))}
             </div>
           )}
