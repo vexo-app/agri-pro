@@ -8,7 +8,7 @@ import { formatPercent } from "../../utils/formatters";
 
 export const Card = ({ children, className, hover = false, ...props }) => (
   <div className={clsx(
-    "bg-surface border border-white/8 rounded-2xl",
+    "sage-card bg-surface border border-white/8 rounded-2xl",
     hover && "transition-colors duration-150 hover:border-white/20",
     className
   )} {...props}>{children}</div>
@@ -120,15 +120,15 @@ export const StatCard = ({ icon, label, value, color = "green", sensitive = fals
   return (
     <div className={clsx(
       // Step 4: شكل ثابت وبسيط — من غير حركة hover ولا تدرّج لوني.
-      "relative bg-surface border rounded-2xl p-5 overflow-hidden flex flex-col items-center text-center gap-3",
+      "sage-stat-card relative bg-surface border rounded-2xl p-5 overflow-hidden flex flex-col items-center text-center gap-3",
       accent.border
     )}>
       {/* Top accent bar (solid) */}
-      <div className={clsx("absolute top-0 inset-x-0 h-0.5", accent.bar)} />
+      <div className={clsx("sage-stat-accent absolute top-0 inset-x-0 h-0.5", accent.bar)} />
 
       {/* Icon with glow bg */}
       <div className={clsx(
-        "w-12 h-12 rounded-2xl flex items-center justify-center flex-shrink-0",
+        "sage-stat-icon w-12 h-12 rounded-2xl flex items-center justify-center flex-shrink-0",
         accent.glow
       )}>
         <div className={accent.icon}>
@@ -138,14 +138,14 @@ export const StatCard = ({ icon, label, value, color = "green", sensitive = fals
 
       {/* Value */}
       <div
-        className={clsx("text-2xl font-extrabold tabular-nums leading-tight transition-[filter] duration-300", accent.value)}
+        className={clsx("sage-stat-value text-2xl font-extrabold tabular-nums leading-tight transition-[filter] duration-300", accent.value)}
         style={{ filter: hidden ? "blur(9px)" : "none", userSelect: hidden ? "none" : "auto" }}
       >
         {value}
       </div>
 
       {/* Label */}
-      <div className="text-xs text-gray-400 font-semibold">{label}</div>
+      <div className="sage-stat-label text-xs text-gray-400 font-semibold">{label}</div>
 
       {/* Change vs. last month */}
       <ChangeBadge change={change} invert={changeInvert}/>
@@ -182,7 +182,7 @@ export const SummaryRow = ({ label, value, valueColor = "text-gray-200", bold = 
   const { isPrivate } = usePrivacy();
   const hidden = sensitive && isPrivate;
   return (
-    <div className="flex items-center justify-between py-2.5 border-b border-white/8 last:border-0">
+    <div className="sage-summary-row flex items-center justify-between py-2.5 border-b border-white/8 last:border-0">
       <span className="text-sm text-gray-400">{label}</span>
       <span className="flex items-center gap-2">
         <span

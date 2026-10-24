@@ -34,7 +34,7 @@ const Modal = ({ open, onClose, title, size = "md", children }) => {
   // كلها بغض النظر عن أي hover/transform في أي عنصر أب.
   return createPortal((
     <div
-      className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4 bg-black/80 backdrop-blur-sm"
+      className="sage-theme sage-modal-backdrop fixed inset-0 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4 bg-black/80 backdrop-blur-sm"
       onClick={(e) => e.target === e.currentTarget && onClose()}
       role="presentation"
     >

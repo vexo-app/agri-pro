@@ -174,7 +174,7 @@ const Sidebar = ({ onClose, collapsed = false, onToggleCollapse }) => {
 
   return (
     <aside className={clsx(
-      "relative flex flex-col h-full bg-surface border-l border-white/8 select-none transition-[width] duration-200",
+      "sage-sidebar relative flex flex-col h-full bg-surface border-l border-white/8 select-none transition-[width] duration-200",
       collapsed ? "w-20" : "w-64"
     )}>
 
@@ -193,7 +193,7 @@ const Sidebar = ({ onClose, collapsed = false, onToggleCollapse }) => {
       {/* Brand — صورة معدات حقيقية كخلفية بدل التدرج الشفاف البسيط، عشان
           تدي إحساس "منتج SaaS متخصص" بدل خلفية عامة. */}
       <div className={clsx(
-        "relative overflow-hidden border-b border-white/8",
+        "sage-sidebar-brand relative overflow-hidden border-b border-white/8",
         collapsed ? "px-2 py-5" : "px-5 py-6"
       )}>
         <img

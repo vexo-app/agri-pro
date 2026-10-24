@@ -29,7 +29,7 @@ const TopBar = ({ onMenuToggle }) => {
   }
 
   return (
-    <header className="sticky top-0 z-30 bg-dark/90 backdrop-blur-md border-b border-white/8 px-4 py-3 flex items-center gap-3 lg:px-6">
+    <header className="sage-topbar sticky top-0 z-30 bg-dark/90 backdrop-blur-md border-b border-white/8 px-4 py-3 flex items-center gap-3 lg:px-6">
 
       {/* Hamburger */}
       <button onClick={onMenuToggle}

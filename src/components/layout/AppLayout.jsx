@@ -1,4 +1,5 @@
 // src/components/layout/AppLayout.jsx
+import "../../styles/sage-theme.css";
 import React, { useState, useEffect } from "react";
 import { Outlet, useLocation } from "react-router-dom";
 import Sidebar      from "./Sidebar";
@@ -45,7 +46,7 @@ const AppLayout = () => {
   }, []);
 
   return (
-    <div className="flex h-screen bg-dark overflow-hidden font-arabic" dir="rtl">
+    <div className="sage-theme sage-app flex h-screen bg-dark overflow-hidden font-arabic" dir="rtl">
 
       {/* Offline / Install banner */}
       <OfflineBanner />

@@ -29,16 +29,16 @@ import { enrichJob } from "../utils/calculations";
 import { shortNum, createAngledNameTick } from "../components/charts/chartHelpers";
 
 // ── Color palettes ────────────────────────────────────────────────────────
-const AREA_GREEN   = "#22c55e";
-const PIE_COLORS   = ["#22c55e","#f59e0b","#3b82f6","#8b5cf6","#f97316","#06b6d4"];
-const BAR_COLORS   = ["#f59e0b","#d97706","#b45309","#92400e","#78350f"];
+const AREA_GREEN   = "#37634d";
+const PIE_COLORS   = ["#37634d","#9a7848","#668495","#8d7b96","#ad7756","#5d9691"];
+const BAR_COLORS   = ["#9a7848","#6c8d76","#87a18d","#a3b6a7","#bdcbbf"];
 
 // ── Shared tooltip style ──────────────────────────────────────────────────
 const tooltipStyle = {
-  background:"rgba(13,21,38,0.97)",
-  border:"1px solid rgba(255,255,255,0.1)",
+  background:"#ffffff",
+  border:"1px solid #dfe6de",
   borderRadius:14, direction:"rtl",
-  boxShadow:"0 8px 32px rgba(0,0,0,0.6)",
+  boxShadow:"0 8px 24px rgba(32,58,46,0.10)",
 };
 
 // ── Custom X-axis tick: shows a shortened name (to fit the chart width),
@@ -51,7 +51,7 @@ const AreaTooltip = ({ active, payload, label }) => {
   if (!active || !payload?.length) return null;
   return (
     <div style={{ ...tooltipStyle, padding:"12px 16px", minWidth:150 }}>
-      <p style={{ fontSize:11, color:"#6b7280", marginBottom:6 }}>{formatDateShort(label)}</p>
+      <p style={{ fontSize:11, color:"#657268", marginBottom:6 }}>{formatDateShort(label)}</p>
       <p style={{ fontSize:14, fontWeight:700, color:AREA_GREEN }}>
         {formatCurrency(payload[0]?.value)}
       </p>
@@ -64,12 +64,12 @@ const BarTooltip = ({ active, payload, label }) => {
   if (!active || !payload?.length) return null;
   return (
     <div style={{ ...tooltipStyle, padding:"12px 16px", minWidth:160 }}>
-      <p style={{ fontSize:11, color:"#6b7280", marginBottom:8 }}>{label}</p>
+      <p style={{ fontSize:11, color:"#657268", marginBottom:8 }}>{label}</p>
       {payload.map((p) => (
         <div key={p.dataKey} style={{ display:"flex", alignItems:"center", gap:8 }}>
           <div style={{ width:8, height:8, borderRadius:"50%", background:p.fill, flexShrink:0 }}/>
-          <span style={{ fontSize:12, color:"#9ca3af", flex:1 }}>{p.name}</span>
-          <span style={{ fontSize:13, fontWeight:700, color:"#f0f4f8" }}>{formatCurrency(p.value)}</span>
+          <span style={{ fontSize:12, color:"#657268", flex:1 }}>{p.name}</span>
+          <span style={{ fontSize:13, fontWeight:700, color:"#203a2e" }}>{formatCurrency(p.value)}</span>
         </div>
       ))}
     </div>
@@ -115,7 +115,7 @@ const DashboardPage = () => {
   }));
 
   return (
-    <div className="p-4 lg:p-6 space-y-6 max-w-7xl mx-auto" dir="rtl">
+    <div className="sage-dashboard p-4 lg:p-6 space-y-6 max-w-7xl mx-auto" dir="rtl">
 
       {/* ── Privacy toggle ───────────────────────────────────── */}
       <PrivacyToggle />
@@ -261,7 +261,7 @@ const DashboardPage = () => {
       </div>
 
       {/* ── Area chart + Financial summary ─────────────────── */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+      <div className="sage-financial-grid grid grid-cols-1 lg:grid-cols-3 gap-4">
 
         {/* Area chart — last 7 days */}
         {totalRevenue === 0 ? (
@@ -292,15 +292,15 @@ const DashboardPage = () => {
                         <stop offset="100%" stopColor={AREA_GREEN} stopOpacity={0}/>
                       </linearGradient>
                     </defs>
-                    <CartesianGrid vertical={false} stroke="rgba(255,255,255,0.05)"/>
+                    <CartesianGrid vertical={false} stroke="#e6ebe4"/>
                     <XAxis
                       dataKey="date"
-                      tick={{ fontSize:10, fill:"#6b7280" }}
+                      tick={{ fontSize:10, fill:"#657268" }}
                       axisLine={false} tickLine={false}
                       tickFormatter={formatDateShort}
                     />
                     <YAxis
-                      tick={{ fontSize:10, fill:"#4b5563" }}
+                      tick={{ fontSize:10, fill:"#657268" }}
                       axisLine={false} tickLine={false}
                       tickFormatter={shortNum}
                     />
@@ -323,7 +323,7 @@ const DashboardPage = () => {
         )}
 
         {/* Financial summary */}
-        <Card>
+        <Card className="sage-financial-summary">
           <CardHeader title="الملخص المالي"/>
           <CardBody>
             <SummaryRow label="إجمالي الإيراد"  value={formatCurrency(totalRevenue)}         valueColor="text-amber-400" sensitive/>
@@ -440,8 +440,8 @@ const DashboardPage = () => {
                       <Tooltip
                         formatter={(v) => [`${formatNumber(v)} فدان`, "أفدنة"]}
                         contentStyle={tooltipStyle}
-                        labelStyle={{ color:"#9ca3af", fontSize:11 }}
-                        itemStyle={{ color:"#f0f4f8", fontSize:12 }}
+                        labelStyle={{ color:"#657268", fontSize:11 }}
+                        itemStyle={{ color:"#203a2e", fontSize:12 }}
                       />
                     </PieChart>
                   </ResponsiveContainer>
@@ -494,7 +494,7 @@ const DashboardPage = () => {
                           </linearGradient>
                         ))}
                       </defs>
-                      <CartesianGrid vertical={false} stroke="rgba(255,255,255,0.05)"/>
+                      <CartesianGrid vertical={false} stroke="#e6ebe4"/>
                       <XAxis
                         dataKey="name"
                         tick={<AngledNameTick />}
@@ -502,12 +502,12 @@ const DashboardPage = () => {
                         interval={0}
                       />
                       <YAxis
-                        tick={{ fontSize:10, fill:"#4b5563" }}
+                        tick={{ fontSize:10, fill:"#657268" }}
                         axisLine={false} tickLine={false}
                         tickFormatter={shortNum}
                       />
                       <Tooltip content={<BarTooltip/>}
-                        cursor={{ fill:"rgba(255,255,255,0.04)", radius:6 }}/>
+                        cursor={{ fill:"rgba(55,99,77,0.05)", radius:6 }}/>
                       <Bar dataKey="revenue" name="الإيراد" radius={[8,8,0,0]} maxBarSize={52}>
                         {barData.map((_, i) => (
                           <Cell key={i} fill={`url(#dashBar${i})`}/>
@@ -515,7 +515,7 @@ const DashboardPage = () => {
                         <LabelList
                           dataKey="revenue"
                           position="top"
-                          style={{ fill:"#9ca3af", fontSize:9 }}
+                          style={{ fill:"#657268", fontSize:9 }}
                           formatter={shortNum}
                         />
                       </Bar>

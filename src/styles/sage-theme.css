@@ -1,0 +1,332 @@
+/* Sage: presentation only. Existing data, permissions, privacy and actions stay intact. */
+.sage-theme {
+  --sage-bg: #f3f5f1;
+  --sage-ink: #203a2e;
+  --sage-muted: #657268;
+  --sage-line: #dfe6de;
+  --sage-primary: #37634d;
+  background: var(--sage-bg);
+  color: var(--sage-ink);
+  color-scheme: light;
+  font-family: Cairo, "Segoe UI", Tahoma, sans-serif;
+  accent-color: var(--sage-primary);
+}
+.sage-app { height: 100dvh; }
+.sage-theme ::selection { background: #dce8d8; color: #203a2e; }
+.sage-theme ::-webkit-scrollbar-track { background: #f3f5f1; }
+.sage-theme ::-webkit-scrollbar-thumb { background: #cad5c9; border-radius: 8px; }
+.sage-theme :focus-visible { outline: 2px solid #37634d; outline-offset: 3px; }
+.sage-theme input, .sage-theme select, .sage-theme textarea { color-scheme: light; }
+.sage-theme select option { background: #fff; color: #203a2e; }
+.sage-theme input::placeholder, .sage-theme textarea::placeholder { color: #758174; opacity: 1; }
+.sage-theme .font-extrabold { font-weight: 700; }
+.sage-theme .rounded-2xl { border-radius: 14px; }
+.sage-theme .sage-card { box-shadow: 0 2px 5px #203a2e03; }
+.sage-theme .sage-sidebar { background: #fcfdfb; }
+.sage-theme .sage-sidebar.w-64 { width: 240px; }
+.sage-theme .sage-sidebar-brand { padding-top: 22px; padding-bottom: 20px; }
+.sage-theme .sage-sidebar-brand > img[aria-hidden="true"],
+.sage-theme .sage-sidebar-brand > .absolute { display: none; }
+.sage-theme .sage-sidebar-brand .shadow-lg { box-shadow: none; }
+.sage-theme .sage-sidebar-brand p:last-child { font-size: 10px; line-height: 1.8; }
+.sage-theme .sage-sidebar nav a { font-size: 12px; border-radius: 9px; }
+.sage-theme .sage-sidebar nav a[aria-current="page"] { background: #e7eee5; border-color: #dce5d8; box-shadow: none; color: #30573e; }
+.sage-theme .sage-sidebar > button { box-shadow: 0 2px 6px #203a2e0d; }
+.sage-theme .sage-topbar { background: #fcfdfbf5; min-height: 72px; }
+.sage-theme .sage-dashboard { max-width: 1480px; }
+.sage-theme .sage-stat-card {
+  display: grid; grid-template-columns: minmax(0,1fr) auto;
+  align-content: start; align-items: center; justify-items: start;
+  gap: 14px 8px; padding: 20px; text-align: start; border-color: #dfe6de;
+}
+.sage-theme .sage-stat-accent { display: none; }
+.sage-theme .sage-stat-icon { grid-column: 2; grid-row: 1; width: 30px; height: 30px; border-radius: 8px; background: #edf2e9; }
+.sage-theme .sage-stat-icon svg { width: 17px; height: 17px; }
+.sage-theme .sage-stat-icon > div { color: #59735e; }
+.sage-theme .sage-stat-label { grid-column: 1; grid-row: 1; font-size: 11px; line-height: 1.8; }
+.sage-theme .sage-stat-value { grid-column: 1 / -1; grid-row: 2; font-size: clamp(18px,1.65vw,26px); line-height: 1.55; overflow-wrap: anywhere; color: #203a2e; }
+.sage-theme .sage-stat-value.text-red-400 { color: #a44238; }
+.sage-theme .sage-stat-card > span { grid-column: 1 / -1; }
+.sage-theme .sage-summary-row { gap: 16px; align-items: baseline; }
+.sage-theme .sage-summary-row > span:last-child { flex-shrink: 0; }
+.sage-theme .sage-financial-summary { border-top: 3px solid #6f8d71; }
+.sage-theme .sage-financial-summary .sage-summary-row { padding-block: 12px; }
+.sage-theme .sage-financial-summary .sage-summary-row > span:first-child { font-size: 12px; }
+.sage-theme .sage-financial-grid .recharts-responsive-container { min-height: 320px; }
+.sage-theme .recharts-cartesian-axis-tick text,
+.sage-theme .recharts-label-list text { fill: #657268; }
+.sage-theme .recharts-cartesian-grid line { stroke: #e6ebe4; }
+.sage-theme .recharts-tooltip-wrapper > div { background: #fff !important; border-color: #dfe6de !important; box-shadow: 0 8px 24px #203a2e1a !important; }
+.sage-theme .recharts-tooltip-wrapper p,
+.sage-theme .recharts-tooltip-wrapper span,
+.sage-theme .recharts-tooltip-item { color: #203a2e !important; }
+.sage-modal-backdrop { background: #14291f66; }
+.sage-theme [class~="bg-black/90"] { background: #14291f80; }
+.sage-theme [class~="hover:text-white"]:hover:not([class~="bg-brand-600"]):not([class~="bg-brand-700"]) { color: #203a2e; }
+@media (min-width: 1024px) {
+  .sage-theme .sage-dashboard { padding: 28px; }
+  .sage-theme .sage-financial-grid { grid-template-columns: minmax(0,1.3fr) minmax(340px,1fr); }
+  .sage-theme .sage-financial-grid > [class~="lg:col-span-2"] { grid-column: span 1; }
+}
+@media (max-width: 639px) {
+  .sage-theme .sage-stat-card { padding: 14px; gap: 10px 4px; }
+  .sage-theme .sage-stat-label { font-size: 10px; }
+  .sage-theme .sage-stat-value { font-size: 18px; }
+  .sage-theme .sage-stat-icon { width: 26px; height: 26px; }
+  .sage-theme .sage-topbar { min-height: 62px; }
+  .sage-theme .sage-summary-row { gap: 10px; }
+  .sage-theme .sage-dashboard > [class~="lg:grid-cols-5"] > .sage-stat-card:last-child { grid-column: 1 / -1; }
+}
+
+/* Light equivalents of the application's existing color utilities. */
+
+.sage-theme [class~="bg-amber-500"],
+.sage-theme [class~="bg-amber-600"],
+.sage-theme [class~="hover:bg-amber-500"]:hover { background-color: #855b22; }
+
+.sage-theme [class~="bg-amber-500/10"],
+.sage-theme [class~="bg-amber-900/20"],
+.sage-theme [class~="bg-amber-900/30"],
+.sage-theme [class~="bg-amber-900/40"],
+.sage-theme [class~="bg-amber-950/40"],
+.sage-theme [class~="hover:bg-amber-900/30"]:hover,
+.sage-theme [class~="hover:bg-amber-900/40"]:hover { background-color: #f7f0e3; }
+
+.sage-theme [class~="bg-blue-500"],
+.sage-theme [class~="bg-blue-600"],
+.sage-theme [class~="bg-sky-600"],
+.sage-theme [class~="hover:bg-blue-500"]:hover { background-color: #476a80; }
+
+.sage-theme [class~="bg-blue-500/10"],
+.sage-theme [class~="bg-blue-900/15"],
+.sage-theme [class~="bg-blue-900/20"],
+.sage-theme [class~="bg-blue-900/30"],
+.sage-theme [class~="bg-blue-900/40"] { background-color: #edf2f5; }
+
+.sage-theme [class~="bg-brand-400"],
+.sage-theme [class~="bg-brand-500"],
+.sage-theme [class~="bg-brand-600"],
+.sage-theme [class~="bg-brand-700"],
+.sage-theme [class~="bg-emerald-600"],
+.sage-theme [class~="bg-green-500"],
+.sage-theme [class~="bg-green-600"],
+.sage-theme [class~="hover:bg-brand-500"]:hover,
+.sage-theme [class~="hover:bg-brand-600"]:hover,
+.sage-theme [class~="hover:bg-green-600"]:hover { background-color: #37634d; }
+
+.sage-theme [class~="bg-brand-500/10"],
+.sage-theme [class~="bg-brand-900/10"],
+.sage-theme [class~="bg-brand-900/15"],
+.sage-theme [class~="bg-brand-900/20"],
+.sage-theme [class~="bg-brand-900/25"],
+.sage-theme [class~="bg-brand-900/30"],
+.sage-theme [class~="bg-brand-900/40"],
+.sage-theme [class~="hover:bg-brand-900/30"]:hover,
+.sage-theme [class~="hover:bg-brand-900/40"]:hover,
+.sage-theme [class~="hover:bg-brand-900/50"]:hover { background-color: #e7eee5; }
+
+.sage-theme [class~="bg-dark"],
+.sage-theme [class~="bg-dark/45"],
+.sage-theme [class~="bg-dark/85"],
+.sage-theme [class~="bg-dark/90"] { background-color: #f3f5f1; }
+
+.sage-theme [class~="bg-gray-800"],
+.sage-theme [class~="bg-gray-800/60"],
+.sage-theme [class~="hover:bg-gray-100"]:hover { background-color: #edf2e9; }
+
+.sage-theme [class~="bg-green-500/10"],
+.sage-theme [class~="bg-green-700/80"],
+.sage-theme [class~="bg-green-900/10"],
+.sage-theme [class~="bg-green-900/15"],
+.sage-theme [class~="bg-green-900/20"],
+.sage-theme [class~="bg-green-900/30"],
+.sage-theme [class~="bg-green-900/40"] { background-color: #eaf2e7; }
+
+.sage-theme [class~="bg-orange-500"],
+.sage-theme [class~="bg-orange-600"] { background-color: #975e32; }
+
+.sage-theme [class~="bg-orange-500/10"],
+.sage-theme [class~="bg-orange-900/20"],
+.sage-theme [class~="bg-orange-900/30"],
+.sage-theme [class~="bg-orange-900/40"] { background-color: #f8eee4; }
+
+.sage-theme [class~="bg-purple-500"] { background-color: #776083; }
+
+.sage-theme [class~="bg-purple-500/10"],
+.sage-theme [class~="bg-purple-900/30"],
+.sage-theme [class~="bg-purple-900/40"] { background-color: #f1ecf4; }
+
+.sage-theme [class~="bg-red-500"],
+.sage-theme [class~="bg-red-600"],
+.sage-theme [class~="bg-red-700"],
+.sage-theme [class~="bg-rose-700"],
+.sage-theme [class~="hover:bg-red-600"]:hover { background-color: #a44238; }
+
+.sage-theme [class~="bg-red-500/10"],
+.sage-theme [class~="bg-red-900/20"],
+.sage-theme [class~="bg-red-900/30"],
+.sage-theme [class~="bg-red-900/40"],
+.sage-theme [class~="bg-red-950/20"],
+.sage-theme [class~="bg-red-950/40"],
+.sage-theme [class~="hover:bg-red-900/20"]:hover,
+.sage-theme [class~="hover:bg-red-900/30"]:hover,
+.sage-theme [class~="hover:bg-red-900/40"]:hover,
+.sage-theme [class~="hover:bg-red-900/60"]:hover { background-color: #fbedea; }
+
+.sage-theme [class~="bg-surface"],
+.sage-theme [class~="bg-surface/40"],
+.sage-theme [class~="bg-surface/95"] { background-color: #ffffff; }
+
+.sage-theme [class~="bg-surface-2"],
+.sage-theme [class~="bg-surface-2/50"],
+.sage-theme [class~="hover:bg-surface-2"]:hover { background-color: #f3f6f0; }
+
+.sage-theme [class~="bg-surface-3"],
+.sage-theme [class~="hover:bg-surface-3"]:hover { background-color: #e9efe5; }
+
+.sage-theme [class~="bg-white/10"],
+.sage-theme [class~="bg-white/15"],
+.sage-theme [class~="bg-white/20"],
+.sage-theme [class~="bg-white/5"],
+.sage-theme [class~="hover:bg-white/10"]:hover,
+.sage-theme [class~="hover:bg-white/20"]:hover,
+.sage-theme [class~="hover:bg-white/5"]:hover { background-color: #eef3e9; }
+
+.sage-theme [class~="border-amber-500"] { border-color: #855b22; }
+
+.sage-theme [class~="border-amber-500/20"],
+.sage-theme [class~="border-amber-700"],
+.sage-theme [class~="border-amber-700/40"],
+.sage-theme [class~="border-amber-800/40"],
+.sage-theme [class~="border-amber-800/50"],
+.sage-theme [class~="border-amber-800/60"],
+.sage-theme [class~="hover:border-amber-700/60"]:hover { border-color: #e9dbc1; }
+
+.sage-theme [class~="border-blue-500/20"],
+.sage-theme [class~="border-blue-800/40"],
+.sage-theme [class~="border-blue-800/50"] { border-color: #d5e1e8; }
+
+.sage-theme [class~="border-brand-500"],
+.sage-theme [class~="border-brand-600"],
+.sage-theme [class~="border-green-600"],
+.sage-theme [class~="focus:border-brand-600"]:focus { border-color: #37634d; }
+
+.sage-theme [class~="border-brand-600/60"],
+.sage-theme [class~="border-brand-700"],
+.sage-theme [class~="border-brand-700/40"],
+.sage-theme [class~="border-brand-700/50"],
+.sage-theme [class~="border-brand-800/30"],
+.sage-theme [class~="border-brand-800/40"],
+.sage-theme [class~="border-brand-800/50"],
+.sage-theme [class~="hover:border-brand-500/30"]:hover,
+.sage-theme [class~="hover:border-brand-600/60"]:hover,
+.sage-theme [class~="hover:border-brand-700/50"]:hover { border-color: #d2dfce; }
+
+.sage-theme [class~="border-gray-600"],
+.sage-theme [class~="border-gray-700"],
+.sage-theme [class~="border-white"],
+.sage-theme [class~="border-white/10"],
+.sage-theme [class~="border-white/15"],
+.sage-theme [class~="border-white/18"],
+.sage-theme [class~="border-white/20"],
+.sage-theme [class~="border-white/5"],
+.sage-theme [class~="border-white/8"],
+.sage-theme [class~="divide-white/8"] > :not([hidden]) ~ :not([hidden]),
+.sage-theme [class~="hover:border-white/15"]:hover,
+.sage-theme [class~="hover:border-white/20"]:hover,
+.sage-theme [class~="hover:border-white/30"]:hover { border-color: #dfe6de; }
+
+.sage-theme [class~="border-green-500/20"],
+.sage-theme [class~="border-green-700"],
+.sage-theme [class~="border-green-800/30"],
+.sage-theme [class~="border-green-800/40"],
+.sage-theme [class~="border-green-800/50"] { border-color: #d4e3ce; }
+
+.sage-theme [class~="border-orange-500/20"],
+.sage-theme [class~="border-orange-800/30"],
+.sage-theme [class~="border-orange-800/40"] { border-color: #ead8c5; }
+
+.sage-theme [class~="border-orange-600"] { border-color: #975e32; }
+
+.sage-theme [class~="border-purple-500/20"],
+.sage-theme [class~="border-purple-500/30"],
+.sage-theme [class~="border-purple-800/50"] { border-color: #e0d6e6; }
+
+.sage-theme [class~="border-red-500"],
+.sage-theme [class~="focus:border-red-500"]:focus,
+.sage-theme [class~="focus:border-red-600"]:focus { border-color: #a44238; }
+
+.sage-theme [class~="border-red-500/20"],
+.sage-theme [class~="border-red-700"],
+.sage-theme [class~="border-red-800/30"],
+.sage-theme [class~="border-red-800/40"],
+.sage-theme [class~="border-red-800/50"],
+.sage-theme [class~="border-red-900/40"],
+.sage-theme [class~="border-red-900/60"],
+.sage-theme [class~="hover:border-red-700"]:hover { border-color: #eed3ce; }
+
+.sage-theme [class~="hover:text-amber-400"]:hover,
+.sage-theme [class~="text-amber-200"],
+.sage-theme [class~="text-amber-300"],
+.sage-theme [class~="text-amber-400"],
+.sage-theme [class~="text-amber-500/80"] { color: #855b22; }
+
+.sage-theme [class~="hover:text-blue-300"]:hover,
+.sage-theme [class~="text-blue-300"],
+.sage-theme [class~="text-blue-400"],
+.sage-theme [class~="text-blue-400/60"],
+.sage-theme [class~="text-blue-400/80"],
+.sage-theme [class~="text-sky-400"] { color: #476a80; }
+
+.sage-theme [class~="hover:text-brand-300"]:hover,
+.sage-theme [class~="hover:text-brand-400"]:hover,
+.sage-theme [class~="hover:text-green-400"]:hover,
+.sage-theme [class~="text-brand-300"],
+.sage-theme [class~="text-brand-400"],
+.sage-theme [class~="text-brand-50"],
+.sage-theme [class~="text-brand-500"],
+.sage-theme [class~="text-brand-700"],
+.sage-theme [class~="text-green-300"],
+.sage-theme [class~="text-green-400"],
+.sage-theme [class~="text-green-500"] { color: #37634d; }
+
+.sage-theme [class~="hover:text-gray-100"]:hover,
+.sage-theme [class~="hover:text-gray-200"]:hover,
+.sage-theme [class~="text-gray-100"],
+.sage-theme [class~="text-gray-200"],
+.sage-theme [class~="text-gray-50"] { color: #203a2e; }
+
+.sage-theme [class~="hover:text-gray-300"]:hover,
+.sage-theme [class~="text-gray-300"],
+.sage-theme [class~="text-gray-400"] { color: #445448; }
+
+.sage-theme [class~="hover:text-red-300"]:hover,
+.sage-theme [class~="hover:text-red-400"]:hover,
+.sage-theme [class~="text-red-200"],
+.sage-theme [class~="text-red-300"],
+.sage-theme [class~="text-red-400"],
+.sage-theme [class~="text-red-500"],
+.sage-theme [class~="text-red-500/80"],
+.sage-theme [class~="text-red-700"],
+.sage-theme [class~="text-rose-700"] { color: #a44238; }
+
+.sage-theme [class~="text-gray-500"],
+.sage-theme [class~="text-gray-600"] { color: #657268; }
+
+.sage-theme [class~="text-orange-300"],
+.sage-theme [class~="text-orange-300/90"],
+.sage-theme [class~="text-orange-400"],
+.sage-theme [class~="text-orange-700"] { color: #975e32; }
+
+.sage-theme [class~="text-purple-300"],
+.sage-theme [class~="text-purple-400"] { color: #776083; }
+
+
+.sage-theme .sage-stat-card { border-color: #dfe6de; }
+.sage-theme .sage-stat-value { color: #203a2e; }
+.sage-theme .sage-stat-value.text-red-400 { color: #a44238; }
+.sage-theme .sage-stat-icon { background: #edf2e9; }
+.sage-theme .sage-sidebar { background: #fcfdfb; }
+.sage-theme .sage-topbar { background: #fcfdfbf5; }
+.sage-theme [class~="hover:bg-brand-500"]:hover,
+.sage-theme [class~="hover:bg-brand-600"]:hover { background: #2c523e; }
