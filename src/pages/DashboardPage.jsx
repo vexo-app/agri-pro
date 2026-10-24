@@ -139,12 +139,120 @@ const DashboardPage = () => {
           change={monthlyComparison.netProfit.change}/>
       </div>
 
+      {/* ── Area chart + Financial summary ─────────────────── */}
+      <div className="sage-financial-grid grid grid-cols-1 lg:grid-cols-3 gap-4">
+
+        {/* Financial summary */}
+        <Card className="sage-financial-summary">
+          <CardHeader title="الملخص المالي"/>
+          <CardBody>
+            <SummaryRow label="إجمالي الإيراد"  value={formatCurrency(totalRevenue)}         valueColor="text-amber-400" sensitive/>
+            <SummaryRow label="تكلفة الوقود"    value={formatDeduction(totals.totalFuelCost)} valueColor="text-red-400" sensitive/>
+            <SummaryRow label="تكاليف الصيانة"  value={formatDeduction(totalMaintCost)}  valueColor="text-red-400" sensitive/>
+            <SummaryRow label="مرتبات الفريق (المستحقة)" value={formatDeduction(totalSalaries||0)} valueColor="text-red-400" sensitive/>
+            <SummaryRow label="الواصل للمورد" value={formatDeduction(totalSupplierPaidOut||0)} valueColor="text-red-400" sensitive/>
+            <SummaryRow label="ضرائب وخصومات"   value={formatDeduction(totalTaxDeductions||0)} valueColor="text-red-400" sensitive/>
+            <div className="sage-profit-total border-t border-white/8 mt-2 pt-2">
+              <SummaryRow label="صافي الربح" value={formatProfit(netProfit)}
+                valueColor={netProfit>=0?"text-green-400":"text-red-400"} bold sensitive/>
+            </div>
+            {totalRevenue > 0 && (
+              <div className="mt-4">
+                <div className="flex justify-between mb-1.5">
+                  <span className="text-xs text-gray-500">هامش الربح</span>
+                  <span className="text-xs font-bold text-brand-400">{margin.toFixed(1)}%</span>
+                </div>
+                <div className="h-1.5 bg-surface-2 rounded-full overflow-hidden">
+                  <div className="h-full rounded-full bg-brand-500 transition-all duration-700"
+                    style={{ width:`${Math.min(100,Math.max(0,margin))}%` }}/>
+                </div>
+              </div>
+            )}
+            {bestEquipment && (
+              <div className="mt-4 p-3 bg-brand-900/20 border border-brand-800/40 rounded-xl">
+                <div className="flex items-center gap-1.5 mb-1">
+                  <StarIcon size={12} className="text-brand-400"/>
+                  <p className="text-[10px] font-bold text-brand-400">أفضل معدة أداء</p>
+                </div>
+                <p className="text-sm font-bold text-gray-200">{bestEquipment.name}</p>
+                <p
+                  className="text-xs text-gray-400 mt-0.5 inline-block transition-[filter] duration-300"
+                  style={{ filter: isPrivate ? "blur(5px)" : "none", userSelect: isPrivate ? "none" : "auto" }}
+                >
+                  {formatCurrency(bestEquipment.totalRevenue)} إيراد
+                </p>
+              </div>
+            )}
+          </CardBody>
+        </Card>
+        {/* Area chart — last 7 days */}
+        {totalRevenue === 0 ? (
+          <Card className="sage-revenue-chart lg:col-span-2">
+            <CardHeader title="الإيرادات — آخر 7 أيام"/>
+            <CardBody>
+              <EmptyState
+                icon={<ChartIcon size={48} className="text-gray-600 mx-auto mb-2"/>}
+                title="لا توجد بيانات بعد"
+                description="سجّل أول عملية لتظهر الرسوم البيانية"
+              />
+            </CardBody>
+          </Card>
+        ) : (
+          <ChartCard
+            className="sage-revenue-chart lg:col-span-2"
+            bodyClassName="sage-revenue-body"
+            title="الإيرادات — آخر 7 أيام"
+            height={400}
+            expandedHeight={440}
+          >
+            {(h) => (
+              <Sensitive hint blur={12}>
+                <ResponsiveContainer width="100%" height={h}>
+                  <AreaChart data={dailyRevenue} margin={{ top:12, right:8, left:0, bottom:0 }}>
+                    <defs>
+                      <linearGradient id="dashAreaGrad" x1="0" y1="0" x2="0" y2="1">
+                        <stop offset="0%"   stopColor={AREA_GREEN} stopOpacity={0.35}/>
+                        <stop offset="100%" stopColor={AREA_GREEN} stopOpacity={0}/>
+                      </linearGradient>
+                    </defs>
+                    <CartesianGrid vertical={false} stroke="#e6ebe4"/>
+                    <XAxis
+                      dataKey="date"
+                      tick={{ fontSize:10, fill:"#657268" }}
+                      axisLine={false} tickLine={false}
+                      tickFormatter={formatDateShort}
+                    />
+                    <YAxis
+                      tick={{ fontSize:10, fill:"#657268" }}
+                      axisLine={false} tickLine={false}
+                      tickFormatter={shortNum}
+                    />
+                    <Tooltip content={<AreaTooltip/>}/>
+                    <Area
+                      type="monotone"
+                      dataKey="revenue"
+                      name="الإيراد"
+                      stroke={AREA_GREEN}
+                      strokeWidth={2.5}
+                      fill="url(#dashAreaGrad)"
+                      dot={{ r:3, fill:AREA_GREEN, strokeWidth:0 }}
+                      activeDot={{ r:5, fill:AREA_GREEN, strokeWidth:0 }}
+                    />
+                  </AreaChart>
+                </ResponsiveContainer>
+              </Sensitive>
+            )}
+          </ChartCard>
+        )}
+
+      </div>
+
       {/* ── Alert strips + Important alerts — same 2/3 · 1/3 split as the
           chart/summary row below, so the strips no longer stretch full
           page width. ─────────────────────────────────────────────────── */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+      <div className="sage-alerts-grid grid grid-cols-1 lg:grid-cols-3 gap-4">
 
-        <div className="lg:col-span-2 space-y-3">
+        <div className="sage-balance-alerts lg:col-span-2 space-y-3">
           {/* ── Debt alert ─────────────────────────────────── */}
           {totalDebt > 0 && (
             <div
@@ -255,113 +363,6 @@ const DashboardPage = () => {
                   </div>
                 </div>
               ))
-            )}
-          </CardBody>
-        </Card>
-      </div>
-
-      {/* ── Area chart + Financial summary ─────────────────── */}
-      <div className="sage-financial-grid grid grid-cols-1 lg:grid-cols-3 gap-4">
-
-        {/* Area chart — last 7 days */}
-        {totalRevenue === 0 ? (
-          <Card className="lg:col-span-2">
-            <CardHeader title="الإيرادات — آخر 7 أيام"/>
-            <CardBody>
-              <EmptyState
-                icon={<ChartIcon size={48} className="text-gray-600 mx-auto mb-2"/>}
-                title="لا توجد بيانات بعد"
-                description="سجّل أول عملية لتظهر الرسوم البيانية"
-              />
-            </CardBody>
-          </Card>
-        ) : (
-          <ChartCard
-            className="lg:col-span-2"
-            title="الإيرادات — آخر 7 أيام"
-            height={200}
-            expandedHeight={440}
-          >
-            {(h) => (
-              <Sensitive hint blur={12}>
-                <ResponsiveContainer width="100%" height={h}>
-                  <AreaChart data={dailyRevenue} margin={{ top:12, right:8, left:0, bottom:0 }}>
-                    <defs>
-                      <linearGradient id="dashAreaGrad" x1="0" y1="0" x2="0" y2="1">
-                        <stop offset="0%"   stopColor={AREA_GREEN} stopOpacity={0.35}/>
-                        <stop offset="100%" stopColor={AREA_GREEN} stopOpacity={0}/>
-                      </linearGradient>
-                    </defs>
-                    <CartesianGrid vertical={false} stroke="#e6ebe4"/>
-                    <XAxis
-                      dataKey="date"
-                      tick={{ fontSize:10, fill:"#657268" }}
-                      axisLine={false} tickLine={false}
-                      tickFormatter={formatDateShort}
-                    />
-                    <YAxis
-                      tick={{ fontSize:10, fill:"#657268" }}
-                      axisLine={false} tickLine={false}
-                      tickFormatter={shortNum}
-                    />
-                    <Tooltip content={<AreaTooltip/>}/>
-                    <Area
-                      type="monotone"
-                      dataKey="revenue"
-                      name="الإيراد"
-                      stroke={AREA_GREEN}
-                      strokeWidth={2.5}
-                      fill="url(#dashAreaGrad)"
-                      dot={{ r:3, fill:AREA_GREEN, strokeWidth:0 }}
-                      activeDot={{ r:5, fill:AREA_GREEN, strokeWidth:0 }}
-                    />
-                  </AreaChart>
-                </ResponsiveContainer>
-              </Sensitive>
-            )}
-          </ChartCard>
-        )}
-
-        {/* Financial summary */}
-        <Card className="sage-financial-summary">
-          <CardHeader title="الملخص المالي"/>
-          <CardBody>
-            <SummaryRow label="إجمالي الإيراد"  value={formatCurrency(totalRevenue)}         valueColor="text-amber-400" sensitive/>
-            <SummaryRow label="تكلفة الوقود"    value={formatDeduction(totals.totalFuelCost)} valueColor="text-red-400" sensitive/>
-            <SummaryRow label="تكاليف الصيانة"  value={formatDeduction(totalMaintCost)}  valueColor="text-red-400" sensitive/>
-            <SummaryRow label="مرتبات الفريق (المستحقة)" value={formatDeduction(totalSalaries||0)} valueColor="text-red-400" sensitive/>
-            <SummaryRow label="الواصل للمورد" value={formatDeduction(totalSupplierPaidOut||0)} valueColor="text-red-400" sensitive/>
-            <SummaryRow label="ضرائب وخصومات"   value={formatDeduction(totalTaxDeductions||0)} valueColor="text-red-400" sensitive/>
-            <div className="border-t border-white/8 mt-2 pt-2">
-              <SummaryRow label="صافي الربح" value={formatProfit(netProfit)}
-                valueColor={netProfit>=0?"text-green-400":"text-red-400"} bold sensitive/>
-            </div>
-            {totalRevenue > 0 && (
-              <div className="mt-4">
-                <div className="flex justify-between mb-1.5">
-                  <span className="text-xs text-gray-500">هامش الربح</span>
-                  <span className="text-xs font-bold text-brand-400">{margin.toFixed(1)}%</span>
-                </div>
-                <div className="h-1.5 bg-surface-2 rounded-full overflow-hidden">
-                  <div className="h-full rounded-full bg-brand-500 transition-all duration-700"
-                    style={{ width:`${Math.min(100,Math.max(0,margin))}%` }}/>
-                </div>
-              </div>
-            )}
-            {bestEquipment && (
-              <div className="mt-4 p-3 bg-brand-900/20 border border-brand-800/40 rounded-xl">
-                <div className="flex items-center gap-1.5 mb-1">
-                  <StarIcon size={12} className="text-brand-400"/>
-                  <p className="text-[10px] font-bold text-brand-400">أفضل معدة أداء</p>
-                </div>
-                <p className="text-sm font-bold text-gray-200">{bestEquipment.name}</p>
-                <p
-                  className="text-xs text-gray-400 mt-0.5 inline-block transition-[filter] duration-300"
-                  style={{ filter: isPrivate ? "blur(5px)" : "none", userSelect: isPrivate ? "none" : "auto" }}
-                >
-                  {formatCurrency(bestEquipment.totalRevenue)} إيراد
-                </p>
-              </div>
             )}
           </CardBody>
         </Card>
