@@ -8,7 +8,7 @@ import { EQUIPMENT_CATEGORY } from "../../config/constants";
 import { escapeHtml, printWindow, downloadReportPdf } from "./core";
 
 const buildEquipmentReportHtml = ({ equipment, jobs, maintenance, fuelEntries = [], fuelPrice, driverName }) => {
-  const today      = new Date().toLocaleDateString("ar-EG");
+  const today      = new Date().toLocaleDateString("ar-EG-u-nu-latn");
   const totalRevenue  = jobs.reduce((s, j) => s + calcRevenue(j.acres, j.pricePerAcre), 0);
   const totalAcres    = jobs.reduce((s, j) => s + (j.acres || 0), 0);
   const totalFuel     = jobs.reduce((s, j) => s + (Number(j.fuelUsed) || 0), 0)

@@ -10,7 +10,7 @@ import { formatCurrency, formatDayMonth, formatDate, todayISO } from "./formatte
 const SEP = "——————";
 
 const monthLabel = (yearMonth) =>
-  new Date(`${yearMonth}-01`).toLocaleDateString("ar-EG", { month: "long", year: "numeric" });
+  new Date(`${yearMonth}-01`).toLocaleDateString("ar-EG-u-nu-latn", { month: "long", year: "numeric" });
 
 const signature = (companyName) => (companyName ? `\n\n${SEP}\n${companyName}` : "");
 

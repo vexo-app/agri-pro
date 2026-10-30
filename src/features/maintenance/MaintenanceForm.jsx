@@ -108,7 +108,7 @@ const MaintenanceForm = ({ initial, equipment, onSave, onClose }) => {
           rules={{
             required: "أدخل التكلفة",
             min: { value: 0, message: "لا يمكن أن يكون سالبًا" },
-            max: { value: MAX_MONEY_VALUE, message: `أكبر من الحد المسموح (${MAX_MONEY_VALUE.toLocaleString()})` },
+            max: { value: MAX_MONEY_VALUE, message: `أكبر من الحد المسموح (${MAX_MONEY_VALUE.toLocaleString("en-US")})` },
           }}
           render={({ field }) => (
             <NumberInput

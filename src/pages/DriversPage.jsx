@@ -394,7 +394,7 @@ const DriversPage = () => {
               <span className="font-bold text-gray-200">{payTarget.name}</span>{" "}
               بمبلغ{" "}
               <span className="font-bold text-green-400">{formatCurrency(payTarget.salary || 0)}</span>{" "}
-              عن شهر {new Date().toLocaleDateString("ar-EG", { month: "long", year: "numeric" })}؟
+              عن شهر {new Date().toLocaleDateString("ar-EG-u-nu-latn", { month: "long", year: "numeric" })}؟
             </p>
             <div className="flex gap-3 justify-end">
               <Button variant="ghost" size="sm" disabled={paying} onClick={() => setPayTarget(null)}>إلغاء</Button>
@@ -420,7 +420,7 @@ const DriversPage = () => {
               <span className="font-bold text-red-400">
                 {formatCurrency(cancelTarget.lastPaidBaseEntry?.amount || 0)}
               </span>{" "}
-              عن شهر {new Date().toLocaleDateString("ar-EG", { month: "long", year: "numeric" })}؟
+              عن شهر {new Date().toLocaleDateString("ar-EG-u-nu-latn", { month: "long", year: "numeric" })}؟
               <br />
               هيترجع الراتب "لسه ما اتصرفش" تاني.
             </p>

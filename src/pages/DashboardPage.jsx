@@ -24,7 +24,7 @@ import {
   TractorIcon, DriverIcon, ClipboardIcon, ChartIcon,
   AlertIcon, StarIcon, WORK_TYPE_ICON_MAP, ChevronLeftIcon,
 } from "../components/ui/Icons";
-import { formatCurrency, formatNumber, formatDateShort, formatProfit, formatNetPosition, formatDeduction } from "../utils/formatters";
+import { formatCurrency, formatNumber, formatDateShort, formatProfit, profitBoxClass, formatNetPosition, formatDeduction } from "../utils/formatters";
 import { enrichJob } from "../utils/calculations";
 import { shortNum, createAngledNameTick } from "../components/charts/chartHelpers";
 
@@ -135,7 +135,7 @@ const DashboardPage = () => {
           change={monthlyComparison.acres.change}/>
         <StatCard icon={<FuelIcon size={26}/>} label="إجمالي الوقود" value={`${formatNumber(totalFuel)} ل`} color="orange" sensitive
           change={monthlyComparison.fuel.change}/>
-        <StatCard icon={<ProfitIcon size={26}/>} label="صافي الربح" value={formatProfit(netProfit)} color={netProfit>=0?"purple":"red"} sensitive
+        <StatCard icon={<ProfitIcon size={26}/>} label="صافي الربح" value={formatProfit(netProfit)} color={netProfit>=0?"profit":"loss"} sensitive
           change={monthlyComparison.netProfit.change}/>
       </div>
 
@@ -152,7 +152,7 @@ const DashboardPage = () => {
             <SummaryRow label="مرتبات الفريق (المستحقة)" value={formatDeduction(totalSalaries||0)} valueColor="text-red-400" sensitive/>
             <SummaryRow label="الواصل للمورد" value={formatDeduction(totalSupplierPaidOut||0)} valueColor="text-red-400" sensitive/>
             <SummaryRow label="ضرائب وخصومات"   value={formatDeduction(totalTaxDeductions||0)} valueColor="text-red-400" sensitive/>
-            <div className="sage-profit-total border-t border-white/8 mt-2 pt-2">
+            <div className={`sage-profit-total mt-3 px-3 py-1 rounded-xl ${profitBoxClass(netProfit)}`}>
               <SummaryRow label="صافي الربح" value={formatProfit(netProfit)}
                 valueColor={netProfit>=0?"text-green-400":"text-red-400"} bold sensitive/>
             </div>

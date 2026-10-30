@@ -103,6 +103,21 @@ const STAT_ACCENTS = {
     glow:   "bg-red-500/10",
     border: "border-red-500/20",
   },
+  // كروت الربح/الخسارة: حدود خضرا للمكسب وحمرا للخسارة (pl-box-* في index.css).
+  profit: {
+    bar:    "bg-green-500",
+    value:  "text-green-400",
+    icon:   "text-green-400",
+    glow:   "bg-green-500/10",
+    border: "pl-box-profit",
+  },
+  loss: {
+    bar:    "bg-red-500",
+    value:  "text-red-400",
+    icon:   "text-red-400",
+    glow:   "bg-red-500/10",
+    border: "pl-box-loss",
+  },
   purple: {
     bar:    "bg-purple-500",
     value:  "text-purple-400",

@@ -12,7 +12,7 @@ const FuelEntryForm = ({ fuelPrice, onSave, onClose }) => {
   const positive = (label) => (value) => {
     const number = Number(value);
     if (!Number.isFinite(number) || number <= 0) return `أدخل ${label} أكبر من صفر`;
-    if (number > MAX_MONEY_VALUE) return `أكبر من الحد المسموح (${MAX_MONEY_VALUE.toLocaleString()})`;
+    if (number > MAX_MONEY_VALUE) return `أكبر من الحد المسموح (${MAX_MONEY_VALUE.toLocaleString("en-US")})`;
     return true;
   };
   const submit = async (data) => {

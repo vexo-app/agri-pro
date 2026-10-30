@@ -8,7 +8,7 @@ import {
   DriverIcon, AcreIcon, FuelIcon,
   WORK_TYPE_ICON_MAP, WrenchIcon,
 } from "../../components/ui/Icons";
-import { formatCurrency, formatNumber, formatDateShort, formatProfit } from "../../utils/formatters";
+import { formatCurrency, formatNumber, formatDateShort, formatProfit, profitBoxClass } from "../../utils/formatters";
 import { calcOverpaidAmount } from "../../utils/calculations";
 import { isStaleDeleteLock } from "../../services/cascadeDeleteService";
 import { printClientInvoice, downloadClientInvoicePdf } from "../../utils/pdfGenerator";
@@ -25,8 +25,8 @@ const PrintSVG = () => (
   </svg>
 );
 
-const FinancialPill = ({ label, value, color }) => (
-  <div className="flex-1 bg-surface-2 rounded-xl p-2 text-center min-w-0">
+const FinancialPill = ({ label, value, color, box = "" }) => (
+  <div className={`flex-1 bg-surface-2 rounded-xl p-2 text-center min-w-0 ${box}`}>
     <p className={`text-sm font-extrabold ${color} tabular-nums truncate`}>{value}</p>
     <p className="text-[10px] text-gray-500 mt-0.5">{label}</p>
   </div>
@@ -140,7 +140,7 @@ const JobCard = ({
       <div className="flex gap-2 mb-2">
         <FinancialPill label="إيراد" value={formatCurrency(revenue)}  color="text-amber-400"/>
         <FinancialPill label="وقود"  value={formatCurrency(fuelCost)} color="text-red-400"/>
-        <FinancialPill label="ربح"   value={formatProfit(profit)}   color={profit>=0?"text-green-400":"text-red-400"}/>
+        <FinancialPill label="ربح"   value={formatProfit(profit)}   color={profit>=0?"text-green-400":"text-red-400"} box={profitBoxClass(profit)}/>
       </div>
 
       {/* Step 3: قفل حذف (deleting:true) — إما حذف شغال دلوقتي من جهاز تاني، أو

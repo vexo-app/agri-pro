@@ -1,7 +1,7 @@
 // src/features/reports/DriverReportCard.jsx
 import React from "react";
 import { Card } from "../../components/ui/Card";
-import { formatCurrency, formatNumber, getInitial, formatProfit } from "../../utils/formatters";
+import { formatCurrency, formatNumber, getInitial, formatProfit, profitBoxClass } from "../../utils/formatters";
 
 const DriverReportCard = ({ report, maxAcres = 1 }) => {
   const { name, phone, salary, totalRevenue, totalAcres, netProfit, ops } = report;
@@ -39,10 +39,10 @@ const DriverReportCard = ({ report, maxAcres = 1 }) => {
           {[
             { label:"أفدنة",    value: formatNumber(totalAcres),  color:"text-blue-400"  },
             { label:"عمليات",   value: ops,                       color:"text-gray-300"  },
-            { label:"ربح التشغيل", value: formatProfit(netProfit), color: isProfit?"text-green-400":"text-red-400" },
+            { label:"ربح التشغيل", value: formatProfit(netProfit), color: isProfit?"text-green-400":"text-red-400", box: profitBoxClass(netProfit) },
             { label:"هامش",     value: `${profitPct.toFixed(0)}%`, color: isProfit?"text-brand-400":"text-red-400" },
           ].map((s) => (
-            <div key={s.label} className="bg-surface-2 rounded-xl p-2.5 text-center">
+            <div key={s.label} className={`bg-surface-2 rounded-xl p-2.5 text-center ${s.box || ""}`}>
               <p className={`text-sm font-extrabold tabular-nums ${s.color}`}>{s.value}</p>
               <p className="text-[10px] text-gray-500 mt-0.5">{s.label}</p>
             </div>

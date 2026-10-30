@@ -12,7 +12,7 @@ import {
   calcSupplierRemaining, getInvoicePaidAmount,
   calcRevenue, calcFuelCost, calcRemainingAmount, derivePaymentStatus, getJobPaidAmount,
 } from "../../utils/calculations";
-import { formatCurrency, formatNumber, formatDateShort, getInitial, formatProfit } from "../../utils/formatters";
+import { formatCurrency, formatNumber, formatDateShort, getInitial, formatProfit, profitBoxClass } from "../../utils/formatters";
 import { GUEST_SECTIONS } from "./guestSectionsConfig";
 import { Card, Badge, ProgressBar, EmptyState } from "../../components/ui/Card";
 import LoadingScreen from "../../components/ui/LoadingScreen";
@@ -121,8 +121,8 @@ const GuestSupplierCard = ({ supplier, delay }) => {
   );
 };
 
-const FinancialPill = ({ label, value, color }) => (
-  <div className="flex-1 bg-surface-2 rounded-xl p-2 text-center min-w-0">
+const FinancialPill = ({ label, value, color, box = "" }) => (
+  <div className={`flex-1 bg-surface-2 rounded-xl p-2 text-center min-w-0 ${box}`}>
     <p className={`text-sm font-extrabold ${color} tabular-nums truncate`}>{value}</p>
     <p className="text-[10px] text-gray-500 mt-0.5">{label}</p>
   </div>
@@ -196,7 +196,7 @@ const GuestJobCard = ({ job, equipmentName, driverName, delay }) => {
       <div className="flex gap-2 mb-2">
         <FinancialPill label="إيراد" value={formatCurrency(revenue)}  color="text-amber-400"/>
         <FinancialPill label="وقود"  value={formatCurrency(fuelCost)} color="text-red-400"/>
-        <FinancialPill label="ربح"   value={formatProfit(profit)}   color={profit>=0?"text-green-400":"text-red-400"}/>
+        <FinancialPill label="ربح"   value={formatProfit(profit)}   color={profit>=0?"text-green-400":"text-red-400"} box={profitBoxClass(profit)}/>
       </div>
 
       {revenue > 0 && (

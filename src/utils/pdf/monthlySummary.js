@@ -8,7 +8,7 @@ import { calcRevenue } from "../calculations";
 import { escapeHtml, downloadReportPdf } from "./core";
 
 const buildMonthlySummaryHtml = ({ jobs, equipment, month, year, allTime = false, financials }) => {
-  const today = new Date().toLocaleDateString("ar-EG");
+  const today = new Date().toLocaleDateString("ar-EG-u-nu-latn");
   // allTime reuses the exact same report layout/calculations below, just
   // without the date filters on jobs/maintenance — so it lines up with the
   // Reports page's own all-time totals instead of one calendar month.
@@ -19,7 +19,7 @@ const buildMonthlySummaryHtml = ({ jobs, equipment, month, year, allTime = false
   // function doesn't filter any of them itself.
   const periodLabel = allTime
     ? "كل الوقت"
-    : new Date(year, month - 1).toLocaleDateString("ar-EG", { month:"long", year:"numeric" });
+    : new Date(year, month - 1).toLocaleDateString("ar-EG-u-nu-latn", { month:"long", year:"numeric" });
   const reportTitle = allTime ? "التقرير الشامل" : "التقرير الشهري";
 
   const prefix = `${year}-${String(month).padStart(2,"0")}`;

@@ -128,7 +128,7 @@ const CustodyTransactionForm = ({ initial, isEdit: isEditProp, drivers, equipmen
             validate: (v) =>
               Number(v) > 0 && Number(v) <= MAX_MONEY_VALUE
                 ? true
-                : Number(v) <= 0 ? "أدخل مبلغ أكبر من صفر" : `أكبر من الحد المسموح (${MAX_MONEY_VALUE.toLocaleString()})`,
+                : Number(v) <= 0 ? "أدخل مبلغ أكبر من صفر" : `أكبر من الحد المسموح (${MAX_MONEY_VALUE.toLocaleString("en-US")})`,
           }}
           render={({ field }) => (
             <NumberInput

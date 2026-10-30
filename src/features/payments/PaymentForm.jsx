@@ -53,7 +53,7 @@ const PaymentForm = ({ jobId, jobRevenue, alreadyPaid, onSave, onClose }) => {
               const num = Number(v);
               if (!(num > 0)) return "يجب أن يكون أكبر من صفر";
               if (num > maxRemaining) return `تم تخطي الحد الأقصى من الدفعة (الحد الأقصى: ${formatCurrency(maxRemaining)})`;
-              if (num > MAX_MONEY_VALUE) return `أكبر من الحد المسموح (${MAX_MONEY_VALUE.toLocaleString()})`;
+              if (num > MAX_MONEY_VALUE) return `أكبر من الحد المسموح (${MAX_MONEY_VALUE.toLocaleString("en-US")})`;
               return true;
             },
           }}

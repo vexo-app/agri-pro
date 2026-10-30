@@ -13,12 +13,12 @@ import Button           from "../components/ui/Button";
 import { EmptyState }   from "../components/ui/Card";
 import LoadingScreen    from "../components/ui/LoadingScreen";
 import { PlusIcon, ClipboardIcon, RevenueIcon, FuelIcon, WrenchIcon, ProfitIcon, AcreIcon } from "../components/ui/Icons";
-import { formatCurrency, formatNumber, formatProfit } from "../utils/formatters";
+import { formatCurrency, formatNumber, formatProfit, profitBoxClass } from "../utils/formatters";
 import { TEAM_ROLE } from "../config/constants";
 import { trackEvent } from "../config/posthog";
 
-const SummaryBadge = ({ Icon, label, value, color }) => (
-  <div className="bg-surface border border-white/8 rounded-2xl px-4 py-3 flex-1 min-w-[120px]">
+const SummaryBadge = ({ Icon, label, value, color, box = "" }) => (
+  <div className={`bg-surface border border-white/8 rounded-2xl px-4 py-3 flex-1 min-w-[120px] ${box}`}>
     <div className="flex items-center gap-2 mb-1">
       {Icon && <Icon size={14} className={color} />}
       <p className={`text-sm font-extrabold tabular-nums ${color}`}>{value}</p>
@@ -85,7 +85,7 @@ const JobsPage = () => {
           <SummaryBadge Icon={RevenueIcon} label="إجمالي الإيراد"  value={formatCurrency(totals.totalRevenue)}   color="text-amber-400" />
           <SummaryBadge Icon={FuelIcon}    label="تكلفة الوقود"    value={formatCurrency(totals.totalFuelCost)}  color="text-red-400" />
           <SummaryBadge Icon={WrenchIcon}  label="تكلفة الصيانة"   value={formatCurrency(totalMaintCost)}        color="text-red-400" />
-          <SummaryBadge Icon={ProfitIcon}  label="ربح التشغيل (قبل الرواتب والمصاريف العامة)" value={formatProfit(netProfit)}             color={netProfit >= 0 ? "text-green-400" : "text-red-400"} />
+          <SummaryBadge Icon={ProfitIcon}  label="ربح التشغيل (قبل الرواتب والمصاريف العامة)" value={formatProfit(netProfit)}             color={netProfit >= 0 ? "text-green-400" : "text-red-400"} box={profitBoxClass(netProfit)} />
           <SummaryBadge Icon={AcreIcon}    label="إجمالي الأفدنة"  value={`${formatNumber(totals.totalAcres)} فدان`} color="text-blue-400" />
         </div>
       )}

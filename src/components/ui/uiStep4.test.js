@@ -13,9 +13,13 @@ import ConfirmDialog from "./ConfirmDialog";
 /* eslint-disable testing-library/no-unnecessary-act */
 window.IS_REACT_ACT_ENVIRONMENT = true;
 
-const nf = (v, o) => new Intl.NumberFormat("ar-EG", o).format(v);
+const nf = (v, o) => new Intl.NumberFormat("en-US", o).format(v);
 
 describe("financial formatting", () => {
+  test("numbers use English digits", () => {
+    expect(formatCurrency(1250000)).toBe("1,250,000 ج.م");
+    expect(formatNumber(1.5)).toBe("1.5");
+  });
   test("currency shows piasters only when present", () => {
     expect(formatCurrency(1000)).toBe(`${nf(1000, { maximumFractionDigits: 0 })} ج.م`);
     expect(formatCurrency(832.5)).toBe(`${nf(832.5, { maximumFractionDigits: 2 })} ج.م`);
@@ -24,8 +28,8 @@ describe("financial formatting", () => {
     expect(formatNumber(2.345, 1)).toBe(nf(2.3, { minimumFractionDigits: 1, maximumFractionDigits: 1 }));
   });
   test("profit/loss is explicit in text, not colour only", () => {
-    expect(formatProfit(500)).toBe(`▲ ${formatCurrency(500)}`);
-    expect(formatProfit(-500)).toBe(`▼ خسارة ${formatCurrency(500)}`);
+    expect(formatProfit(500)).toBe(formatCurrency(500));
+    expect(formatProfit(-500)).toBe(`خسارة ${formatCurrency(500)}`);
     expect(formatProfit(0)).toBe(formatCurrency(0));
     expect(formatNetPosition(300)).toBe(`ليك ${formatCurrency(300)}`);
     expect(formatNetPosition(-300)).toBe(`عليك ${formatCurrency(300)}`);

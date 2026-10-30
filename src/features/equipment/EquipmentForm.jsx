@@ -329,7 +329,7 @@ const EquipmentForm = ({ initial, drivers, baseEquipment = [], onSave, onClose }
             rules={{
               validate: (v) =>
                 !v || (Number(v) >= 0 && Number(v) <= MAX_MONEY_VALUE) ||
-                (Number(v) < 0 ? "لا يمكن أن يكون سالبًا" : `أكبر من الحد المسموح (${MAX_MONEY_VALUE.toLocaleString()})`),
+                (Number(v) < 0 ? "لا يمكن أن يكون سالبًا" : `أكبر من الحد المسموح (${MAX_MONEY_VALUE.toLocaleString("en-US")})`),
             }}
             render={({ field }) => (
               <NumberInput

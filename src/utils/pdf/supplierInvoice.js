@@ -291,7 +291,7 @@ const buildSupplierStatementHtml = ({ supplierName, invoices = [], totalInvoiced
     </div>
   `;
 
-  const today = new Date().toLocaleDateString("ar-EG");
+  const today = new Date().toLocaleDateString("ar-EG-u-nu-latn");
   return {
     html,
     title: `فاتورة عامة - ${supplierName} - ${today}`,

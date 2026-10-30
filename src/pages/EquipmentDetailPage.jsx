@@ -311,7 +311,7 @@ const EquipmentDetailPage = () => {
         <StatCard icon={<AcreIcon size={24}/>}    label="إجمالي الأفدنة" value={formatNumber(stats.totalAcres)}    color="blue"/>
         <StatCard icon={<RevenueIcon size={24}/>} label="إجمالي الإيراد" value={formatCurrency(stats.totalRevenue)} color="amber"/>
         <StatCard icon={<FuelIcon size={24}/>}    label="إجمالي الوقود"  value={`${formatNumber(stats.totalFuel)} ل`} color="orange"/>
-        <StatCard icon={<ProfitIcon size={24}/>}  label="ربح المعدة (قبل المصاريف العامة)" value={formatProfit(netProfit)} color={netProfit>=0?"green":"red"}/>
+        <StatCard icon={<ProfitIcon size={24}/>}  label="ربح المعدة (قبل المصاريف العامة)" value={formatProfit(netProfit)} color={netProfit>=0?"profit":"loss"}/>
       </div>
 
       {/* P&L */}

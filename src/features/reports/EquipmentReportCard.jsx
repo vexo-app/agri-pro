@@ -1,7 +1,7 @@
 // src/features/reports/EquipmentReportCard.jsx
 import React from "react";
 import { Card, Badge, ProgressBar } from "../../components/ui/Card";
-import { formatCurrency, formatNumber, formatProfit } from "../../utils/formatters";
+import { formatCurrency, formatNumber, formatProfit, profitBoxClass } from "../../utils/formatters";
 import { EQUIP_TYPE_ICON_MAP, TractorIcon } from "../../components/ui/Icons";
 
 const EquipmentReportCard = ({ report }) => {
@@ -39,9 +39,9 @@ const EquipmentReportCard = ({ report }) => {
           { label: "إجمالي الوقود",   value: `${formatNumber(totalFuel)} لتر`,     color: "text-gray-300"  },
           { label: "تكلفة الوقود",    value: formatCurrency(totalFuelCost),         color: "text-red-400"   },
           { label: "تكاليف الصيانة",  value: formatCurrency(maintCost),            color: "text-red-400"   },
-          { label: "ربح المعدة (قبل المصاريف العامة)", value: formatProfit(netProfit),            color: isProfit ? "text-green-400" : "text-red-400" },
+          { label: "ربح المعدة (قبل المصاريف العامة)", value: formatProfit(netProfit),            color: isProfit ? "text-green-400" : "text-red-400", box: profitBoxClass(netProfit) },
         ].map((s) => (
-          <div key={s.label} className="bg-surface-2 rounded-xl p-3">
+          <div key={s.label} className={`bg-surface-2 rounded-xl p-3 ${s.box || ""}`}>
             <p className={`text-sm font-extrabold tabular-nums ${s.color}`}>{s.value}</p>
             <p className="text-[10px] text-gray-500 mt-0.5">{s.label}</p>
           </div>

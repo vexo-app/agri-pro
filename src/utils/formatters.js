@@ -6,7 +6,7 @@
  * (1.5 فدان تظهر ١٫٥ مش ٢، و1000 تفضل ١٬٠٠٠) — عرض بس، مفيش أي حساب اتغير.
  */
 export const formatNumber = (value, decimals) =>
-  (Number(value) || 0).toLocaleString("ar-EG", decimals === undefined
+  (Number(value) || 0).toLocaleString("en-US", decimals === undefined
     ? { minimumFractionDigits: 0, maximumFractionDigits: 2 }
     : { minimumFractionDigits: decimals, maximumFractionDigits: decimals });
 
@@ -17,14 +17,18 @@ export const formatCurrency = (value) =>
   `${formatNumber(value)} ج.م`;
 
 /**
- * Step 4: ربح/خسارة من غير الاعتماد على اللون بس — الخسارة مكتوبة صراحة
- * بكلمة "خسارة" وسهم لتحت، والربح بسهم لفوق. القيمة نفسها زي ما هي.
+ * ربح/خسارة: من غير أسهم. الخسارة مكتوبة بكلمة "خسارة" صراحة، والمربع
+ * اللي حوالين الرقم بيتلوّن (أخضر للمكسب / أحمر للخسارة) — شوف pl-box-* في index.css.
  */
 export const formatProfit = (value) => {
   const n = Number(value) || 0;
   if (Math.abs(n) < 0.005) return formatCurrency(0);
-  return n > 0 ? `▲ ${formatCurrency(n)}` : `▼ خسارة ${formatCurrency(Math.abs(n))}`;
+  return n > 0 ? formatCurrency(n) : `خسارة ${formatCurrency(Math.abs(n))}`;
 };
+
+/** كلاس المربع حسب الربح/الخسارة: حدود خضرا للمكسب وحمرا للخسارة. */
+export const profitBoxClass = (value) =>
+  (Number(value) || 0) < 0 ? "pl-box-loss" : "pl-box-profit";
 
 /** بند بيتخصم (تكلفة) — بعلامة "−" صريحة بدل الاعتماد على اللون الأحمر بس. */
 export const formatDeduction = (value) => {
@@ -52,7 +56,7 @@ export const formatDateTime = (value) => {
   if (isDateOnly) return formatDate(value);
   const d = typeof value?.toDate === "function" ? value.toDate() : new Date(value);
   if (isNaN(d.getTime())) return "—";
-  return d.toLocaleString("ar-EG", {
+  return d.toLocaleString("ar-EG-u-nu-latn", {
     year: "numeric", month: "long", day: "numeric",
     hour: "numeric", minute: "2-digit", hour12: true,
   });
@@ -63,7 +67,7 @@ export const formatDateTime = (value) => {
  */
 export const formatDate = (dateStr) => {
   if (!dateStr) return "—";
-  return new Date(dateStr).toLocaleDateString("ar-EG", {
+  return new Date(dateStr).toLocaleDateString("ar-EG-u-nu-latn", {
     year: "numeric", month: "long", day: "numeric",
   });
 };
@@ -73,7 +77,7 @@ export const formatDate = (dateStr) => {
  */
 export const formatDateShort = (dateStr) => {
   if (!dateStr) return "—";
-  return new Date(dateStr).toLocaleDateString("ar-EG");
+  return new Date(dateStr).toLocaleDateString("ar-EG-u-nu-latn");
 };
 
 /**
@@ -83,7 +87,7 @@ export const formatDateShort = (dateStr) => {
  */
 export const formatDayMonth = (dateStr) => {
   if (!dateStr) return "—";
-  return new Date(dateStr).toLocaleDateString("ar-EG", { day: "numeric", month: "long" });
+  return new Date(dateStr).toLocaleDateString("ar-EG-u-nu-latn", { day: "numeric", month: "long" });
 };
 
 /**

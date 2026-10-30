@@ -214,7 +214,7 @@ const JobForm = ({ mode = "add", initial, equipment, drivers, fuelPrice, onSave,
         <Controller
           name="pricePerAcre"
           control={control}
-          rules={{ validate: (v) => !v || (Number(v) >= 0 && Number(v) <= MAX_MONEY_VALUE) || (Number(v) < 0 ? "لا يمكن أن يكون سالبًا" : `أكبر من الحد المسموح (${MAX_MONEY_VALUE.toLocaleString()})`) }}
+          rules={{ validate: (v) => !v || (Number(v) >= 0 && Number(v) <= MAX_MONEY_VALUE) || (Number(v) < 0 ? "لا يمكن أن يكون سالبًا" : `أكبر من الحد المسموح (${MAX_MONEY_VALUE.toLocaleString("en-US")})`) }}
           render={({ field }) => (
             <NumberInput label="سعر الفدان (ج.م)" placeholder="0" error={errors.pricePerAcre?.message} {...field} />
           )}
@@ -224,7 +224,7 @@ const JobForm = ({ mode = "add", initial, equipment, drivers, fuelPrice, onSave,
         <Controller
           name="fuelUsed"
           control={control}
-          rules={{ validate: (v) => !v || (Number(v) >= 0 && Number(v) <= MAX_MONEY_VALUE) || (Number(v) < 0 ? "لا يمكن أن يكون سالبًا" : `أكبر من الحد المسموح (${MAX_MONEY_VALUE.toLocaleString()})`) }}
+          rules={{ validate: (v) => !v || (Number(v) >= 0 && Number(v) <= MAX_MONEY_VALUE) || (Number(v) < 0 ? "لا يمكن أن يكون سالبًا" : `أكبر من الحد المسموح (${MAX_MONEY_VALUE.toLocaleString("en-US")})`) }}
           render={({ field }) => (
             <NumberInput
               label="الوقود المستخدم (لتر)"
@@ -256,7 +256,7 @@ const JobForm = ({ mode = "add", initial, equipment, drivers, fuelPrice, onSave,
                 const num = Number(v);
                 if (num < 0) return "لا يمكن أن يكون سالبًا";
                 if (revenue > 0 && num > revenue) return `تم تخطي الحد الأقصى من الدفعة (الحد الأقصى: ${formatCurrency(revenue)})`;
-                if (num > MAX_MONEY_VALUE) return `أكبر من الحد المسموح (${MAX_MONEY_VALUE.toLocaleString()})`;
+                if (num > MAX_MONEY_VALUE) return `أكبر من الحد المسموح (${MAX_MONEY_VALUE.toLocaleString("en-US")})`;
                 return true;
               },
             }}

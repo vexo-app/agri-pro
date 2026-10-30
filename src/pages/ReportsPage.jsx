@@ -15,7 +15,7 @@ import LoadingScreen       from "../components/ui/LoadingScreen";
 import DownloadReportButton from "../components/ui/DownloadReportButton";
 import FeatureIntroBanner   from "../components/common/FeatureIntroBanner";
 import { TractorIcon, DriverIcon, ChartIcon, RevenueIcon, AcreIcon, FuelIcon, ReceiptIcon } from "../components/ui/Icons";
-import { formatCurrency, formatNumber, formatProfit, formatDeduction } from "../utils/formatters";
+import { formatCurrency, formatNumber, formatProfit, profitBoxClass, formatDeduction } from "../utils/formatters";
 import { TEAM_ROLE } from "../config/constants";
 import { useData }                from "../contexts/DataContext";
 import { findJobsWithMissingEquipment } from "../utils/calculations";
@@ -248,9 +248,9 @@ const ReportsPage = () => {
               { label:"مرتبات الفريق (المستحقة)", value:formatDeduction(totalSalariesPaid), color:"text-red-400",    icon:<DriverIcon size={18}/> },
               { label:"الواصل للمورد", value:formatDeduction(totalSupplierPaidOut), color:"text-red-400",    icon:<ReceiptIcon size={18}/> },
               { label:"ضرائب وخصومات",   value:formatDeduction(totalTaxDeductions), color:"text-red-400",    icon:<ReceiptIcon size={18}/> },
-              { label:"صافي الربح",      value:formatProfit(totalProfit),   color:totalProfit>=0?"text-green-400":"text-red-400", icon:<ChartIcon size={18}/> },
+              { label:"صافي الربح",      value:formatProfit(totalProfit),   color:totalProfit>=0?"text-green-400":"text-red-400", icon:<ChartIcon size={18}/>, box:profitBoxClass(totalProfit) },
             ].map((s) => (
-              <div key={s.label} className="bg-surface border border-white/8 rounded-2xl p-4">
+              <div key={s.label} className={`bg-surface border border-white/8 rounded-2xl p-4 ${s.box || ""}`}>
                 <div className={`mb-2 ${s.color}`}>{s.icon}</div>
                 <p className={`text-base font-extrabold tabular-nums ${s.color}`}>{s.value}</p>
                 <p className="text-xs text-gray-500 mt-0.5">{s.label}</p>

@@ -78,11 +78,11 @@ const formatDate = (d) => {
     // بيدعم كل الأشكال المحتملة: نص ISO، أو Firestore Timestamp لو
     // اتحول لـ JSON فبيبقى { seconds, nanoseconds }
     if (typeof d === "object" && d.seconds) {
-      return new Date(d.seconds * 1000).toLocaleDateString("ar-EG");
+      return new Date(d.seconds * 1000).toLocaleDateString("ar-EG-u-nu-latn");
     }
     const date = new Date(d);
     if (isNaN(date.getTime())) return String(d);
-    return date.toLocaleDateString("ar-EG");
+    return date.toLocaleDateString("ar-EG-u-nu-latn");
   } catch {
     return String(d);
   }
@@ -92,11 +92,11 @@ const formatDateTime = (d) => {
   if (!d) return "—";
   try {
     if (typeof d === "object" && d.seconds) {
-      return new Date(d.seconds * 1000).toLocaleString("ar-EG");
+      return new Date(d.seconds * 1000).toLocaleString("ar-EG-u-nu-latn");
     }
     const date = new Date(d);
     if (isNaN(date.getTime())) return String(d);
-    return date.toLocaleString("ar-EG");
+    return date.toLocaleString("ar-EG-u-nu-latn");
   } catch {
     return String(d);
   }

@@ -22,7 +22,7 @@ const buildCustodyReportHtml = ({
   company = {}, month = null, allTime = true, reportType = CUSTODY_TYPES.EXPENSE,
   dateFrom = null, dateTo = null,
 }) => {
-  const today = new Date().toLocaleDateString("ar-EG");
+  const today = new Date().toLocaleDateString("ar-EG-u-nu-latn");
   const printedAt = formatDateTime(new Date());
   const reportNo = buildCustodyReportNumber();
   const isExpenseReport = reportType !== CUSTODY_TYPES.DEPOSIT;
@@ -58,7 +58,7 @@ const buildCustodyReportHtml = ({
   const periodLabel = isRange
     ? `من ${formatDate(dateFrom)} إلى ${formatDate(dateTo)}`
     : (!allTime && month)
-    ? new Date(`${month}-01`).toLocaleDateString("ar-EG", { month: "long", year: "numeric" })
+    ? new Date(`${month}-01`).toLocaleDateString("ar-EG-u-nu-latn", { month: "long", year: "numeric" })
     : "كل الوقت";
   const reportTitle = isRange
     ? (isExpenseReport ? "تقرير العهدة" : "تقرير إضافات العهدة")

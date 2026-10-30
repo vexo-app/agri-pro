@@ -5,8 +5,8 @@ import { formatCurrency, formatDate } from "../formatters";
 import { escapeHtml, printWindow, downloadReportPdf } from "./core";
 
 const buildDriverPayslipHtml = ({ driver, month, summary, entries, attendance }) => {
-  const today      = new Date().toLocaleDateString("ar-EG");
-  const monthLabel = new Date(month + "-01").toLocaleDateString("ar-EG", { month:"long", year:"numeric" });
+  const today      = new Date().toLocaleDateString("ar-EG-u-nu-latn");
+  const monthLabel = new Date(month + "-01").toLocaleDateString("ar-EG-u-nu-latn", { month:"long", year:"numeric" });
 
   const carried = Number(summary.carriedDeduction) || 0;
   const carryRow = carried > 0 ? `<tr>

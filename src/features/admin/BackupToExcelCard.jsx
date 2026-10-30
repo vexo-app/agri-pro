@@ -82,7 +82,7 @@ const BackupToExcelCard = () => {
         {preview && (
           <div className="rounded-xl border border-white/10 bg-surface-2 p-3 text-sm text-gray-300 space-y-1">
             <p className="font-semibold text-gray-200">
-              تاريخ تصدير النسخة: {preview.exportedAt ? new Date(preview.exportedAt).toLocaleString("ar-EG") : "غير معروف"}
+              تاريخ تصدير النسخة: {preview.exportedAt ? new Date(preview.exportedAt).toLocaleString("ar-EG-u-nu-latn") : "غير معروف"}
             </p>
             <div className="grid grid-cols-2 sm:grid-cols-4 gap-x-4 gap-y-1 text-xs text-gray-400">
               {Object.entries(preview.counts).map(([key, count]) => (

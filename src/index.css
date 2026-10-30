@@ -113,3 +113,20 @@
   box-shadow: 0 0 0 3px rgba(74, 222, 128, 0.85), 0 0 18px rgba(74, 222, 128, 0.35);
   transition: box-shadow 0.3s ease;
 }
+
+/* ── مربع الربح/الخسارة ──────────────────────────────────────
+   المكسب: حدود خضرا. الخسارة: حدود حمرا. (بيتحط عن طريق profitBoxClass
+   في utils/formatters.js). !important عشان يغلب ألوان الحدود الافتراضية
+   بتاعة الثيم (sage-theme.css). */
+.pl-box-profit {
+  border: 2px solid #22a05a !important;
+  background-color: rgba(34, 160, 90, 0.06) !important;
+}
+.pl-box-loss {
+  border: 2px solid #dc3b30 !important;
+  background-color: rgba(220, 59, 48, 0.06) !important;
+}
+.pl-box-profit .sage-stat-value,
+.sage-theme .pl-box-profit .sage-stat-value { color: #1e7f47 !important; }
+.pl-box-loss .sage-stat-value,
+.sage-theme .pl-box-loss .sage-stat-value { color: #b8322a !important; }

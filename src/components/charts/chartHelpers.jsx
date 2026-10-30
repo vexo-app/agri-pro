@@ -12,10 +12,12 @@ import React from "react";
 // ── Compact number formatter for chart axes (١٫٢م / ١٢k) ──────────────────
 // Byte-for-byte identical in both DashboardPage.jsx and ReportsPage.jsx
 // before this extraction.
+// أرقام إنجليزي وكلمة عربي واحدة لكل الرسوم: "1.2 مليون" / "12 ألف".
+const trimNum = (n) => Number(n.toFixed(1)).toLocaleString("en-US");
 export const shortNum = (v) =>
-  v >= 1_000_000 ? `${(v / 1_000_000).toFixed(1)}م`
-  : v >= 1_000 ? `${(v / 1_000).toFixed(0)}k`
-  : String(v);
+  Math.abs(v) >= 1_000_000 ? `${trimNum(v / 1_000_000)} مليون`
+  : Math.abs(v) >= 1_000 ? `${trimNum(v / 1_000)} ألف`
+  : Number(v || 0).toLocaleString("en-US");
 
 // ── Truncate a label to `max` chars, appending an ellipsis ────────────────
 // Was only defined in ReportsPage.jsx; DashboardPage.jsx's AngledNameTick
